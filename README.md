@@ -19,3 +19,9 @@ Sets up the build environment (compilers, cross-compilers, dependencies, et al)
 chmod +x build.sh
 ./build.sh
 ```
+Auto downloads Liesel & BookThief source code from GitHub, and (using that source code)
+
+ - Compiles DEB packages
+ - Cross-compiles for Win64
+ - Creates a Win64 Installer
+ - Builds DEB source-only packages
