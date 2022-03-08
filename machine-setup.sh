@@ -13,7 +13,7 @@ bit32winepkg="wine32"
 basepkgslist="build-essential gcc g++ make git wget tar"
 
 bookthiefdeps="fpc-3.2.0 lazarus lcl-2.0 lcl-utils-2.0 fp-units-misc-3.2.0"
-lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev"
+lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
 
 packagingdeps="devscripts wine wine64 php-cli"
 
