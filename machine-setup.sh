@@ -17,7 +17,7 @@ lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontcon
 
 packagingdeps="devscripts wine wine64 php-cli"
 
-mxedeps="autoconf automake autopoint bash bison bzip2 flex g++ g++-multilib gettext git gperf intltool libc6-dev-i386 libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch perl python ruby sed unzip wget xz-utils"
+mxedeps="autoconf automake autopoint bash bison bzip2 flex g++ g++-multilib gettext git gperf intltool libc6-dev-i386 libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch perl python ruby sed unzip wget xz-utils python3-mako"
 
 # For restoring the CWD
 initdir=`pwd`
