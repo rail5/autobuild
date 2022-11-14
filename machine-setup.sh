@@ -129,7 +129,7 @@ if [[ installingmxe -eq 1 ]]; then
 	echo "Cross-compiling Liesel's dependencies"
 	echo "----"
 
-	make graphicsmagick poppler -j 8
+	make graphicsmagick poppler libharu -j 8
 fi
 
 installingfpc=0
