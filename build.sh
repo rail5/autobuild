@@ -210,7 +210,7 @@ if [[ buildingwin64 -eq 1 ]]; then
 	echo "--"
 	echo "--"
 	
-	wine "/root/.wine/drive_c/Program Files/Inno Setup 6/ISCC.exe" ./bt-$btversion.iss
+	wine "/root/.wine/drive_c/Program Files (x86)/Inno Setup 6/ISCC.exe" ./bt-$btversion.iss
 	if [ $? -eq 0 ]; then
 		echo "Win64 Installer successfully built"
 	else
