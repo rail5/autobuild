@@ -70,6 +70,13 @@ echo "----"
 echo "----"
 
 echo "Build dependencies installed"
+echo "--"
+echo "This script can also set up cross-compilation"
+echo "MXE is required to cross-compile Liesel (core) Windows binaries"
+echo "The FPC cross-compiler is required to build BookThief (GUI) Windows binaries"
+echo "And Inno Setup 6 (via Wine) is required to build the Windows installer package"
+echo "Setting up for cross-compilation (particularly, building the MXE packages) can take a really, really long time"
+echo "--"
 
 while true; do
 	read -p "Do you want to prepare the cross-compiler as well? (y/n) " yn
