@@ -4,11 +4,34 @@ echo "NOTICE:"
 echo ""
 echo "In order to run this script, you need:"
 echo " - all the buildtools (GCC, Lazarus, etc) necessary to build BookThief+Liesel (incl. dependencies)"
-echo " - MXE, with GCC11 configured for x86_64 in your \$PATH"
-echo " - Inno Setup 6 via Wine (configure location in this script)"
-## Location for Inno is circa Line 179, beginning "wine "
+echo " - (To publish to deb.rail5.org) reprepro"
+echo " - (For win64 cross-compilation) MXE, with GCC11 configured for x86_64 in your \$PATH"
+echo " - (For win64 cross-compilation) Inno Setup 6 via Wine (configure location in this script)"
 echo " - Git installed to download sources"
 echo " - devscripts"
+
+
+# Configure Inno Setup location here (ISCC variable):
+ISCC="$HOME/.wine/drive_c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+
+# Ubuntu distribution & Debian distribution names
+ubuntudist="focal"
+debiandist="bullseye"
+
+# Directory structure:
+#  - deb
+#    Contains the source for the Debian packages (Binary+Source packages)
+#    The packages here will be designated for a DEBIAN distribution ($debiandist)
+#
+#  - srconly
+#    Contains the source for the Ubuntu Launchpad PPA packages (Source-only packages)
+#    The packages here will be designated for a UBUNTU distribution ($ubuntudist)
+#
+#  - win
+#    Contains the source for the Win64 cross-compilation
+#
+#  - release
+#    All release binaries are moved to this directory after being built
 
 while true; do
 	read -p "Do you want to go ahead (y/n)" yn
@@ -59,10 +82,14 @@ rm -rf ./bookthief/
 rm -rf ./liesel/
 
 cp -rv srconly/liesel/* deb/liesel/
+sed -i "s/$ubuntudist/$debiandist/gi" deb/liesel/debian/changelog
+
 cp -rv srconly/liesel/* win/build/liesel/
 cp -rv srconly/liesel/* win/release/source/source/liesel/
 
 cp -rv srconly/bookthief/* deb/bookthief/
+sed -i "s/$ubuntudist/$debiandist/gi" deb/bookthief/debian/changelog
+
 cp -rv srconly/bookthief/* win/build/bookthief/
 cp -rv srconly/bookthief/* win/release/source/source/bookthief/
 
@@ -71,7 +98,7 @@ echo "All source files copied"
 buildingdebbinary=0
 echo "---"
 while true; do
-	read -p "Do you want to build .DEB binary packages for Liesel+BookThief? (y/n) " yn
+	read -p "Do you want to build .DEB packages for Liesel+BookThief? (y/n) " yn
 	case $yn in
 		[Yy]* ) buildingdebbinary=1; break;;
 		[Nn]* ) buildingdebbinary=0; break;;
@@ -89,12 +116,12 @@ if [[ buildingdebbinary -eq 1 ]]; then
 	echo "--"
 
 	echo "----"
-	echo "Building Liesel DEB package"
+	echo "Building Liesel DEB packages"
 	echo "----"
 
-	cd deb/liesel
+	cd $initdir/$nowvar/deb/liesel
 
-	debuild -us -uc
+	debuild
 	if [ $? -eq 0 ]; then
 		echo "Liesel successfully built"
 	else
@@ -103,12 +130,12 @@ if [[ buildingdebbinary -eq 1 ]]; then
 	fi
 	
 	echo "----"
-	echo "Building BookThief DEB package"
+	echo "Building BookThief DEB packages"
 	echo "----"
 	
-	cd ../bookthief
+	cd $initdir/$nowvar/deb/bookthief
 	
-	debuild -us -uc
+	debuild
 	if [ $? -eq 0 ]; then
 		echo "BookThief successfully built"
 	else
@@ -121,14 +148,19 @@ if [[ buildingdebbinary -eq 1 ]]; then
 	echo "----"
 
 	mv ../*.deb $initdir/$nowvar/release/
+	mv ../*.dsc $initdir/$nowvar/release/
+	mv ../*.tar.gz $initdir/$nowvar/release/
+	mv ../*.build $initdir/$nowvar/release/
+	mv ../*.buildinfo $initdir/$nowvar/release/
+	mv ../*.changes $initdir/$nowvar/release/
 
-	versionsearch=`ls .. | grep bookthief_ | grep .dsc`
+	versionsearch=`ls $initdir/$nowvar/release/ | grep bookthief_ | grep .dsc`
 	btversion="${versionsearch/bookthief_/}"
 	btversion="${btversion/.dsc/}"
 	echo "Discovered bookthief version:"
 	echo $btversion
 
-	lieselversionsearch=`ls .. | grep liesel_ | grep .dsc`
+	lieselversionsearch=`ls $initdir/$nowvar/release/ | grep liesel_ | grep .dsc`
 	lieselversion="${lieselversionsearch/liesel_/}"
 	lieselversion="${lieselversion/.dsc/}"
 	echo "Discovered liesel version:"
@@ -210,7 +242,7 @@ if [[ buildingwin64 -eq 1 ]]; then
 	echo "--"
 	echo "--"
 	
-	wine "/root/.wine/drive_c/Program Files (x86)/Inno Setup 6/ISCC.exe" ./bt-$btversion.iss
+	wine "$ISCC" ./bt-$btversion.iss
 	if [ $? -eq 0 ]; then
 		echo "Win64 Installer successfully built"
 	else
@@ -319,7 +351,7 @@ if [[ buildingdebsrc -eq 1 ]]; then
 
 
 	while true; do
-		read -p "Do you want to push Liesel $lieselversion to the PPA? (y/n)" yn
+		read -p "Do you want to push Liesel $lieselversion to the Launchpad PPA? (y/n)" yn
 		case $yn in
 			[Yy]* ) echo "PUSHING"; dput ppa:rail5/bookthief ./$lsrcfile$lsrcend; break;;
 			[Nn]* ) echo "NOT pushing"; break;;
@@ -328,7 +360,7 @@ if [[ buildingdebsrc -eq 1 ]]; then
 	done
 	
 	while true; do
-		read -p "Do you want to push BookThief $btversion to the PPA? (y/n)" yn
+		read -p "Do you want to push BookThief $btversion to the Launchpad PPA? (y/n)" yn
 		case $yn in
 			[Yy]* ) echo "PUSHING"; dput ppa:rail5/bookthief ./$btsrcfile$lsrcend; break;;
 			[Nn]* ) echo "NOT pushing"; break;;
@@ -336,6 +368,67 @@ if [[ buildingdebsrc -eq 1 ]]; then
 		esac
 	done
 	
+fi
+
+echo "--"
+echo "--"
+echo "Pushing to deb.rail5.org Debian repo"
+echo "--"
+echo "--"
+
+pushinglieseltodebrepo=0
+pushingbttodebrepo=0
+pushinganytodebrepo=0
+
+lvfile="liesel_$lieselversion"
+btvfile="bookthief_$btversion"
+debend="_amd64.changes"
+
+lfile="$lvfile$debend"
+btfile="$btvfile$debend"
+
+while true; do
+	read -p "Do you want to push Liesel $lieselversion to deb.rail5.org? (y/n)" yn
+	case $yn in
+		[Yy]* ) echo "SET TO PUSH"; pushinglieseltodebrepo=1; pushinganytodebrepo=1; break;;
+		[Nn]* ) echo "NOT pushing"; break;;
+		* ) echo "Answer yes or no";;
+	esac
+done
+
+while true; do
+	read -p "Do you want to push BookThief $btversion to the deb.rail5.org? (y/n)" yn
+	case $yn in
+		[Yy]* ) echo "SET TO PUSH"; pushingbttodebrepo=1; pushinganytodebrepo=1; break;;
+		[Nn]* ) echo "NOT pushing"; break;;
+		* ) echo "Answer yes or no";;
+	esac
+done
+
+if [[ pushinganytodebrepo -eq 1 ]]; then
+	cd $initdir/$nowvar
+	git clone https://github.com/rail5/ppa.git
+	cd ppa
+fi
+
+if [[ pushinglieseltodebrepo -eq 1 ]]; then
+	cd debian
+	reprepro -P optional include bullseye $initdir/$nowvar/release/$lfile
+	cd $initdir/$nowvar/ppa
+	git add --all
+	git commit -m "Updated Liesel version"
+fi
+
+if [[ pushingbttodebrepo -eq 1 ]]; then
+	cd debian
+	reprepro -P optional include bullseye $initdir/$nowvar/release/$btfile
+	cd $initdir/$nowvar/ppa
+	git add --all
+	git commit -m "Updated BookThief version"
+fi
+
+if [[ pushinganytodebrepo -eq 1 ]]; then
+	git push origin
 fi
 
 exit 0
@@ -402,7 +495,7 @@ fi
 
 
 while true; do
-	read -p "Do you want to make GitLab/GitHub Release pages for Liesel $lieselversion? (y/n)" yn
+	read -p "Do you want to make a GitHub Release page for Liesel $lieselversion? (y/n)" yn
 	case $yn in
 		[Yy]* ) echo "PUSHING"; break;;
 		[Nn]* ) echo "NOT pushing"; break;;
@@ -411,7 +504,7 @@ while true; do
 done
 
 while true; do
-	read -p "Do you want to make GitLab/GitHub Release pages for BookThief $btversion? (y/n)" yn
+	read -p "Do you want to make a GitHub Release page for BookThief $btversion? (y/n)" yn
 	case $yn in
 		[Yy]* ) echo "PUSHING"; break;;
 		[Nn]* ) echo "NOT pushing"; break;;

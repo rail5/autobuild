@@ -227,7 +227,6 @@ echo "Inno Setup 6 is necessary in order to build the Windows Installer Package"
 echo "This script can download the Inno Setup 6 installer, and open it via Wine"
 echo "This requires installing Wine's 32 bit libraries"
 echo "You also need a functioning X-Server, since Inno Setup runs as a Graphical installer"
-echo "If you don't know what that means, you probably have one"
 echo ""
 while true; do
 	read -p "Do you want to download and install Inno Setup 6? (y/n) " yn
