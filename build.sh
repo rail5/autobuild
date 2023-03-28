@@ -82,16 +82,25 @@ rm -rf ./bookthief/
 rm -rf ./liesel/
 
 cp -rv srconly/liesel/* deb/liesel/
+# Swap all instances of $ubuntudist with $debiandist in the changelog for the deb/ folder
+# Mark the package with a DEBIAN distribution
 sed -i "s/$ubuntudist/$debiandist/gi" deb/liesel/debian/changelog
 
 cp -rv srconly/liesel/* win/build/liesel/
 cp -rv srconly/liesel/* win/release/source/source/liesel/
 
 cp -rv srconly/bookthief/* deb/bookthief/
+# Swap all instances of $ubuntudist with $debiandist in the changelog for the deb/ folder
+# Mark the package with a DEBIAN distribution
 sed -i "s/$ubuntudist/$debiandist/gi" deb/bookthief/debian/changelog
 
 cp -rv srconly/bookthief/* win/build/bookthief/
 cp -rv srconly/bookthief/* win/release/source/source/bookthief/
+
+# Swap all instances of $debiandist with $ubuntudist in the changelog for the srconly/ folder
+# Mark the packages with a UBUNTU distribution
+sed -i "s/$debiandist/$ubuntudist/gi" srconly/liesel/debian/changelog
+sed -i "s/$debiandist/$ubuntudist/gi" srconly/bookthief/debian/changelog
 
 echo "All source files copied"
 
