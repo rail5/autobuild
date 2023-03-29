@@ -151,8 +151,6 @@ if [[ setupgithubhttps -eq 1 ]]; then
 		
 		echo "All set up!"
 	fi
-	
-	exit 0
 fi
 
 echo "--"
