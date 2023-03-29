@@ -347,8 +347,7 @@ echo "----"
 echo "All set up. You can now run build.sh"
 echo "If you want to cross-compile, build.sh handles that automatically"
 echo "If you want to cross-compile without build-sh:"
-echo "  For BookThief: just run 'make windows'"
-echo "  For Liesel: run 'make windows CROSS=x86_64-w64-mingw32.static-"
+echo "  Just run 'make windows' in the BookThief or Liesel source tree"
 
 cd $initdir
 
