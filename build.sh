@@ -8,7 +8,6 @@ echo " - (To publish to deb.rail5.org) reprepro"
 echo " - (For win64 cross-compilation) MXE, with GCC11 configured for x86_64 in your \$PATH"
 echo " - (For win64 cross-compilation) Inno Setup 6 via Wine (configure location in this script)"
 echo " - Git installed to download sources"
-echo " - Hub installed to create GitHub Releases"
 echo " - devscripts"
 
 
@@ -494,7 +493,7 @@ if [[ buildingwin64 -eq 1 ]] && [[ buildingdebbinary -eq 1 ]]; then
 				\"generate_release_notes\": false}" > liesel-release-info
 		
 		# Get GitHub Release ID
-		RELEASEID=$(php $initdir/get-release-id.php -i "$initdir/$nowvar/release/liesel-release-info")
+		RELEASEID=$(php "$initdir/get-release-id.php" -i "$initdir/$nowvar/release/liesel-release-info")
 		
 		# Upload liesel .DEB package
 		curl -L \
@@ -533,7 +532,7 @@ if [[ buildingwin64 -eq 1 ]] && [[ buildingdebbinary -eq 1 ]]; then
 				\"prerelease\": false,
 				\"generate_release_notes\": false}" > bookthief-release-info
 		# Get GitHub Release ID
-		RELEASEID=$(php $initdir/get-release-id.php -i "$initdir/$nowvar/release/bookthief-release-info")
+		RELEASEID=$(php "$initdir/get-release-id.php" -i "$initdir/$nowvar/release/bookthief-release-info")
 		# Upload liesel .DEB package
 		curl -L \
 			-X POST \
