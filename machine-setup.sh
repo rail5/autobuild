@@ -15,7 +15,7 @@ basepkgslist="build-essential gcc g++ make git wget tar curl"
 bookthiefdeps="fpc-3.2.0 lazarus lcl-2.0 lcl-utils-2.0 fp-units-misc-3.2.0"
 lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
 
-packagingdeps="devscripts wine wine64 php-cli"
+packagingdeps="devscripts wine wine64 php-cli reprepro"
 
 mxedeps="autoconf automake autopoint bash bison bzip2 flex g++ g++-multilib gettext git gperf intltool libc6-dev-i386 libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch perl python ruby sed unzip wget xz-utils python3-mako"
 
@@ -41,7 +41,6 @@ echo "If you want to run this on some other distribution, you can edit this scri
 echo "If you want to make those edits, there are environment variables at the top of the script"
 echo ""
 echo ""
-echo "This script must be run as ROOT"
 
 echo "----"
 echo "----"
@@ -58,18 +57,104 @@ done
 echo "----"
 echo "----"
 
-echo "Installing build dependencies..."
+echo "Updating package lists..."
 
 sudo $packagemanager $updatecommand
 
-sudo $packagemanager $installcommand $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
+echo "----"
+echo "----"
+echo "Base necessary packages are:"
+echo "$basepkgslist $bookthiefdeps $lieseldeps $packagingdeps"
 
-echo "----"
-echo "----"
-echo "----"
-echo "----"
+installingbasedeps=0
+while true; do
+	read -p "Do you want to install these now? (y/n) " yn
+	case $yn in
+		[Yy]* ) echo "Alright then"; installingbasedeps=1; break;;
+		[Nn]* ) echo "Moving on"; break;;
+		* ) echo "Answer yes or no";;
+	esac
+done
 
-echo "Build dependencies installed"
+if [[ installingbasedeps -eq 1 ]]; then
+
+	echo "Installing build dependencies..."
+
+	sudo $packagemanager $installcommand $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
+
+	echo "----"
+	echo "----"
+	echo "----"
+	echo "----"
+
+	echo "Build dependencies installed"
+	echo "--"
+
+fi
+
+setupgithubhttps=0
+while true; do
+	read -p "Do you want to set up GitHub over HTTPS? (y/n) " yn
+	case $yn in
+		[Yy]* ) echo "Alright then"; setupgithubhttps=1; break;;
+		[Nn]* ) echo "Moving on"; break;;
+		* ) echo "Answer yes or no";;
+	esac
+done
+
+if [[ setupgithubhttps -eq 1 ]]; then
+	
+	read -p "Enter the email address associated with your GPG key: " gpgemail
+	read -p "Enter your GitHub username: " ghuser
+	read -p "Enter your GitHub Access Token: " ghtoken
+	
+	echo "machine github.com" > github-credentials
+	echo "" >> github-credentials
+	echo "login $ghuser" >> github-credentials
+	echo "" >> github-credentials
+	echo "password $ghtoken" >> github-credentials
+	echo "" >> github-credentials
+	echo "protocol https" >> github-credentials
+	
+	echo "$ghtoken" > github-token
+	
+	gpg --recipient $gpgemail -e ./github-credentials
+	gpg --recipient $gpgemail -e ./github-token
+	
+	rm ./github-credentials
+	rm ./github-token
+	
+	echo "#!/bin/bash" > credential-helper
+	echo "" >> credential-helper
+	echo "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl -f /etc/git/github-credentials.gpg get" >> credential-helper
+	
+	ghreadyok=0
+	echo "GitHub credential files will be moved to /etc/git/"
+	echo "And git config variables will be set"
+	while true; do
+		read -p "Sound good? (y/n) " yn
+		case $yn in
+			[Yy]* ) echo "Alright then"; ghreadyok=1; break;;
+			[Nn]* ) echo "Cancelling"; break;;
+			* ) echo "Answer yes or no";
+		esac
+	done
+	
+	if [[ ghreadyok -eq 1 ]]; then
+		sudo mv ./github-credentials.gpg /etc/git/
+		sudo mv ./github-token.gpg /etc/git/
+		sudo mv ./credential-helper /etc/git/
+		sudo chmod +x /etc/git/credential-helper
+		
+		git config --global credential.helper /etc/git/credential-helper
+		git config --global user.name $ghuser
+		
+		echo "All set up!"
+	fi
+	
+	exit 0
+fi
+
 echo "--"
 echo "This script can also set up cross-compilation"
 echo "MXE is required to cross-compile Liesel (core) Windows binaries"
