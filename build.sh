@@ -8,6 +8,7 @@ echo " - (To publish to deb.rail5.org) reprepro"
 echo " - (For win64 cross-compilation) MXE, with GCC11 configured for x86_64 in your \$PATH"
 echo " - (For win64 cross-compilation) Inno Setup 6 via Wine (configure location in this script)"
 echo " - Git installed to download sources"
+echo " - Hub installed to create GitHub Releases"
 echo " - devscripts"
 
 
@@ -57,12 +58,15 @@ mkdir -p $nowvar
 
 cd $nowvar
 
+mkdir srconly
+
+cd srconly
+
 git clone https://github.com/rail5/liesel.git
 
 git clone https://github.com/rail5/bookthief.git
 
-mkdir -p srconly/liesel
-mkdir -p srconly/bookthief
+cd ..
 
 mkdir -p deb/liesel
 mkdir -p deb/bookthief
@@ -74,12 +78,6 @@ mkdir -p win/release/source/source/bookthief
 mkdir -p win/release/pkg/
 
 mkdir -p release
-
-mv ./bookthief/* srconly/bookthief/
-mv ./liesel/* srconly/liesel/
-
-rm -rf ./bookthief/
-rm -rf ./liesel/
 
 cp -rv srconly/liesel/* deb/liesel/
 # Swap all instances of $ubuntudist with $debiandist in the changelog for the deb/ folder
@@ -389,12 +387,18 @@ pushinglieseltodebrepo=0
 pushingbttodebrepo=0
 pushinganytodebrepo=0
 
-lvfile="liesel_$lieselversion"
-btvfile="bookthief_$btversion"
-debend="_amd64.changes"
+lversionfile="liesel_$lieselversion"
+btversionfile="bookthief_$btversion"
+debchangesend="_amd64.changes"
+debpkgend="_amd64.deb"
 
-lfile="$lvfile$debend"
-btfile="$btvfile$debend"
+lchangesfile="$lversionfile$debchangesend"
+btchangesfile="$btversionfile$debchangesend"
+
+lpkgfile="$lversionfile$debpkgend"
+btpkgfile="$btversionfile$debpkgend"
+
+btwininstallerfile="BookThief-$btversion-Installer.exe"
 
 while true; do
 	read -p "Do you want to push Liesel $lieselversion to deb.rail5.org? (y/n)" yn
@@ -422,7 +426,7 @@ fi
 
 if [[ pushinglieseltodebrepo -eq 1 ]]; then
 	cd debian
-	reprepro -P optional include bullseye $initdir/$nowvar/release/$lfile
+	reprepro -P optional include bullseye $initdir/$nowvar/release/$lchangesfile
 	cd $initdir/$nowvar/ppa
 	git add --all
 	git commit -m "Updated Liesel version"
@@ -430,7 +434,7 @@ fi
 
 if [[ pushingbttodebrepo -eq 1 ]]; then
 	cd debian
-	reprepro -P optional include bullseye $initdir/$nowvar/release/$btfile
+	reprepro -P optional include bullseye $initdir/$nowvar/release/$btchangesfile
 	cd $initdir/$nowvar/ppa
 	git add --all
 	git commit -m "Updated BookThief version"
@@ -439,6 +443,133 @@ fi
 if [[ pushinganytodebrepo -eq 1 ]]; then
 	git push origin
 fi
+
+# If we've built a Debian package & the Windows installer, we can push a Release page to GitHub
+if [[ buildingwin64 -eq 1 ]] && [[ buildingdebbinary -eq 1 ]]; then
+
+	createlieselrelease=0
+	createbtrelease=0
+
+	while true; do
+		read -p "Do you want to make a GitHub Release page for Liesel $lieselversion? (y/n)" yn
+		case $yn in
+			[Yy]* ) echo "PUSHING"; createlieselrelease=1; break;;
+			[Nn]* ) echo "NOT pushing"; break;;
+			* ) echo "Answer yes or no";;
+		esac
+	done
+
+	while true; do
+		read -p "Do you want to make a GitHub Release page for BookThief $btversion? (y/n)" yn
+		case $yn in
+			[Yy]* ) echo "PUSHING"; createbtrelease=1; break;;
+			[Nn]* ) echo "NOT pushing"; break;;
+			* ) echo "Answer yes or no";;
+		esac
+	done
+	
+	
+	if [[ createlieselrelease -eq 1 ]]; then
+		changelog=$(php "$initdir/get-changelog.php" -d "$initdir/$nowvar" -l);
+		
+		cd $initdir/$nowvar/release
+		
+		OWNER=rail5
+		REPOSITORY=liesel
+		ACCESS_TOKEN=$(gpg -d /etc/git/github-token.gpg 2>/dev/null)
+		
+		# Create GitHub Release
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-GitHub-Api-Version: 2022-11-28" \
+			https://api.github.com/repos/$OWNER/$REPOSITORY/releases \
+			-d "{\"tag_name\": \"v$lieselversion\",
+				\"target_commitish\": \"main\",
+				\"name\": \"v$lieselversion\",
+				\"body\": \"$changelog\",
+				\"draft\": false,
+				\"prerelease\": false,
+				\"generate_release_notes\": false}" > liesel-release-info
+		
+		# Get GitHub Release ID
+		RELEASEID=$(php $initdir/get-release-id.php -i "$initdir/$nowvar/release/liesel-release-info")
+		
+		# Upload liesel .DEB package
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-Github-Api-Version: 2022-11-28" \
+			-H "Content-Type: application/octet-stream" \
+			https://uploads.github.com/repos/$OWNER/$REPOSITORY/releases/$RELEASEID/assets?name=$lpkgfile \
+			--data-binary "@$lpkgfile"
+		
+		cd $initdir/$nowvar
+	fi
+	
+	if [[ createbtrelease -eq 1 ]]; then
+		changelog=$(php "$initdir/get-changelog.php" -d "$initdir/$nowvar" -b);
+		
+		cd $initdir/$nowvar/release
+		
+		OWNER=rail5
+		REPOSITORY=bookthief
+		ACCESS_TOKEN=$(gpg -d /etc/git/github-token.gpg 2>/dev/null)
+		
+		# Create GitHub Release
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-GitHub-Api-Version: 2022-11-28" \
+			https://api.github.com/repos/$OWNER/$REPOSITORY/releases \
+			-d "{\"tag_name\": \"v$btversion\",
+				\"target_commitish\": \"main\",
+				\"name\": \"v$btversion\",
+				\"body\": \"$changelog\",
+				\"draft\": false,
+				\"prerelease\": false,
+				\"generate_release_notes\": false}" > bookthief-release-info
+		# Get GitHub Release ID
+		RELEASEID=$(php $initdir/get-release-id.php -i "$initdir/$nowvar/release/bookthief-release-info")
+		# Upload liesel .DEB package
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-Github-Api-Version: 2022-11-28" \
+			-H "Content-Type: application/octet-stream" \
+			https://uploads.github.com/repos/$OWNER/$REPOSITORY/releases/$RELEASEID/assets?name=$lpkgfile \
+			--data-binary "@$lpkgfile"
+		
+		# Upload BookThief .DEB package
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-Github-Api-Version: 2022-11-28" \
+			-H "Content-Type: application/octet-stream" \
+			https://uploads.github.com/repos/$OWNER/$REPOSITORY/releases/$RELEASEID/assets?name=$btpkgfile \
+			--data-binary "@$btpkgfile"
+		
+		# Upload BookThief Win64 Installer package
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-Github-Api-Version: 2022-11-28" \
+			-H "Content-Type: application/octet-stream" \
+			https://uploads.github.com/repos/$OWNER/$REPOSITORY/releases/$RELEASEID/assets?name=$btwininstallerfile \
+			--data-binary "@$btwininstallerfile"
+		
+		cd $initdir/$nowvar
+	fi
+	
+fi
+
+
 
 exit 0
 	## Code below is not implemented and probably won't be but who knows
@@ -497,26 +628,3 @@ if [[ $pushtosite -eq 1 ]]; then
 	echo "BT-Win64: $btwin64tosite"
 	
 fi
-
-
-
-
-
-
-while true; do
-	read -p "Do you want to make a GitHub Release page for Liesel $lieselversion? (y/n)" yn
-	case $yn in
-		[Yy]* ) echo "PUSHING"; break;;
-		[Nn]* ) echo "NOT pushing"; break;;
-		* ) echo "Answer yes or no";;
-	esac
-done
-
-while true; do
-	read -p "Do you want to make a GitHub Release page for BookThief $btversion? (y/n)" yn
-	case $yn in
-		[Yy]* ) echo "PUSHING"; break;;
-		[Nn]* ) echo "NOT pushing"; break;;
-		* ) echo "Answer yes or no";;
-	esac
-done

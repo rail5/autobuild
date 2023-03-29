@@ -10,7 +10,7 @@ add32bitcommand="dpkg --add-architecture i386"
 bit32winepkg="wine32"
 
 # Build Dependencies
-basepkgslist="build-essential gcc g++ make git wget tar"
+basepkgslist="build-essential gcc g++ make git wget tar curl"
 
 bookthiefdeps="fpc-3.2.0 lazarus lcl-2.0 lcl-utils-2.0 fp-units-misc-3.2.0"
 lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
