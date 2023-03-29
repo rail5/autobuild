@@ -60,9 +60,9 @@ echo "----"
 
 echo "Installing build dependencies..."
 
-$packagemanager $updatecommand
+sudo $packagemanager $updatecommand
 
-$packagemanager $installcommand $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
+sudo $packagemanager $installcommand $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
 
 echo "----"
 echo "----"
@@ -88,7 +88,7 @@ while true; do
 done
 
 echo "Installing CC dependencies"
-$packagemanager $installcommand $mxedeps
+sudo $packagemanager $installcommand $mxedeps
 
 installingmxe=0
 
@@ -111,24 +111,24 @@ if [[ installingmxe -eq 1 ]]; then
 
 	cd /opt
 
-	git clone https://github.com/mxe/mxe.git
+	sudo git clone https://github.com/mxe/mxe.git
 
 	cd mxe
 
-	echo "MXE_PLUGIN_DIRS := plugins/gcc11" > ./settings.mk
-	echo "MXE_TARGETS := x86_64-w64-mingw32.static" >> ./settings.mk
+	sudo echo "MXE_PLUGIN_DIRS := plugins/gcc11" > ./settings.mk
+	sudo echo "MXE_TARGETS := x86_64-w64-mingw32.static" >> ./settings.mk
 
 	echo "----"
 	echo "Building the GCC cross-compiler"
 	echo "----"
 
-	make gcc -j 8
+	sudo make gcc -j 8
 
 	echo "----"
 	echo "Adding /opt/mxe/bin and /opt/mxe/usr/bin/ to \$PATH via /etc/profile"
 	echo "----"
-	echo "" >> /etc/profile
-	echo "export PATH=/opt/mxe/usr/bin:/opt/mxe/bin:\$PATH" >> /etc/profile
+	sudo echo "" >> /etc/profile
+	sudo echo "export PATH=/opt/mxe/usr/bin:/opt/mxe/bin:\$PATH" >> /etc/profile
 
 	export PATH=/opt/mxe/usr/bin:/opt/mxe/bin:$PATH
 
@@ -136,7 +136,7 @@ if [[ installingmxe -eq 1 ]]; then
 	echo "Cross-compiling Liesel's dependencies"
 	echo "----"
 
-	make graphicsmagick poppler libharu -j 8
+	sudo make graphicsmagick poppler libharu -j 8
 fi
 
 installingfpc=0
@@ -167,16 +167,16 @@ if [[ installingfpc -eq 1 ]]; then
 	echo "----"
 
 	cd /opt/
-	mkdir fpc
+	sudo mkdir fpc
 	cd fpc
 
-	wget https://deac-ams.dl.sourceforge.net/project/freepascal/Source/3.2.0/fpc-3.2.0.source.tar.gz
+	sudo wget https://deac-ams.dl.sourceforge.net/project/freepascal/Source/3.2.0/fpc-3.2.0.source.tar.gz
 
 	echo "--"
 	echo "Unpacking"
 	echo "--"
 
-	tar -xvzf fpc-3.2.0.source.tar.gz
+	sudo tar -xvzf fpc-3.2.0.source.tar.gz
 
 	cd fpc-3.2.0
 
@@ -185,11 +185,11 @@ if [[ installingfpc -eq 1 ]]; then
 	echo "--"
 	echo "Compiling FPC win64 cross-compiler for BookThief"
 	echo "--"
-	make clean all OS_TARGET=win64 CPU_TARGET=x86_64
+	sudo make clean all OS_TARGET=win64 CPU_TARGET=x86_64
 
-	make crossinstall OS_TARGET=win64 CPU_TARGET=x86_64 INSTALL_PREFIX=/usr
+	sudo make crossinstall OS_TARGET=win64 CPU_TARGET=x86_64 INSTALL_PREFIX=/usr
 
-	ln -sf /usr/lib/fpc/3.2.0/ppcrossx64 /usr/bin/ppcrossx64
+	sudo ln -sf /usr/lib/fpc/3.2.0/ppcrossx64 /usr/bin/ppcrossx64
 
 	echo "------------------"
 	echo "------------------"
@@ -213,9 +213,9 @@ addingfpcline=0
 	done
 	
 	if [[ addingfpcline -eq 1 ]]; then
-		echo "" >> /etc/fpc.cfg
-		echo "-Fu/usr/lib/fpc/\$fpcversion/units/\$fpctarget/*" >> /etc/fpc.cfg
-		echo "Line added to bottom of /etc/fpc.cfg"
+		sudo echo "" >> /etc/fpc.cfg
+		sudo echo "-Fu/usr/lib/fpc/\$fpcversion/units/\$fpctarget/*" >> /etc/fpc.cfg
+		sudo echo "Line added to bottom of /etc/fpc.cfg"
 	fi
 
 fi
@@ -239,7 +239,7 @@ done
 
 if [[ installinginno -eq 1 ]]; then
 
-	$add32bitcommand && $packagemanager $updatecommand && $packagemanager $installcommand $bit32winepkg
+	sudo $add32bitcommand && sudo $packagemanager $updatecommand && sudo $packagemanager $installcommand $bit32winepkg
 	cd $initdir
 	echo "----"
 	echo "----"
