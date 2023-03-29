@@ -141,6 +141,7 @@ if [[ setupgithubhttps -eq 1 ]]; then
 	done
 	
 	if [[ ghreadyok -eq 1 ]]; then
+		sudo mkdir -p /etc/git
 		sudo mv ./github-credentials.gpg /etc/git/
 		sudo mv ./github-token.gpg /etc/git/
 		sudo mv ./credential-helper /etc/git/
