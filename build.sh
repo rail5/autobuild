@@ -412,6 +412,12 @@ debpkgend="_amd64.deb"
 lchangesfile="$lversionfile$debchangesend"
 btchangesfile="$btversionfile$debchangesend"
 
+i386debchangesend="_i386.changes"
+i386debpkgend="_i386.deb"
+
+i386lchangesfile="$lversionfile$i386debchangesend"
+i386btchangesfile="$btversionfile$i386debchangesend"
+
 lpkgfile="$lversionfile$debpkgend"
 btpkgfile="$btversionfile$debpkgend"
 
@@ -420,7 +426,7 @@ btwininstallerfile="BookThief-$btversion-Installer.exe"
 while true; do
 	read -p "Do you want to push Liesel $lieselversion to deb.rail5.org? (y/n)" yn
 	case $yn in
-		[Yy]* ) echo "SET TO PUSH"; pushinganytodebrepo=1; break;;
+		[Yy]* ) echo "SET TO PUSH"; pushinglieseltodebrepo=1; pushinganytodebrepo=1; break;;
 		[Nn]* ) echo "NOT pushing"; break;;
 		* ) echo "Answer yes or no";;
 	esac
@@ -429,7 +435,7 @@ done
 while true; do
 	read -p "Do you want to push BookThief $btversion to the deb.rail5.org? (y/n)" yn
 	case $yn in
-		[Yy]* ) echo "SET TO PUSH"; pushinganytodebrepo=1; break;;
+		[Yy]* ) echo "SET TO PUSH"; pushingbttodebrepo=1; pushinganytodebrepo=1; break;;
 		[Nn]* ) echo "NOT pushing"; break;;
 		* ) echo "Answer yes or no";;
 	esac
@@ -438,14 +444,36 @@ done
 if [[ pushinganytodebrepo -eq 1 ]]; then
 	cd $initdir/$nowvar
 	git clone https://github.com/rail5/ppa.git
-	cd ppa/debian
+	cd ppa
+fi
+
+if [[ pushinglieseltodebrepo -eq 1 ]]; then
+	cd debian
+	reprepro -P optional include bullseye $initdir/$nowvar/release/$lchangesfile
 	
-	reprepro -P optional include bullseye $initdir/$nowvar/release/*.changes
+	if [[ buildfarmbuilds -eq ]]; then
+		reprepro -P optional include bullseye $initdir/$nowvar/release/$i386lchangesfile
+	fi
 	
 	cd $initdir/$nowvar/ppa
 	git add --all
-	git commit -m "Updated packages"
+	git commit -m "Updated Liesel version"
+fi
+
+if [[ pushingbttodebrepo -eq 1 ]]; then
+	cd debian
+	reprepro -P optional include bullseye $initdir/$nowvar/release/$btchangesfile
 	
+	if [[ buildfarmbuilds -eq ]]; then
+		reprepro -P optional include bullseye $initdir/$nowvar/release/$i386btchangesfile
+	fi
+	
+	cd $initdir/$nowvar/ppa
+	git add --all
+	git commit -m "Updated BookThief version"
+fi
+
+if [[ pushinganytodebrepo -eq 1 ]]; then
 	git push origin
 fi
 
