@@ -195,7 +195,8 @@ if [[ buildfarmbuilds -eq 1 ]]; then
 	cd $initdir
 	./build-farm.sh
 	debsign $initdir/build-farm/packages/*.changes
-	mv $initdir/build-farm/packages/* $initdir/$nowvar/release/
+	mv $initdir/build-farm/packages/*.deb $initdir/$nowvar/release/
+	rm -f $initdir/build-farm/packages/*
 fi
 
 buildingwin64=0
@@ -415,8 +416,8 @@ btchangesfile="$btversionfile$debchangesend"
 i386debchangesend="_i386.changes"
 i386debpkgend="_i386.deb"
 
-i386lchangesfile="$lversionfile$i386debchangesend"
-i386btchangesfile="$btversionfile$i386debchangesend"
+i386lpkgfile="$lversionfile$i386debpkgend"
+i386btpkgfile="$btversionfile$i386debpkgend"
 
 lpkgfile="$lversionfile$debpkgend"
 btpkgfile="$btversionfile$debpkgend"
@@ -452,7 +453,7 @@ if [[ pushinglieseltodebrepo -eq 1 ]]; then
 	reprepro -P optional include bullseye $initdir/$nowvar/release/$lchangesfile
 	
 	if [[ buildfarmbuilds -eq 1 ]]; then
-		reprepro -P optional include bullseye $initdir/$nowvar/release/$i386lchangesfile
+		reprepro includedeb bullseye $initdir/$nowvar/release/$i386lpkgfile
 	fi
 	
 	cd $initdir/$nowvar/ppa
@@ -465,7 +466,7 @@ if [[ pushingbttodebrepo -eq 1 ]]; then
 	reprepro -P optional include bullseye $initdir/$nowvar/release/$btchangesfile
 	
 	if [[ buildfarmbuilds -eq 1 ]]; then
-		reprepro -P optional include bullseye $initdir/$nowvar/release/$i386btchangesfile
+		reprepro includedeb bullseye $initdir/$nowvar/release/$i386btpkgfile
 	fi
 	
 	cd $initdir/$nowvar/ppa
