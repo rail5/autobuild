@@ -15,7 +15,11 @@ basepkgslist="build-essential gcc g++ make git wget tar curl"
 bookthiefdeps="fpc-3.2.0 lazarus lcl-2.0 lcl-utils-2.0 fp-units-misc-3.2.0"
 lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
 
-packagingdeps="devscripts wine wine64 php-cli reprepro"
+packagingdeps="devscripts make sed unzip xz-utils"
+
+extrapackagingdeps="wine wine64 php-cli reprepro"
+
+buildfarmdeps="sshpass libarchive-tools syslinux syslinux-utils cpio genisoimage coreutils qemu-system qemu-system-x86 qemu-utils util-linux"
 
 mxedeps="autoconf automake autopoint bash bison bzip2 flex g++ g++-multilib gettext git gperf intltool libc6-dev-i386 libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch perl python ruby sed unzip wget xz-utils python3-mako"
 
@@ -64,7 +68,7 @@ sudo $packagemanager $updatecommand
 echo "----"
 echo "----"
 echo "Base necessary packages are:"
-echo "$basepkgslist $bookthiefdeps $lieseldeps $packagingdeps"
+echo "$basepkgslist $bookthiefdeps $lieseldeps $packagingdeps $extrapackagingdeps"
 
 installingbasedeps=0
 while true; do
@@ -80,7 +84,7 @@ if [[ installingbasedeps -eq 1 ]]; then
 
 	echo "Installing build dependencies..."
 
-	sudo $packagemanager $installcommand $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
+	sudo $packagemanager $installcommand $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps $extrapackagingdeps
 
 	echo "----"
 	echo "----"
@@ -152,6 +156,43 @@ if [[ setupgithubhttps -eq 1 ]]; then
 		
 		echo "All set up!"
 	fi
+fi
+
+
+echo "--"
+echo "This script can also set up a virtual-machine Build Farm"
+echo "This can be used to build packages on other architectures or for other distributions"
+echo "This requires QEMU and a few more free (libre) utilities as well"
+echo "Currently the build farm contains the following VMs:"
+echo "  - Debian Stable i386"
+echo "Setting each VM up generally takes about 20-30 minutes"
+echo "However, ARM VMs can take much longer (2-3 hours each)"
+echo "--"
+
+buildingvms=0
+
+while true; do
+	read -p "Do you want to automatically prepare the Build Farm? (y/n) " yn
+	case $yn in
+		[Yy]* ) echo "Alright then"; buildingvms=1; break;;
+		[Nn]* ) echo "Moving on"; break;;
+		* ) echo "Answer yes or no";;
+	esac
+done
+
+if [[ buildingvms -eq 1 ]]; then
+	sudo $packagemanager $installcommand $buildfarmdeps
+	
+	cd $initdir/build-farm
+	
+	cd debian-stable-i386
+	
+	./set-install-packages.sh $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
+	
+	make download
+	make image
+	make boot-install
+	make clean
 fi
 
 echo "--"

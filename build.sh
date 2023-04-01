@@ -180,6 +180,24 @@ if [[ buildingdebbinary -eq 1 ]]; then
 	echo "----"
 fi
 
+buildfarmbuilds=0
+echo "---"
+while true; do
+	read -p "Do you want to build other-architecture packages on the QEMU build farm? (y/n) " yn
+	case $yn in
+		[Yy]* ) buildfarmbuilds=1; break;;
+		[Nn]* ) buildfarmbuilds=0; break;;
+		* ) echo "Answer yes or no";;
+	esac
+done
+
+if [[ buildfarmbuilds -eq 1 ]]; then
+	cd $initdir
+	./build-farm.sh
+	debsign $initdir/build-farm/packages/*.changes
+	mv $initdir/build-farm/packages/* $initdir/$nowvar/release/
+fi
+
 buildingwin64=0
 echo "---"
 while true; do
@@ -402,7 +420,7 @@ btwininstallerfile="BookThief-$btversion-Installer.exe"
 while true; do
 	read -p "Do you want to push Liesel $lieselversion to deb.rail5.org? (y/n)" yn
 	case $yn in
-		[Yy]* ) echo "SET TO PUSH"; pushinglieseltodebrepo=1; pushinganytodebrepo=1; break;;
+		[Yy]* ) echo "SET TO PUSH"; pushinganytodebrepo=1; break;;
 		[Nn]* ) echo "NOT pushing"; break;;
 		* ) echo "Answer yes or no";;
 	esac
@@ -411,7 +429,7 @@ done
 while true; do
 	read -p "Do you want to push BookThief $btversion to the deb.rail5.org? (y/n)" yn
 	case $yn in
-		[Yy]* ) echo "SET TO PUSH"; pushingbttodebrepo=1; pushinganytodebrepo=1; break;;
+		[Yy]* ) echo "SET TO PUSH"; pushinganytodebrepo=1; break;;
 		[Nn]* ) echo "NOT pushing"; break;;
 		* ) echo "Answer yes or no";;
 	esac
@@ -420,26 +438,14 @@ done
 if [[ pushinganytodebrepo -eq 1 ]]; then
 	cd $initdir/$nowvar
 	git clone https://github.com/rail5/ppa.git
-	cd ppa
-fi
-
-if [[ pushinglieseltodebrepo -eq 1 ]]; then
-	cd debian
-	reprepro -P optional include bullseye $initdir/$nowvar/release/$lchangesfile
+	cd ppa/debian
+	
+	reprepro -P optional include bullseye $initdir/$nowvar/release/*.changes
+	
 	cd $initdir/$nowvar/ppa
 	git add --all
-	git commit -m "Updated Liesel version"
-fi
-
-if [[ pushingbttodebrepo -eq 1 ]]; then
-	cd debian
-	reprepro -P optional include bullseye $initdir/$nowvar/release/$btchangesfile
-	cd $initdir/$nowvar/ppa
-	git add --all
-	git commit -m "Updated BookThief version"
-fi
-
-if [[ pushinganytodebrepo -eq 1 ]]; then
+	git commit -m "Updated packages"
+	
 	git push origin
 fi
 
