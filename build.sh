@@ -451,7 +451,7 @@ if [[ pushinglieseltodebrepo -eq 1 ]]; then
 	cd debian
 	reprepro -P optional include bullseye $initdir/$nowvar/release/$lchangesfile
 	
-	if [[ buildfarmbuilds -eq ]]; then
+	if [[ buildfarmbuilds -eq 1 ]]; then
 		reprepro -P optional include bullseye $initdir/$nowvar/release/$i386lchangesfile
 	fi
 	
@@ -464,7 +464,7 @@ if [[ pushingbttodebrepo -eq 1 ]]; then
 	cd debian
 	reprepro -P optional include bullseye $initdir/$nowvar/release/$btchangesfile
 	
-	if [[ buildfarmbuilds -eq ]]; then
+	if [[ buildfarmbuilds -eq 1 ]]; then
 		reprepro -P optional include bullseye $initdir/$nowvar/release/$i386btchangesfile
 	fi
 	
