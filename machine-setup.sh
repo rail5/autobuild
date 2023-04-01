@@ -150,6 +150,7 @@ if [[ setupgithubhttps -eq 1 ]]; then
 		sudo mv ./github-token.gpg /etc/git/
 		sudo mv ./credential-helper /etc/git/
 		sudo chmod +x /etc/git/credential-helper
+		sudo chmod +x /usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl
 		
 		git config --global credential.helper /etc/git/credential-helper
 		git config --global user.name $ghuser
