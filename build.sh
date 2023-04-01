@@ -475,6 +475,9 @@ if [[ pushingbttodebrepo -eq 1 ]]; then
 fi
 
 if [[ pushinganytodebrepo -eq 1 ]]; then
+	./update-indexes.sh
+	git add --all
+	git commit -m "Updated index pages"
 	git push origin
 fi
 
