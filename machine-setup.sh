@@ -166,8 +166,9 @@ echo "This can be used to build packages on other architectures or for other dis
 echo "This requires QEMU and a few more free (libre) utilities as well"
 echo "Currently the build farm contains the following VMs:"
 echo "  - Debian Stable i386"
-echo "Setting each VM up generally takes about 20-30 minutes"
-echo "However, ARM VMs can take much longer (2-3 hours each)"
+echo "  - Debian Stable arm64"
+echo "Setting the i386 VM up generally takes about 20-30 minutes"
+echo "However, ARM VMs can take much longer (~2 hours each)"
 echo "--"
 
 buildingvms=0
@@ -186,6 +187,8 @@ if [[ buildingvms -eq 1 ]]; then
 	
 	cd $initdir/build-farm
 	
+	echo "  Creating i386 VM..."
+	
 	cd debian-stable-i386
 	
 	./set-install-packages.sh $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
@@ -194,6 +197,20 @@ if [[ buildingvms -eq 1 ]]; then
 	make image
 	make boot-install
 	make clean
+	
+	echo "  Created i386 VM."
+	echo "  Creating arm64 VM..."
+	
+	cd ../debian-stable-arm64
+	
+	./set-install-packages.sh $basepkgslist $bookthiefdeps $lieseldeps $packagingdeps
+	
+	make download
+	make image
+	make boot-install
+	make clean
+	
+	echo "  Created arm64 VM."
 fi
 
 echo "--"

@@ -1,0 +1,52 @@
+# Configuration
+
+# Source ISO image file
+SOURCE = debian-stable-arm64-netinst.iso
+
+# Target ISO image file
+TARGET = debian-stable-arm64-netinst-hl.iso
+
+# Image label (must be ≤ 32 chars)
+LABEL = Debian-stable-arm64-headless
+
+# Machine architecture
+ARCH = arm64
+
+# Where to find the usb drive
+# CAUTION: if set incorrectly you may ruin your system!
+USBDEV = /dev/null
+#USBDEV = /dev/sda
+
+############################################################
+# You can probably leave alone everything below this line 
+############################################################
+
+# Console configuration
+#
+# Format: DEV[,PARMS]
+# 
+# DEV: typically ttyS0 or ttyUSB0
+#
+# SERIALPARMS format (according to LINUX kernel documentation):
+# depend on the driver. For the serial port this
+# defines the baudrate/parity/bits/flow control of
+# the port, in the format BBBBPNF, where BBBB is the
+# speed, P is parity (n/o/e), N is number of bits,
+# and F is flow control ('r' for RTS). Default is
+# 9600n8. The maximum baudrate is 115200.
+# For serial console:
+CONSOLE = ttyS0,115200n8
+# For local console (normal non-headless installation):
+#CONSOLE = tty0
+
+# Folder for image unpacking
+TMP = tmp
+
+ISOLINUX_CFG_TEMPLATE = ../templates/isolinux.cfg.template
+GRUB_CFG_TEMPLATE = ../templates/grub.cfg.template
+
+# set architecture-dependent variables
+ARCHFOLDER = a64
+QEMU = qemu-system-aarch64
+
+# vim: set syntax=make :
