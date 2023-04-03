@@ -6,15 +6,14 @@ The original script seemed to aim for an interactive installation on genuine har
 
 This script has been modified to:
 
-	- Have a completely non-interactive, fully-automatic installation
-
-	- Focus on building & running in QEMU, rather than on actual hardware
+  - Have a completely non-interactive, fully-automatic installation
+  - Focus on building & running in QEMU, rather than on actual hardware
 
 With these changes, it's usable as the basis for a "build farm" to build packages for multiple distributions/architectures
 
 ## What's included
 
-So far, only a build script for a VM of Debian Stable i386. Hopefully soon arm64 and armhf will be added as well.
+So far, a build script for a VM of Debian Stable i386, and one for Debian Stable arm64
 
 ## Usage
 
