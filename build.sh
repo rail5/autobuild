@@ -47,7 +47,12 @@ pkgswecanbuild=("polonius" "liesel" "bookthief" "ocrshot" "randomtext")
 
 # Key -> Value map of package name -> Git URL
 declare -A urls
-urls=(["polonius"]="https://github.com/rail5/polonius.git" ["liesel"]="https://github.com/rail5/liesel.git" ["bookthief"]="https://github.com/rail5/bookthief.git" ["ocrshot"]="https://github.com/rail5/ocrshot.git" ["randomtext"]="https://github.com/rail5/randomtext.git")
+urls=()
+urls+=(["polonius"]="https://github.com/rail5/polonius.git")
+urls+=(["liesel"]="https://github.com/rail5/liesel.git")
+urls+=(["bookthief"]="https://github.com/rail5/bookthief.git")
+urls+=(["ocrshot"]="https://github.com/rail5/ocrshot.git")
+urls+=(["randomtext"]="https://github.com/rail5/randomtext.git")
 
 
 # GitHub info: Username and Access Token
