@@ -141,7 +141,8 @@ boot-nodisplay:
 		-net user,hostfwd=tcp::22222-:22 \
 		-net nic \
 		-drive if=virtio,file=image.qcow,format=qcow2,id=hd \
-		-serial telnet:localhost:33333,server,nowait
+		-serial telnet:localhost:33333,server,nowait \
+		-nographic
 
 image.qcow:
 	# Create a virtual disk for QEMU.

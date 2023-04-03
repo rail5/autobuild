@@ -1,17 +1,23 @@
 # autobuild
 
-Scripts to auto-build (& auto cross-compile) BookThief + Liesel
+Scripts to automatically build & distribute Debian packages
 
-## Setting up
+This script is by default configured to build *my* packages, but by changing a view variables at the top of **build.sh**, it could be used for any Debian packages hosted in a Git repo
 
-This script assumes you're running Debian. It could probably work on other systems with heavy modification
+This script will:
 
-```
-chmod +x machine-setup.sh
-./machine-setup.sh
-```
+  - Download sources from a git repo
+  - Compile them on an x86_64/amd64 host machine
+  - Launch a virtual QEMU build-farm & build equivalents on Debian Stable i386 & arm64
+  - Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
+  - Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
 
-Sets up the build environment (compilers, cross-compilers, dependencies, et al)
+This script is by default configured to build my own packages, including:
+  - Liesel
+  - BookThief
+  - Polonius
+  - OCRShot
+  - RandomText
 
 ## Running
 
@@ -19,9 +25,13 @@ Sets up the build environment (compilers, cross-compilers, dependencies, et al)
 chmod +x build.sh
 ./build.sh
 ```
-Auto downloads Liesel & BookThief source code from GitHub, and (using that source code)
+Auto downloads package source code from GitHub, and builds (& distributes) using that source code
+ 
+## Setting up
 
- - Compiles DEB packages
- - Cross-compiles for Win64
- - Creates a Win64 Installer
- - Builds DEB source-only packages
+```
+chmod +x machine-setup.sh
+./machine-setup.sh
+```
+
+Sets up the build environment (compilers, cross-compilers, dependencies, et al)
