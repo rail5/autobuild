@@ -50,6 +50,9 @@ if (isset($options["c"])) {
 	
 	// Replace all newlines with spaces
 	$changelog = str_replace("\n", " ", $changelog);
+	
+	// Escape all quotes
+	$changelog = str_replace('"', '\"', $changelog);
 
 	echo $changelog;
 } else if (isset($options["v"])) {
