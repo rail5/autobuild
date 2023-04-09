@@ -192,7 +192,7 @@ function start_build_vm() {
 		sleep 60
 	fi
 	
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 2>/dev/null << EOF
 
 sudo apt update -y
 sudo apt upgrade -y
@@ -203,7 +203,7 @@ EOF
 
 function shutdown_build_vm() {
 	# Connect to it on SSH and send the shutdown command
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 2>/dev/null << EOF
 sudo shutdown now
 
 EOF
@@ -218,7 +218,7 @@ function build_other_arch() {
 	
 	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
 	# Here we connect and build the packages
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 2>/dev/null << EOF
 mkdir -p /home/debian/build/src
 mkdir -p /home/debian/build/pkg
 
