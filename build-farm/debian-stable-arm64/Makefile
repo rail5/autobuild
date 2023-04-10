@@ -128,6 +128,21 @@ boot-run:
 		-drive if=virtio,file=image.qcow,format=qcow2,id=hd \
 		-serial telnet:localhost:33333,server,nowait
 
+boot-notelnet:
+	${QEMU} -m 2048 \
+		-machine virt \
+		-cpu cortex-a53 \
+		-smp 2 \
+		-drive if=pflash,format=raw,file=efi.img,readonly=on \
+		-drive if=pflash,format=raw,file=varstore.img \
+		-object rng-random,filename=/dev/urandom,id=rng0 \
+		-device virtio-rng-pci,rng=rng0 \
+		-accel tcg \
+		-net user,hostfwd=tcp::22222-:22 \
+		-net nic \
+		-drive if=virtio,file=image.qcow,format=qcow2,id=hd \
+		-serial telnet:localhost:33333,server,nowait
+
 boot-nodisplay:
 	${QEMU} -m 2048 \
 		-machine virt \

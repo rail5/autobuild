@@ -110,6 +110,14 @@ boot-run:
 		-hda image.qcow \
 		-serial telnet:localhost:33333,server,nowait
 
+boot-notelnet:
+	${QEMU} -m 2048 \
+		-accel kvm \
+		-net user,hostfwd=tcp::22222-:22 \
+		-net nic \
+		-hda image.qcow \
+		-serial telnet:localhost:33333,server,nowait
+
 boot-nodisplay:
 	${QEMU} -m 2048 \
 		-accel kvm \

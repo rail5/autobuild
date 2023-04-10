@@ -49,7 +49,7 @@ if (isset($options["c"])) {
 	$changelog = str_replace("\n  ", "\n", $changelog);
 	
 	// Replace all newlines with spaces
-	$changelog = str_replace("\n", " ", $changelog);
+	$changelog = str_replace("\n", "\\n", $changelog);
 	
 	// Escape all quotes
 	$changelog = str_replace('"', '\"', $changelog);

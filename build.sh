@@ -178,7 +178,7 @@ function start_build_vm() {
 		
 		cd "$initdir/build-farm/$ARCHDIR"
 		
-		make boot-nodisplay &
+		make boot-notelnet &
 		# Give the VM some time to come online
 		sleep 15
 		
@@ -187,15 +187,14 @@ function start_build_vm() {
 	
 		cd "$initdir/build-farm/$ARCHDIR"
 		
-		make boot-nodisplay &
+		make boot-notelnet &
 		# Give the VM some time to come online (ARM emulation takes a lot longer)
 		sleep 60
 	fi
 	
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 2>/dev/null << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
-sudo apt update -y
-sudo apt upgrade -y
+(sudo apt update -y >/dev/null 2>&1 && sudo apt upgrade -y >/dev/null 2>&1) & disown
 
 exit
 EOF
@@ -203,8 +202,8 @@ EOF
 
 function shutdown_build_vm() {
 	# Connect to it on SSH and send the shutdown command
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 2>/dev/null << EOF
-sudo shutdown now
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
+sudo shutdown now >/dev/null 2>&1
 
 EOF
 }
@@ -218,7 +217,7 @@ function build_other_arch() {
 	
 	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
 	# Here we connect and build the packages
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 2>/dev/null << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 mkdir -p /home/debian/build/src
 mkdir -p /home/debian/build/pkg
 
