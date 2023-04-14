@@ -42,7 +42,7 @@ ccwinpkgs=()
 thisarchitecture="amd64"
 
 # Array of packages this script can build
-pkgswecanbuild=("polonius" "liesel" "bookthief" "ocrshot" "randomtext")
+pkgswecanbuild=("polonius" "liesel" "bookthief" "ocrshot" "randomtext" "evolution-notify")
 
 
 # Key -> Value map of package name -> Git URL
@@ -53,6 +53,7 @@ urls+=(["liesel"]="https://github.com/rail5/liesel.git")
 urls+=(["bookthief"]="https://github.com/rail5/bookthief.git")
 urls+=(["ocrshot"]="https://github.com/rail5/ocrshot.git")
 urls+=(["randomtext"]="https://github.com/rail5/randomtext.git")
+urls+=(["evolution-notify"]="https://github.com/rail5/evolution-notify.git")
 
 
 # GitHub info: Username and Access Token
