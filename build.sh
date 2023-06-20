@@ -54,6 +54,7 @@ urls+=(["bookthief"]="https://github.com/rail5/bookthief.git")
 urls+=(["ocrshot"]="https://github.com/rail5/ocrshot.git")
 urls+=(["randomtext"]="https://github.com/rail5/randomtext.git")
 urls+=(["evolution-notify"]="https://github.com/rail5/evolution-notify.git")
+urls+=(["stepgrampa"]="https://github.com/rail5/stepgrampa.git")
 
 
 # GitHub info: Username and Access Token
