@@ -42,7 +42,7 @@ ccwinpkgs=()
 thisarchitecture="amd64"
 
 # Array of packages this script can build
-pkgswecanbuild=("polonius" "liesel" "bookthief" "ocrshot" "randomtext" "evolution-notify")
+pkgswecanbuild=("polonius" "liesel" "bookthief" "ocrshot" "randomtext" "evolution-notify" "stepgrampa")
 
 
 # Key -> Value map of package name -> Git URL
