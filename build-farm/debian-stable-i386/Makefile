@@ -92,7 +92,7 @@ boot-install: image.qcow
 	@echo "It may take a few minutes for the installer to get to that point.\n"
 	@echo "Alternatively connect to the serial console:\n"
 	@echo "    telnet localhost 33333\n"
-	@x-terminal-emulator -e ../view-progress.sh
+	@x-terminal-emulator -e ../view-progress.sh &
 	${QEMU} -m 2048 \
 		-accel kvm \
 		-net user,hostfwd=tcp::22222-:22 \
@@ -102,7 +102,7 @@ boot-install: image.qcow
 		-cdrom ${TARGET}
 
 boot-run:
-	@x-terminal-emulator -e ../view-progress.sh
+	@x-terminal-emulator -e ../view-progress.sh &
 	${QEMU} -m 2048 \
 		-accel kvm \
 		-net user,hostfwd=tcp::22222-:22 \

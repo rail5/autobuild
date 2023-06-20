@@ -96,7 +96,7 @@ boot-install: image.qcow
 	@echo "It may take a few minutes for the installer to get to that point.\n"
 	@echo "Alternatively connect to the serial console:\n"
 	@echo "    telnet localhost 33333\n"
-	@x-terminal-emulator -e ../view-progress.sh
+	@x-terminal-emulator -e ../view-progress.sh &
 	${QEMU} -m 2048 \
 		-machine virt \
 		-cpu cortex-a53 \
@@ -113,7 +113,7 @@ boot-install: image.qcow
 		-serial telnet:localhost:33333,server,nowait
 
 boot-run:
-	@x-terminal-emulator -e ../view-progress.sh
+	@x-terminal-emulator -e ../view-progress.sh &
 	${QEMU} -m 2048 \
 		-machine virt \
 		-cpu cortex-a53 \
