@@ -12,14 +12,7 @@ bit32winepkg="wine32"
 # Build Dependencies
 basepkgslist="build-essential gcc g++ make git wget tar curl"
 
-## I don't like this hacky fix for the different FPC versions on Debian 12/11
-## Note to self: fix this fix ASAP
-hostdebianversion=$(cat /etc/debian_version | cut -c -2)
-if [[ $hostdebianversion -ge 12 ]]; then
-	bookthiefdeps="fpc-3.2.2 lazarus lcl-2.2 lcl-utils-2.2 fp-units-misc-3.2.2"
-else
-	bookthiefdeps="fpc-3.2.0 lazarus lcl-2.0 lcl-utils-2.0 fp-units-misc-3.2.0"
-fi
+bookthiefdeps="fpc-3.2.2 lazarus lcl-2.2 lcl-utils-2.2 fp-units-misc-3.2.2"
 
 lieseldeps="graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
 
@@ -278,6 +271,8 @@ if [[ installingmxe -eq 1 ]]; then
 	echo "----"
 	echo "Adding /opt/mxe/bin and /opt/mxe/usr/bin/ to \$PATH via /etc/profile"
 	echo "----"
+	### NOTE: 'sudo' does not redirect with >
+	### But, also, this never worked anyway. Why did you keep it?
 	sudo echo "" >> /etc/profile
 	sudo echo "export PATH=/opt/mxe/usr/bin:/opt/mxe/bin:\$PATH" >> /etc/profile
 
