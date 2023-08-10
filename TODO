@@ -1,6 +1,7 @@
 TODO:
 
 - Modularize as much as possible
+	Separate tasks into separate functions, place functions in INCLUDE file(s)
 
 - Customizable build farm
 
