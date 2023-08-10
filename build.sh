@@ -16,7 +16,8 @@ debiandist="bullseye"
 #  - release
 #    All release binaries are moved to this directory after being built
 
-initdir=$(pwd)
+scriptfile=$(readlink -f "$0")
+initdir=$(dirname "$scriptfile")
 pkgs_build_base_directory=builds/$(date +%Y-%h-%d-%H%M%S)
 
 # Variables for build-farm Virtual Machines

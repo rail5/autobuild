@@ -25,7 +25,8 @@ buildfarmdeps="sshpass libarchive-tools syslinux syslinux-utils cpio genisoimage
 mxedeps="autoconf automake autopoint bash bison bzip2 flex g++ g++-multilib gettext git gperf intltool libc6-dev-i386 libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch perl python-is-python3 ruby sed unzip wget xz-utils python3-mako"
 
 # For restoring the CWD
-initdir=`pwd`
+scriptfile=$(readlink -f "$0")
+initdir=$(dirname "$scriptfile")
 
 ###########################
 ## If you wanted to
