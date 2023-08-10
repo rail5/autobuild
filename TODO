@@ -23,3 +23,5 @@ TODO:
 - (IN PROGRESS) Remove Windows cross-compilation & MXE setup. This is far too niche to be worth maintaining.
 
 - Add function to update/upgrade the software in the build farm VMs
+
+- Add non-interactive mode
