@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Configure Inno Setup location here (ISCC variable)
-# For building a BookThief Windows Installer package
-ISCC="$HOME/.wine/drive_c/Program Files (x86)/Inno Setup 6/ISCC.exe"
-
 # Ubuntu distribution & Debian distribution names
 ubuntudist="focal"
 debiandist="bullseye"
@@ -37,7 +33,6 @@ basereleasedir=""
 buildbasepkgs=()
 buildi386pkgs=()
 buildarm64pkgs=()
-ccwinpkgs=()
 
 thisarchitecture="amd64"
 
@@ -80,11 +75,11 @@ function setup_build_environment() {
 	
 
 function build_package_universal() {
-	if [[ $# -lt 6 ]]; then
+	if [[ $# -lt 5 ]]; then
 		echo "bag args to build_package_universal" && exit 1
 	fi
 	
-	local PKGNAME="$1" GITURL="$2" BASEBUILD="$3" I386BUILD="$4" ARM64BUILD="$5" WINBUILD="$6" CLONESOURCES=0
+	local PKGNAME="$1" GITURL="$2" BASEBUILD="$3" I386BUILD="$4" ARM64BUILD="$5" CLONESOURCES=0
 	
 	# Variables:
 	## PKGNAME, GITURL: Self-explanatory
@@ -94,10 +89,6 @@ function build_package_universal() {
 	### 1 or 0: are we connecting to the i386 build-farm VM and building there?
 	## ARM64BUILD:
 	### 1 or 0: are we connecting to the arm64 build-farm VM and building there?
-	## WINBUILD:
-	### 1 or 0: are we cloning the sources and running 'make windows' in the source tree?
-	
-	# Winbuild should only be run if basebuild has already been run & sources already cloned
 	
 	# Start by creating directories:
 	##	srcdir: Source-only directory, also Git root
@@ -137,14 +128,6 @@ function build_package_universal() {
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$GITURL" "arm64"
 		mv "$initdir/build-farm/packages/debs/"*.deb "$releasedir/"
-	fi
-	
-	if [[ WINBUILD -eq 1 ]]; then
-		# Cross-compile to Windows using 'make' target 'windows'
-		echo "MOVING TO $builddir"
-		cd "$builddir"
-		make windows
-		mv "$builddir/"*.exe "$releasedir/"
 	fi
 	
 	# Move packages to 'release' directory
@@ -265,18 +248,14 @@ function build_all_pkgs_in_pkgarrays() {
 	fi
 
 	for pkgname in "${buildbasepkgs[@]}"; do
-		build_package_universal "$pkgname" "${urls[$pkgname]}" 1 0 0 0
-	done
-	
-	for pkgname in "${ccwinpkgs[@]}"; do
-		build_package_universal "$pkgname" "${urls[$pkgname]}" 0 0 0 1
+		build_package_universal "$pkgname" "${urls[$pkgname]}" 1 0 0
 	done
 	
 	if [[ buildingsomei386 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "i386"
 		for pkgname in "${buildi386pkgs[@]}"; do
-			build_package_universal "$pkgname" "${urls[$pkgname]}" 0 1 0 0
+			build_package_universal "$pkgname" "${urls[$pkgname]}" 0 1 0
 		done
 		shutdown_build_vm
 		
@@ -288,7 +267,7 @@ function build_all_pkgs_in_pkgarrays() {
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "arm64"
 		for pkgname in "${buildarm64pkgs[@]}"; do
-			build_package_universal "$pkgname" "${urls[$pkgname]}" 0 0 1 0
+			build_package_universal "$pkgname" "${urls[$pkgname]}" 0 0 1
 		done
 		shutdown_build_vm
 	fi
@@ -360,23 +339,7 @@ function push_github_release_page() {
 	## Get the list of package files
 	for file in $(ls); do
 		list_of_pkg_files+=("$(echo $file | grep -P -e $PKGNAME.*.deb)")
-		if [[ "$PKGNAME" != "bookthief" ]]; then
-			# Don't add the plain old .exe file in the case of bookthief, we'll add the Installer instead
-			list_of_pkg_files+=("$(echo $file | grep -P -e $PKGNAME.*.exe)")
-		fi
 	done
-	
-	if [[ "$PKGNAME" == "bookthief" ]]; then
-		# Add the Windows Installer package if this is bookthief
-		list_of_pkg_files+=("$(ls "$basereleasedir/bookthief/" | grep -P -o -e BookThief.*Installer.exe)")
-		# Also add the Liesel .deb packages
-		for extrafile in $(ls "$basereleasedir/liesel/"); do
-			if [[ "$extrafile" != "" ]]; then
-				list_of_pkg_files+=("$(echo $extrafile | grep -P -e liesel.*.deb)")
-				cp "$basereleasedir/liesel/$extrafile" "$basereleasedir/bookthief/"
-			fi
-		done
-	fi
 	
 	## Upload the attachments via POST request to the GitHub API
 	for file in "${list_of_pkg_files[@]}"; do
@@ -490,15 +453,6 @@ function ask_user_build_pkg() {
 			* ) echo "Answer yes or no";;
 		esac
 	done
-	
-	while true; do
-		read -p "  $PKGNAME: Cross-compile to Windows as well? (y/n) " yn
-		case $yn in
-			[Yy]* ) ccwinpkgs+=("$PKGNAME"); break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
-		esac
-	done
 }
 
 function ask_user_publish_to_deb_repo() {
@@ -553,46 +507,6 @@ function ask_user_make_github_release_page() {
 	fi
 }
 
-function make_bookthief_windows_installer() {
-	if [[ $# != 1 ]]; then
-		echo "bag args to make_bookthief_windows_installer" && exit 7
-	fi
-	
-	local versionnumber="$1"
-	
-	cd "$initdir/$pkgs_build_base_directory"
-	
-	wininstallerdirectory="$initdir/$pkgs_build_base_directory/windowsinstaller"
-	
-	mkdir -p "$wininstallerdirectory"
-	cd "$wininstallerdirectory"
-	
-	mkdir -p source/bookthief
-	mkdir -p source/liesel
-	mkdir pkg
-	
-	cp "$basereleasedir/bookthief/bookthief.exe" pkg/
-	cp "$basereleasedir/liesel/liesel.exe" pkg/
-	
-	cp -r "$initdir/$pkgs_build_base_directory/srconly/bookthief/"* source/bookthief/
-	cp -r "$initdir/$pkgs_build_base_directory/srconly/liesel/"* source/liesel/
-	cp "$initdir/$pkgs_build_base_directory/srconly/bookthief/LICENSE" pkg/LICENSE.txt
-	
-	php "$initdir/autobuild.php" -b -v "$versionnumber" -p "$wininstallerdirectory" > "$wininstallerdirectory/bt-$versionnumber.iss"
-	
-	wine "$ISCC" ./bt-$versionnumber.iss
-	
-	mv "./pkg/BookThief-$versionnumber-Installer.exe" "$basereleasedir/bookthief/"
-}
-
-function maybe_build_bookthief_windows_installer() {
-	if ([[ "${ccwinpkgs[*]}" =~ "bookthief" ]] && [[ "${ccwinpkgs[*]}" =~ "liesel" ]]); then
-		local btversion=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/bookthief/debian/changelog" --show-field version | sed -z 's/\n//g')
-		
-		make_bookthief_windows_installer "$btversion"
-	fi
-}
-
 # And now the program:
 
 setup_build_environment
@@ -603,8 +517,6 @@ done
 
 build_all_pkgs_in_pkgarrays
 clean_up
-
-maybe_build_bookthief_windows_installer
 
 ask_user_publish_to_deb_repo
 ask_user_make_github_release_page
