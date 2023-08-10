@@ -1,3 +1,14 @@
+## Universalis branch
+
+This is a **development** branch. The idea is to expand autobuild to make it more universal & usable by all, not only for my packages.
+
+Planned ideas:
+
+  - One single config file *(Users should not have to mess with any of the shell scripting in order to configure this to build and distribute their own packages)*
+  - More flexible build-farm virtual machines *(Users should be able to build custom build-farm VMs, in any combination they want, and to build each package on one, some, or all of them as they choose)*
+  - Non-interactive mode *(It should be possible to run the script with some set options so that it runs without waiting for user input throughout the process)*
+  - POSIX-compliant shell *(Any and all BASH-isms should be removed so that this will run on as many different shells as possible)*
+
 # autobuild
 
 Scripts to automatically build & distribute Debian packages
