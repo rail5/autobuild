@@ -6,7 +6,7 @@ TODO:
 
 - (DONE) Rather than creating a new directory named {current-timestamp} in the base directory for builds, this should all happen in a "builds" subdirectory
 
-- There should also be a "clean-up" function
+- (DONE) There should also be a "clean-up" function
 
 - POSIX-compliant shell
 
