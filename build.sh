@@ -352,7 +352,7 @@ function push_github_release_page() {
 				\"generate_release_notes\": false}" > release-info
 	
 	## Get GitHub Release ID
-	RELEASEID=$(php "$initdir/get-release-id.php" -i "$basereleasedir/$PKGNAME/release-info")
+	RELEASEID=$(cat "$basereleasedir/$PKGNAME/release-info" | jq -r '.id')
 	
 	## Declare array which will be filled with filenames of attachments (.debs, .exes)
 	local list_of_pkg_files=()
