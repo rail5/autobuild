@@ -9,6 +9,10 @@ Planned ideas:
   - Non-interactive mode *(It should be possible to run the script with some set options so that it runs without waiting for user input throughout the process)*
   - POSIX-compliant shell *(Any and all BASH-isms should be removed so that this will run on as many different shells as possible)*
 
+Progress:
+
+ ![1%](https://progress-bar.dev/1)
+
 # autobuild
 
 Scripts to automatically build & distribute Debian packages

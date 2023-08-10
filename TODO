@@ -1,0 +1,13 @@
+TODO:
+
+- Modularize as much as possible
+
+- Customizable build farm
+
+- Rather than creating a new directory named {current-timestamp} in the base directory for builds, this should all happen in a "builds" subdirectory
+
+- There should also be a "clean-up" function
+
+- POSIX-compliant shell
+
+- One single configuration file
