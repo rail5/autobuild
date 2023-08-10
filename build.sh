@@ -315,12 +315,21 @@ function push_github_release_page() {
 	
 	# Get package info: Latest changelog entry + latest version number
 	
-	## Get changelog from package source using get-pkg-info.php -c
-	CHANGELOG=$(php "$initdir/get-pkg-info.php" -i "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME" -c)
-	
-	## Get version number from package source using get-pkg-info.php -v
-	VERSION=$(php "$initdir/get-pkg-info.php" -i "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME" -v)
-	
+	## Get changelog from package source using dpkg-parsechangelog (dpkg-dev package)
+	### Pipe into sed to:
+	### (1) Remove newline chars
+	### (2) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\n//g' | sed -n 's/.*\* //p')
+
+	### Finally, check if "double-spaces" exist (The double-spaces come after we remove the original newline chars, if the original changelog message spanned multiple lines). If so:
+	### (3) Replace double-spaces ('  ') with '\n' (literal)
+	if (echo "$CHANGELOG" | grep "  " >/dev/null); then
+		CHANGELOG=$(echo -n "$CHANGELOG" | sed -n 's/  /\\n/p')
+	fi
+
+	## Get version number from package source using dpkg-parsechangelog
+	### Pipe into sed to remove the ending newline char
+	VERSION=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
 	
 	# Create GitHub Release
 	
@@ -578,7 +587,7 @@ function make_bookthief_windows_installer() {
 
 function maybe_build_bookthief_windows_installer() {
 	if ([[ "${ccwinpkgs[*]}" =~ "bookthief" ]] && [[ "${ccwinpkgs[*]}" =~ "liesel" ]]); then
-		local btversion=$(php "$initdir/get-pkg-info.php" -i "$initdir/$pkgs_build_base_directory/srconly/bookthief" -v)
+		local btversion=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/bookthief/debian/changelog" --show-field version | sed -z 's/\n//g')
 		
 		make_bookthief_windows_installer "$btversion"
 	fi
