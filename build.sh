@@ -21,7 +21,7 @@ debiandist="bullseye"
 #    All release binaries are moved to this directory after being built
 
 initdir=$(pwd)
-nowvar=$(date +%Y-%h-%d-%H%M%S)
+pkgs_build_base_directory=builds/$(date +%Y-%h-%d-%H%M%S)
 
 # Variables for build-farm Virtual Machines
 SSHPASSWORD="debianpassword"
@@ -65,17 +65,17 @@ ACCESS_TOKEN=$(gpg -d /etc/git/github-token.gpg 2>/dev/null)
 # Location of the Debian Repo we may push to
 # This script can push to a Debian Repository hosted on GitHub pages (or similar)
 gitdebianrepo="https://github.com/rail5/ppa.git"
-repodirectory="$initdir/$nowvar/repo/debian"
+repodirectory="$initdir/$pkgs_build_base_directory/repo/debian"
 
 
 function setup_build_environment() {
-	mkdir -p "$initdir/$nowvar"
+	mkdir -p "$initdir/$pkgs_build_base_directory"
 
-	mkdir "$initdir/$nowvar/srconly"
-	mkdir "$initdir/$nowvar/deb"
-	mkdir "$initdir/$nowvar/release"
+	mkdir "$initdir/$pkgs_build_base_directory/srconly"
+	mkdir "$initdir/$pkgs_build_base_directory/deb"
+	mkdir "$initdir/$pkgs_build_base_directory/release"
 
-	basereleasedir="$initdir/$nowvar/release/"
+	basereleasedir="$initdir/$pkgs_build_base_directory/release/"
 }
 	
 
@@ -103,8 +103,8 @@ function build_package_universal() {
 	##	srcdir: Source-only directory, also Git root
 	##	builddir: Directory where we build the .deb package
 	##	releasedir: Directory where we move the .debs after they've been built
-	local srcdir="$initdir/$nowvar/srconly/$PKGNAME"
-	local builddir="$initdir/$nowvar/deb/$PKGNAME"
+	local srcdir="$initdir/$pkgs_build_base_directory/srconly/$PKGNAME"
+	local builddir="$initdir/$pkgs_build_base_directory/deb/$PKGNAME"
 	local releasedir="$basereleasedir/$PKGNAME"
 	
 	mkdir -p "$builddir"
@@ -112,7 +112,7 @@ function build_package_universal() {
 	
 	if [[ BASEBUILD -eq 1 ]]; then
 		# Pull the source code from GITURL into directory named PKGNAME
-		cd "$initdir/$nowvar/srconly"
+		cd "$initdir/$pkgs_build_base_directory/srconly"
 		git clone "$GITURL" "$PKGNAME"
 		
 		cp -rv "$srcdir/"* "$builddir/"
@@ -148,17 +148,17 @@ function build_package_universal() {
 	fi
 	
 	# Move packages to 'release' directory
-	mv "$initdir/$nowvar/deb/"*.deb "$releasedir/"
-	mv "$initdir/$nowvar/deb/"*.tar.gz "$releasedir/"
-	mv "$initdir/$nowvar/deb/"*.dsc "$releasedir/"
-	mv "$initdir/$nowvar/deb/"*.build "$releasedir/"
-	mv "$initdir/$nowvar/deb/"*.buildinfo "$releasedir/"
-	mv "$initdir/$nowvar/deb/"*.changes "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.deb "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.build "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.changes "$releasedir/"
 }
 
 function clean_up() {
 	# Keep only the 'release' and 'srconly' directories
-	rm -rf "$initdir/$nowvar/deb"
+	rm -rf "$initdir/$pkgs_build_base_directory/deb"
 }
 
 function start_build_vm() {
@@ -316,10 +316,10 @@ function push_github_release_page() {
 	# Get package info: Latest changelog entry + latest version number
 	
 	## Get changelog from package source using get-pkg-info.php -c
-	CHANGELOG=$(php "$initdir/get-pkg-info.php" -i "$initdir/$nowvar/srconly/$PKGNAME" -c)
+	CHANGELOG=$(php "$initdir/get-pkg-info.php" -i "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME" -c)
 	
 	## Get version number from package source using get-pkg-info.php -v
-	VERSION=$(php "$initdir/get-pkg-info.php" -i "$initdir/$nowvar/srconly/$PKGNAME" -v)
+	VERSION=$(php "$initdir/get-pkg-info.php" -i "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME" -v)
 	
 	
 	# Create GitHub Release
@@ -387,14 +387,14 @@ function push_github_release_page() {
 }
 
 function prepare_ghpages_debian_repo() {
-	cd "$initdir/$nowvar"
+	cd "$initdir/$pkgs_build_base_directory"
 	
 	# Clone the git repo into a directory called "repo"
 	git clone "$gitdebianrepo" "repo"
 }
 
 function close_ghpages_debian_repo() {
-	cd "$initdir/$nowvar/repo"
+	cd "$initdir/$pkgs_build_base_directory/repo"
 	
 	# Push the changes we've made before calling this function
 	git push origin
@@ -403,7 +403,7 @@ function close_ghpages_debian_repo() {
 	cd $initdir
 	
 	# Clean up
-	rm -rf "$initdir/$nowvar/repo"
+	rm -rf "$initdir/$pkgs_build_base_directory/repo"
 }
 
 function push_to_ghpages_debian_repo() {
@@ -417,7 +417,7 @@ function push_to_ghpages_debian_repo() {
 	
 	local PKGNAME="$1" CHANGESFILE="" list_of_pkg_files=()
 	
-	cd "$initdir/$nowvar/repo"
+	cd "$initdir/$pkgs_build_base_directory/repo"
 	cd debian
 	
 	
@@ -441,7 +441,7 @@ function push_to_ghpages_debian_repo() {
 	done
 	
 	# Update indexes and commit changes
-	cd "$initdir/$nowvar/repo"
+	cd "$initdir/$pkgs_build_base_directory/repo"
 	./update-indexes.sh
 	git add --all
 	git commit -m "Updated $PKGNAME"
@@ -551,9 +551,9 @@ function make_bookthief_windows_installer() {
 	
 	local versionnumber="$1"
 	
-	cd "$initdir/$nowvar"
+	cd "$initdir/$pkgs_build_base_directory"
 	
-	wininstallerdirectory="$initdir/$nowvar/windowsinstaller"
+	wininstallerdirectory="$initdir/$pkgs_build_base_directory/windowsinstaller"
 	
 	mkdir -p "$wininstallerdirectory"
 	cd "$wininstallerdirectory"
@@ -565,9 +565,9 @@ function make_bookthief_windows_installer() {
 	cp "$basereleasedir/bookthief/bookthief.exe" pkg/
 	cp "$basereleasedir/liesel/liesel.exe" pkg/
 	
-	cp -r "$initdir/$nowvar/srconly/bookthief/"* source/bookthief/
-	cp -r "$initdir/$nowvar/srconly/liesel/"* source/liesel/
-	cp "$initdir/$nowvar/srconly/bookthief/LICENSE" pkg/LICENSE.txt
+	cp -r "$initdir/$pkgs_build_base_directory/srconly/bookthief/"* source/bookthief/
+	cp -r "$initdir/$pkgs_build_base_directory/srconly/liesel/"* source/liesel/
+	cp "$initdir/$pkgs_build_base_directory/srconly/bookthief/LICENSE" pkg/LICENSE.txt
 	
 	php "$initdir/autobuild.php" -b -v "$versionnumber" -p "$wininstallerdirectory" > "$wininstallerdirectory/bt-$versionnumber.iss"
 	
@@ -578,7 +578,7 @@ function make_bookthief_windows_installer() {
 
 function maybe_build_bookthief_windows_installer() {
 	if ([[ "${ccwinpkgs[*]}" =~ "bookthief" ]] && [[ "${ccwinpkgs[*]}" =~ "liesel" ]]); then
-		local btversion=$(php "$initdir/get-pkg-info.php" -i "$initdir/$nowvar/srconly/bookthief" -v)
+		local btversion=$(php "$initdir/get-pkg-info.php" -i "$initdir/$pkgs_build_base_directory/srconly/bookthief" -v)
 		
 		make_bookthief_windows_installer "$btversion"
 	fi

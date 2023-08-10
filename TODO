@@ -4,7 +4,7 @@ TODO:
 
 - Customizable build farm
 
-- Rather than creating a new directory named {current-timestamp} in the base directory for builds, this should all happen in a "builds" subdirectory
+- (DONE) Rather than creating a new directory named {current-timestamp} in the base directory for builds, this should all happen in a "builds" subdirectory
 
 - There should also be a "clean-up" function
 
