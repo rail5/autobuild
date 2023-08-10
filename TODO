@@ -11,3 +11,7 @@ TODO:
 - POSIX-compliant shell
 
 - One single configuration file
+
+- Remove PHP scripts
+
+- If the user is pushing to a git-based Debian repository, don't clone it every single time. Store it once and leave it in the config file
