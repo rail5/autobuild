@@ -9,7 +9,7 @@ updatecommand="update"
 # Build Dependencies
 basepkgslist="build-essential gcc g++ make git wget tar curl"
 
-packagingdeps="devscripts make sed unzip xz-utils reprepro"
+packagingdeps="devscripts make sed unzip xz-utils jq reprepro"
 
 buildfarmdeps="sshpass libarchive-tools syslinux syslinux-utils cpio genisoimage coreutils qemu-system qemu-system-x86 qemu-utils util-linux"
 
