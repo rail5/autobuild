@@ -472,7 +472,41 @@ function ask_user_make_github_release_page() {
 }
 
 function display_help() {
-	echo "help"
+	echo "autobuild"
+	echo "Copyright (C) 2023 rail5"
+	echo ""
+	echo "This program comes with ABSOLUTELY NO WARRANTY."
+	echo "This is free software (GNU GPL V3), and you are welcome to redistribute it under certain conditions."
+	echo ""
+	echo "You should edit CONFIG and run setup before using this script"
+	echo ""
+	echo "Options:"
+	echo ""
+	echo "  -p"
+	echo "  --package"
+	echo "    Add a package to the build list"
+	echo ""
+	echo "  -1"
+	echo "  --i386"
+	echo "    Build packages on the i386 Build Farm VM"
+	echo ""
+	echo "  -2"
+	echo "  --arm64"
+	echo "    Build packages on the arm64 Build Farm VM"
+	echo ""
+	echo "  -d"
+	echo "  --debian-repo"
+	echo "    Distribute built packages to a Git-based Debian Repository managed with reprepro"
+	echo ""
+	echo "  -g"
+	echo "  --github-page"
+	echo "    Create a Release page on the built packages' Github repositories"
+	echo ""
+	echo "Example:"
+	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
+	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
+	echo ""
+	echo "If no arguments are provided, the script will run in 'interactive mode'"
 }
 
 
@@ -481,7 +515,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 12dgp: --long i386,arm64,debian-repo,github-page,package: \
+TEMP=$(getopt -o 12dghp: --long i386,arm64,debian-repo,github-page,help,package: \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -497,10 +531,11 @@ distribute_to_github_page=false
 
 while true; do
 	case "$1" in
-		-1 | --i386 ) cross_to_i386=true; shift ;;
+		-1 | --i386 ) cross_to_i386=true; echo "doing i386"; shift ;;
 		-2 | --arm64 ) cross_to_arm64=true; shift ;;
 		-d | --debian-repo ) distribute_to_debian_repo=true; shift ;;
 		-g | --github-page ) distribute_to_github_page=true; shift ;;
+		-h | --help ) display_help; exit 0; shift ;;
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
 				buildbasepkgs+=("$2");
