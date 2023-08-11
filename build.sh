@@ -471,13 +471,70 @@ function ask_user_make_github_release_page() {
 	fi
 }
 
+function display_help() {
+	echo "help"
+}
+
+
 # And now the program:
+
+
+# Check if the user has provided us arguments for non-interactive mode
+
+TEMP=$(getopt -o 12dgp: --long i386,arm64,debian-repo,github-page,package: \
+              -n 'autobuild' -- "$@")
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+eval set -- "$TEMP"
+
+interactive_mode=true # By default, until we received --package "something"
+
+cross_to_i386=false
+cross_to_arm64=false
+distribute_to_debian_repo=false
+distribute_to_github_page=false
+
+while true; do
+	case "$1" in
+		-1 | --i386 ) cross_to_i386=true; shift ;;
+		-2 | --arm64 ) cross_to_arm64=true; shift ;;
+		-d | --debian-repo ) distribute_to_debian_repo=true; shift ;;
+		-g | --github-page ) distribute_to_github_page=true; shift ;;
+		-p | --package )
+			if [ ${packages[$2]+1} ]; then
+				buildbasepkgs+=("$2");
+				interactive_mode=false;
+				echo "Building $2"
+			else
+				echo "ERROR: Package '$2' not in CONFIG!";
+			fi;
+			shift 2 ;;
+		-- ) shift; break ;;
+		* ) break ;;
+	esac
+done
 
 setup_build_environment
 
-for pkgname in "${!packages[@]}"; do
-	ask_user_build_pkg "$pkgname"
-done
+if [ interactive_mode == true ]; then
+	for pkgname in "${!packages[@]}"; do
+		ask_user_build_pkg "$pkgname"
+	done
+else
+	# Check if we're using the build farm
+	if [ cross_to_i386 == true ]; then
+		for pkgname in "${buildbasepkgs[@]}"; do
+			buildi386pkgs+=("$pkgname")
+		done
+	fi
+
+	if [ cross_to_arm64 == true ]; then
+		for pkgname in "${buildbasepkgs[@]}"; do
+			buildarm64pkgs+=("$pkgname")
+		done
+	fi
+fi
 
 build_all_pkgs_in_pkgarrays
 clean_up
