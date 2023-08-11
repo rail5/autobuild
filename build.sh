@@ -433,7 +433,7 @@ function ask_user_build_pkg() {
 function ask_user_publish_to_deb_repo() {
 	for pkgname in "${buildbasepkgs[@]}"; do
 		while true; do
-			read -p "Do you want to publish $pkgname to deb.rail5.org? (y/n) " yn
+			read -p "Do you want to publish $pkgname to your Git-based Debian Repository? (y/n) " yn
 			case $yn in
 				[Yy]* ) pkgstopublish+=("$pkgname"); break;;
 				[Nn]* ) break;;

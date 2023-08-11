@@ -42,6 +42,6 @@ To make it completely automatic, provide arguments. The basic run-down is as fol
 ./build.sh --package my-debian-package --package my-other-debian-package --github-page
 ```
 
-The above example will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to a GitHub Release page
+The above example will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to GitHub Release pages.
 
 See `./build.sh --help` or `./build.sh -h` for a list of options and how to use them.
