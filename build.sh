@@ -1,17 +1,11 @@
 #!/bin/bash
 
-# Ubuntu distribution & Debian distribution names
-ubuntudist="focal"
-debiandist="bullseye"
-
 # Directory structure:
 #  - deb
-#    Contains the source for the Debian packages (Binary+Source packages)
-#    The packages here will be designated for a DEBIAN distribution ($debiandist)
+#    Packages are built in this directory before being move to 'release'
 #
 #  - srconly
-#    Contains the source for the Ubuntu Launchpad PPA packages (Source-only packages)
-#    The packages here will be designated for a UBUNTU distribution ($ubuntudist)
+#    Contains the source of the packages
 #
 #  - release
 #    All release binaries are moved to this directory after being built
@@ -19,11 +13,6 @@ debiandist="bullseye"
 scriptfile=$(readlink -f "$0")
 initdir=$(dirname "$scriptfile")
 pkgs_build_base_directory=builds/$(date +%Y-%h-%d-%H%M%S)
-
-# Variables for build-farm Virtual Machines
-SSHPASSWORD="debianpassword"
-SSHUSER="debian"
-SSHPORT="22222"
 
 
 basereleasedir=""
@@ -35,30 +24,9 @@ buildbasepkgs=()
 buildi386pkgs=()
 buildarm64pkgs=()
 
-thisarchitecture="amd64"
 
-# Array of packages this script can build
-# Key -> Value map of package name -> Git URL
-declare -A urls
-urls=()
-urls+=(["polonius"]="https://github.com/rail5/polonius.git")
-urls+=(["liesel"]="https://github.com/rail5/liesel.git")
-urls+=(["bookthief"]="https://github.com/rail5/bookthief.git")
-urls+=(["ocrshot"]="https://github.com/rail5/ocrshot.git")
-urls+=(["randomtext"]="https://github.com/rail5/randomtext.git")
-urls+=(["evolution-notify"]="https://github.com/rail5/evolution-notify.git")
-urls+=(["stepgrampa"]="https://github.com/rail5/stepgrampa.git")
-
-
-# GitHub info: Username and Access Token
-OWNER="rail5"
-ACCESS_TOKEN=$(gpg -d /etc/git/github-token.gpg 2>/dev/null)
-
-
-# Location of the Debian Repo we may push to
-# This script can push to a Debian Repository hosted on GitHub pages (or similar)
-gitdebianrepo="https://github.com/rail5/ppa.git"
-repodirectory="$initdir/$pkgs_build_base_directory/repo/debian"
+# Load configuration
+. ./includes/config.sh
 
 
 function setup_build_environment() {
@@ -246,14 +214,14 @@ function build_all_pkgs_in_pkgarrays() {
 	fi
 
 	for pkgname in "${buildbasepkgs[@]}"; do
-		build_package_universal "$pkgname" "${urls[$pkgname]}" 1 0 0
+		build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0
 	done
 	
 	if [[ buildingsomei386 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "i386"
 		for pkgname in "${buildi386pkgs[@]}"; do
-			build_package_universal "$pkgname" "${urls[$pkgname]}" 0 1 0
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0
 		done
 		shutdown_build_vm
 		
@@ -265,7 +233,7 @@ function build_all_pkgs_in_pkgarrays() {
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "arm64"
 		for pkgname in "${buildarm64pkgs[@]}"; do
-			build_package_universal "$pkgname" "${urls[$pkgname]}" 0 0 1
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1
 		done
 		shutdown_build_vm
 	fi
@@ -285,7 +253,7 @@ function push_github_release_page() {
 	# Get repo name from PKG url
 	
 	## This first line trims a URL like "https://github.com/user/repo.git" to just "repo.git"
-	REPOSITORY=$(echo "${urls[$PKGNAME]}" | grep -P -o -e "/[^/]*\.git" | cut -c2-)
+	REPOSITORY=$(echo "${packages[$PKGNAME]}" | grep -P -o -e "/[^/]*\.git" | cut -c2-)
 	
 	## This second line removes the ".git" if it's there, making it just "repo"
 	REPOSITORY="${REPOSITORY/.git/""}"
@@ -357,23 +325,21 @@ function push_github_release_page() {
 }
 
 function prepare_ghpages_debian_repo() {
-	cd "$initdir/$pkgs_build_base_directory"
-	
-	# Clone the git repo into a directory called "repo"
-	git clone "$gitdebianrepo" "repo"
+	# Clone the git repo into a local directory
+	cd "$initdir"
+	git clone "$git_debianrepo" "$local_repodirectory"
+	cd "$local_repodirectory"
+	git pull
 }
 
 function close_ghpages_debian_repo() {
-	cd "$initdir/$pkgs_build_base_directory/repo"
+	cd "$initdir/$local_repodirectory"
 	
 	# Push the changes we've made before calling this function
 	git push origin
 	
 	# Move back to start
-	cd $initdir
-	
-	# Clean up
-	rm -rf "$initdir/$pkgs_build_base_directory/repo"
+	cd "$initdir"
 }
 
 function push_to_ghpages_debian_repo() {
@@ -387,7 +353,7 @@ function push_to_ghpages_debian_repo() {
 	
 	local PKGNAME="$1" CHANGESFILE="" list_of_pkg_files=()
 	
-	cd "$initdir/$pkgs_build_base_directory/repo"
+	cd "$initdir/$local_repodirectory"
 	cd debian
 	
 	
@@ -395,23 +361,23 @@ function push_to_ghpages_debian_repo() {
 	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep -P -e .changes | head -n 1)"
 	
 	# Add that to the repo
-	reprepro -P optional include $debiandist "$basereleasedir/$PKGNAME/$CHANGESFILE"
+	reprepro -P optional include $debian_distribution "$basereleasedir/$PKGNAME/$CHANGESFILE"
 	
 	
-	# Get the list of all .deb package files that are NOT marked with $thisarchitecture (default: amd64)
+	# Get the list of all .deb package files that are NOT marked with $host_architecture (default: amd64)
 	for file in $(ls "$basereleasedir/$PKGNAME/"); do
-		list_of_pkg_files+=("$(echo $file | grep -P -e $PKGNAME.*.deb | grep -v "$thisarchitecture")")
+		list_of_pkg_files+=("$(echo $file | grep -P -e $PKGNAME.*.deb | grep -v "$host_architecture")")
 	done
 	
 	# Add those to the repo with includedeb
 	for file in "${list_of_pkg_files[@]}"; do
 		if [[ "$file" != "" ]]; then
-			reprepro includedeb $debiandist "$basereleasedir/$PKGNAME/$file"
+			reprepro includedeb $debian_distribution "$basereleasedir/$PKGNAME/$file"
 		fi
 	done
 	
 	# Update indexes and commit changes
-	cd "$initdir/$pkgs_build_base_directory/repo"
+	cd "$initdir/$local_repodirectory"
 	./update-indexes.sh
 	git add --all
 	git commit -m "Updated $PKGNAME"
@@ -509,7 +475,7 @@ function ask_user_make_github_release_page() {
 
 setup_build_environment
 
-for pkgname in "${!urls[@]}"; do
+for pkgname in "${!packages[@]}"; do
 	ask_user_build_pkg "$pkgname"
 done
 
