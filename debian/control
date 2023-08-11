@@ -1,0 +1,15 @@
+Source: autobuild
+Priority: optional
+Maintainer: rail5 <andrew@rail5.org>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+Section: utils
+
+Package: autobuild
+Version: 1.0
+License: GPL-3.0
+Vendor: rail5 <andrew@rail5.org>
+Priority: optional
+Architecture: all
+Depends: bash, coreutils, build-essential, gcc, g++, make, git, wget, tar, curl, devscripts, sed, unzip, xz-utils, jq, reprepro, sshpass, libarchive-tools, syslinux, syslinux-utils, cpio, genisoimage, qemu-system, qemu-system-x86, qemu-utils, util-linux
+Description: Automatically build & distribute multi-arch Debian packages from source

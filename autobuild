@@ -37,7 +37,10 @@ SSHPORT="22222"
 
 
 # Load configuration
-. ./includes/config.sh
+
+CONFIG_FILE="~/.local/share/autobuild/includes/config.sh"
+
+. $CONFIG_FILE
 
 
 function setup_build_environment() {
@@ -511,6 +514,14 @@ function display_help() {
 	echo "  --github-page"
 	echo "    Create a Release page on the built packages' Github repositories"
 	echo ""
+	echo "  -s"
+	echo "  --setup"
+	echo "    Run the setup script (after editing your CONFIG file)"
+	echo ""
+	echo "  -c"
+	echo "  --config"
+	echo "    Open the CONFIG file for editing"
+	echo ""
 	echo "Example:"
 	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
@@ -524,7 +535,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 12dghp: --long i386,arm64,debian-repo,github-page,help,package: \
+TEMP=$(getopt -o 12cdghp:s --long i386,arm64,config,debian-repo,github-page,help,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -544,6 +555,8 @@ while true; do
 			cross_to_i386=true; shift ;;
 		-2 | --arm64 )
 			cross_to_arm64=true; shift ;;
+		-c | --config )
+			xdg-open ~/.local/share/autobuild/includes/config.sh; exit 0; shift ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-g | --github-page )
@@ -559,6 +572,9 @@ while true; do
 				echo "ERROR: Package '$2' not in CONFIG!";
 			fi;
 			shift 2 ;;
+		-s | --setup )
+			autobuild-setup;
+			exit 0; shift ;;
 		-- ) shift; break ;;
 		* ) break ;;
 	esac
