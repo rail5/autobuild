@@ -25,6 +25,12 @@ buildi386pkgs=()
 buildarm64pkgs=()
 
 
+# How will we distribute the built packages?
+# These arrays will be populated etc etc
+pkgstopublish=()
+releasepagestomake=()
+
+
 # Load configuration
 . ./includes/config.sh
 
@@ -420,9 +426,6 @@ function ask_user_build_pkg() {
 }
 
 function ask_user_publish_to_deb_repo() {
-
-	local pkgstopublish=()
-
 	for pkgname in "${buildbasepkgs[@]}"; do
 		while true; do
 			read -p "Do you want to publish $pkgname to deb.rail5.org? (y/n) " yn
@@ -433,7 +436,9 @@ function ask_user_publish_to_deb_repo() {
 			esac
 		done
 	done
-	
+}
+
+function maybe_publish_to_deb_repo() {
 	if [[ ${#pkgstopublish[@]} -gt 0 ]]; then
 		echo "Publishing to repo..."
 		
@@ -447,10 +452,7 @@ function ask_user_publish_to_deb_repo() {
 	fi
 }
 
-function ask_user_make_github_release_page() {
-	
-	local releasepagestomake=()
-	
+function ask_user_make_github_release_page() {	
 	for pkgname in "${buildbasepkgs[@]}"; do
 		while true; do
 			read -p "Do you want to make a GITHUB RELEASE PAGE for $pkgname? (y/n) " yn
@@ -461,7 +463,9 @@ function ask_user_make_github_release_page() {
 			esac
 		done
 	done
-	
+}
+
+function maybe_make_github_release_page() {
 	if [[ ${#releasepagestomake[@]} -gt 0 ]]; then
 		echo "Making release pages..."
 		
@@ -531,11 +535,16 @@ distribute_to_github_page=false
 
 while true; do
 	case "$1" in
-		-1 | --i386 ) cross_to_i386=true; shift ;;
-		-2 | --arm64 ) cross_to_arm64=true; shift ;;
-		-d | --debian-repo ) distribute_to_debian_repo=true; shift ;;
-		-g | --github-page ) distribute_to_github_page=true; shift ;;
-		-h | --help ) display_help; exit 0; shift ;;
+		-1 | --i386 )
+			export cross_to_i386=true; shift ;;
+		-2 | --arm64 )
+			cross_to_arm64=true; shift ;;
+		-d | --debian-repo )
+			distribute_to_debian_repo=true; shift ;;
+		-g | --github-page )
+		distribute_to_github_page=true; shift ;;
+		-h | --help )
+			display_help; exit 0; shift ;;
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
 				buildbasepkgs+=("$2");
@@ -552,21 +561,38 @@ done
 
 setup_build_environment
 
-if [ interactive_mode == true ]; then
+if [ $interactive_mode == true ]; then
 	for pkgname in "${!packages[@]}"; do
 		ask_user_build_pkg "$pkgname"
 	done
 else
+	# Non-interactive mode
+
 	# Check if we're using the build farm
-	if [ cross_to_i386 == true ]; then
+	if [ $cross_to_i386 == true ]; then
+		echo "Crossing to i386"
 		for pkgname in "${buildbasepkgs[@]}"; do
 			buildi386pkgs+=("$pkgname")
 		done
 	fi
 
-	if [ cross_to_arm64 == true ]; then
+	if [ $cross_to_arm64 == true ]; then
+		echo "Crossing to arm64"
 		for pkgname in "${buildbasepkgs[@]}"; do
 			buildarm64pkgs+=("$pkgname")
+		done
+	fi
+
+	# Check if and how we're distributing the built packages
+	if [ $distribute_to_debian_repo == true ]; then
+		for pkgname in "${buildbasepkgs[@]}"; do
+			pkgstopublish+=("$pkgname")
+		done
+	fi
+
+	if [ $distribute_to_github_page == true ]; then
+		for pkgname in "${buildbasepkgs[@]}"; do
+			releasepagestomake+=("$pkgname")
 		done
 	fi
 fi
@@ -574,5 +600,10 @@ fi
 build_all_pkgs_in_pkgarrays
 clean_up
 
-ask_user_publish_to_deb_repo
-ask_user_make_github_release_page
+if [ interactive_mode == true ]; then
+	ask_user_publish_to_deb_repo
+	ask_user_make_github_release_page
+fi
+
+maybe_publish_to_deb_repo
+maybe_make_github_release_page
