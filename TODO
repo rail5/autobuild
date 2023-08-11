@@ -1,6 +1,6 @@
 TODO:
 
-- Modularize as much as possible
+- (IN PROGRESS) Modularize as much as possible
 	Separate tasks into separate functions, place functions in INCLUDE file(s)
 
 - Customizable build farm
@@ -11,7 +11,7 @@ TODO:
 
 - POSIX-compliant shell
 
-- One single configuration file
+- (IN PROGRESS) One single configuration file
 
 - (DONE) Remove PHP scripts
 	The package 'dpkg-dev' is required for one of the PHP replacements, which uses the 'dpkg-parsechangelog' utility. The 'dpkg-dev' package is provided by 'build-essential'
