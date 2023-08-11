@@ -24,4 +24,4 @@ TODO:
 
 - Add function to update/upgrade the software in the build farm VMs
 
-- Add non-interactive mode
+- (DONE) Add non-interactive mode

@@ -536,7 +536,7 @@ distribute_to_github_page=false
 while true; do
 	case "$1" in
 		-1 | --i386 )
-			export cross_to_i386=true; shift ;;
+			cross_to_i386=true; shift ;;
 		-2 | --arm64 )
 			cross_to_arm64=true; shift ;;
 		-d | --debian-repo )
