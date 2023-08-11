@@ -30,6 +30,11 @@ buildarm64pkgs=()
 pkgstopublish=()
 releasepagestomake=()
 
+## SSH connection into the build-farm VMs
+SSHPASSWORD="debianpassword"
+SSHUSER="debian"
+SSHPORT="22222"
+
 
 # Load configuration
 . ./includes/config.sh

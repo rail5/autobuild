@@ -1,27 +1,6 @@
 TODO:
-
-- (IN PROGRESS) Modularize as much as possible
-	Separate tasks into separate functions, place functions in INCLUDE file(s)
-
 - Customizable build farm
 
-- (DONE) Rather than creating a new directory named {current-timestamp} in the base directory for builds, this should all happen in a "builds" subdirectory
-
-- (DONE) There should also be a "clean-up" function
-
-- POSIX-compliant shell
-
-- (IN PROGRESS) One single configuration file
-
-- (DONE) Remove PHP scripts
-	The package 'dpkg-dev' is required for one of the PHP replacements, which uses the 'dpkg-parsechangelog' utility. The 'dpkg-dev' package is provided by 'build-essential'
-
-	The package 'jq' is required for another of the PHP replacements in order to parse some JSON.
-
-- (DONE) If the user is pushing to a git-based Debian repository, don't clone it every single time. Store it once and leave it in the config file
-
-- (DONE) Remove Windows cross-compilation & MXE setup. This is far too niche to be worth maintaining.
+- POSIX-compliant shell(?)
 
 - Add function to update/upgrade the software in the build farm VMs
-
-- (DONE) Add non-interactive mode

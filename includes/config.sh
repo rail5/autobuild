@@ -16,6 +16,7 @@ debian_distribution="bullseye"
 declare -A packages
 packages=()
 
+
 ## Set your packages & their Git URLs here
 ## as: packages+=(["package-name"]="https://link.to/repository.git")
 packages+=(["polonius"]="https://github.com/rail5/polonius.git")
@@ -26,20 +27,12 @@ packages+=(["randomtext"]="https://github.com/rail5/randomtext.git")
 packages+=(["evolution-notify"]="https://github.com/rail5/evolution-notify.git")
 packages+=(["stepgrampa"]="https://github.com/rail5/stepgrampa.git")
 
+
 ## Build dependencies for your packages
 ## SET THIS **BEFORE** RUNNING THE SETUP SCRIPT
 ## AND ESPECIALLY BEFORE CREATING THE BUILD FARM VMS
 build_dependencies="fpc-3.2.2 lazarus lcl-2.2 lcl-utils-2.2 fp-units-misc-3.2.2 graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
 
-
-# BUILD FARM
-
-## Stuff goes here
-
-## SSH connection into them
-SSHPASSWORD="debianpassword"
-SSHUSER="debian"
-SSHPORT="22222"
 
 # GITHUB
 
