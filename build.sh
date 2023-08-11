@@ -30,7 +30,7 @@ basereleasedir=""
 
 
 # Declare the lists of packages we'll be building
-# These arrays will be populated with package names from ${pkgswecanbebuild}
+# These arrays will be populated with the packages selected by the user
 buildbasepkgs=()
 buildi386pkgs=()
 buildarm64pkgs=()
@@ -38,9 +38,6 @@ buildarm64pkgs=()
 thisarchitecture="amd64"
 
 # Array of packages this script can build
-pkgswecanbuild=("polonius" "liesel" "bookthief" "ocrshot" "randomtext" "evolution-notify" "stepgrampa")
-
-
 # Key -> Value map of package name -> Git URL
 declare -A urls
 urls=()
@@ -512,7 +509,7 @@ function ask_user_make_github_release_page() {
 
 setup_build_environment
 
-for pkgname in "${pkgswecanbuild[@]}"; do
+for pkgname in "${!urls[@]}"; do
 	ask_user_build_pkg "$pkgname"
 done
 
