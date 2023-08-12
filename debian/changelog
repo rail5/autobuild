@@ -1,3 +1,9 @@
+autobuild (1.1) bullseye; urgency=medium
+
+  * Added LICENSE file
+
+ -- rail5 <andrew@rail5.org>  Sat, 12 Aug 2023 16:41:50 -0400
+
 autobuild (1.0) bullseye; urgency=low
 
   * Initial release
