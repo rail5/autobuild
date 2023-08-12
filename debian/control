@@ -11,6 +11,6 @@ License: GPL-3.0
 Vendor: rail5 <andrew@rail5.org>
 Priority: optional
 Architecture: all
-Depends: adduser, build-essential, gcc, g++, make, git, wget, curl, devscripts, unzip, xz-utils, jq, reprepro, sshpass, libarchive-tools, syslinux, syslinux-utils, cpio, genisoimage, qemu-system, qemu-system-x86, qemu-utils
+Depends: adduser, sudo, build-essential, gcc, g++, make, git, wget, curl, devscripts, unzip, xz-utils, jq, reprepro, sshpass, libarchive-tools, syslinux, syslinux-utils, cpio, genisoimage, qemu-system, qemu-system-x86, qemu-utils
 Description: Automatically build & distribute multi-arch Debian packages from source
  Autobuild builds Debian packages from Git sources and distributes them
