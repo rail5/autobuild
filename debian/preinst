@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Create autobuild user
+adduser --system --no-create-home autobuild
+
+# Create autobuild group
+groupadd autobuild
+
+# Add autobuild user to group
+usermod -aG autobuild autobuild
+
+# Make our storage directory
+mkdir -p /var/opt/autobuild
+
+# Transfer ownership to the autobuild user and group
+chown -R autobuild:autobuild /var/opt/autobuild/

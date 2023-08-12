@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Copy everything to our /var storage
+sudo -u autobuild cp -rf /usr/share/autobuild/* /var/opt/autobuild/
