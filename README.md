@@ -1,7 +1,3 @@
-## Universalis branch
-
-Development branch
-
 # autobuild
 
 Automatically build & distribute Debian packages
@@ -20,32 +16,24 @@ This script will:
 
 ### Set-up
 
-You should begin by editing the **CONFIG** file *(includes/config.sh)*. This file tells autobuild where to find your package sources & how to distribute them once they're build.
+After installing, run `autobuild -c` to edit your configuration, followed by `autobuild -s` to complete set-up based on that configuration.
 
-**AFTER** you've edited the CONFIG file, run the setup script:
-
-```
-./setup.sh
-```
-
-You only have to do this **once.**
+Your **CONFIG** file (edited with `autobuild -c`) is where you will tell autobuild where to find your packages, as well as other settings
 
 ### Usage
 
 ```
-./build.sh
+autobuild
 ```
-
-Auto downloads package source code from GitHub, and builds (& distributes) using that source code.
 
 With no arguments given, it runs in **interactive mode**, and will ask you what to do each step of the way.
 
 To make it completely automatic, provide arguments. The basic run-down is as follows:
 
 ```
-./build.sh --package my-debian-package --package my-other-debian-package --github-page
+autobuild --package my-debian-package --package my-other-debian-package --github-page
 ```
 
 The above example will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to GitHub Release pages.
 
-See `./build.sh --help` or `./build.sh -h` for a list of options and how to use them.
+See `autobuild --help`, `autobuild -h`, or `man autobuild` for a list of options and how to use them.
