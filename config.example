@@ -32,7 +32,7 @@ packages+=(["autobuild"]="https://github.com/rail5/autobuild.git")
 ## Build dependencies for your packages
 ## SET THIS **BEFORE** RUNNING THE SETUP SCRIPT
 ## AND ESPECIALLY BEFORE CREATING THE BUILD FARM VMS
-build_dependencies="fpc-3.2.2 lazarus lcl-2.2 lcl-utils-2.2 fp-units-misc-3.2.2 graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
+build_dependencies="fpc-3.2.2 lazarus lcl-2.2 lcl-utils-2.2 fp-units-misc-3.2.2 graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev libncurses-dev"
 
 
 # GITHUB
