@@ -12,6 +12,8 @@ This script will:
   - Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
   - Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
 
+Autobuild is also used to build & distribute *itself*.
+
 ## How do I use it?
 
 ### Set-up
