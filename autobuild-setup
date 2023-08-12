@@ -4,8 +4,6 @@ packagemanager="apt"
 installcommand="install"
 updatecommand="update"
 
-. ./includes/config.sh
-
 # Build Dependencies
 basepkgslist="build-essential gcc g++ make git wget tar curl"
 
@@ -17,14 +15,25 @@ buildfarmdeps="sshpass libarchive-tools syslinux syslinux-utils cpio genisoimage
 scriptfile=$(readlink -f "$0")
 initdir=$(dirname "$scriptfile")
 
+storagedir="$HOME/.local/share/autobuild"
+
+CONFIG_FILE="$storagedir/config"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+	echo "Error: Run this script through 'autobuild -s'"
+	exit 1
+fi
+
+. "$CONFIG_FILE"
+
 echo "This script is to set up your machine to use autobuild"
 echo ""
-echo "FILL OUT includes/config.sh **BEFORE** RUNNING THIS SCRIPT!"
+echo "EDIT YOUR CONFIG **BEFORE** RUNNING THIS SCRIPT! (Run 'autobuild -c')"
 echo ""
 echo ""
 
 while true; do
-	read -p "Ready? (y/n) " yn
+	read -p "Have you edited your config? (y/n) " yn
 	case $yn in
 		[Yy]* ) echo "Alright then"; break;;
 		[Nn]* ) exit 1; break;;
@@ -81,6 +90,8 @@ while true; do
 done
 
 if [[ setupgithubhttps -eq 1 ]]; then
+
+	cd "$storagedir"
 	
 	read -p "Enter the email address associated with your GPG key: " gpgemail
 	read -p "Enter your GitHub username: " ghuser
@@ -159,13 +170,13 @@ done
 if [[ buildingvms -eq 1 ]]; then
 	sudo $packagemanager $installcommand $buildfarmdeps
 	
-	cd $initdir/build-farm
+	cd $storagedir/build-farm
 	
 	echo "  Creating i386 VM..."
 	
 	cd debian-stable-i386
 	
-	./set-install-packages.sh $basepkgslist $build_dependencies $packagingdeps
+	bash ./set-install-packages.sh $basepkgslist $build_dependencies $packagingdeps
 	
 	make download
 	make image
@@ -177,7 +188,7 @@ if [[ buildingvms -eq 1 ]]; then
 	
 	cd ../debian-stable-arm64
 	
-	./set-install-packages.sh $basepkgslist $build_dependencies $packagingdeps
+	bash ./set-install-packages.sh $basepkgslist $build_dependencies $packagingdeps
 	
 	make download
 	make image

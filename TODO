@@ -6,6 +6,5 @@ TODO:
 - Add function to update/upgrade the software in the build farm VMs
 
 - Package autobuild itself as a Debian package
-	Store everything (config, builds, build-farm etc etc) under a /var/ subdirectory
-	Package should create an autobuild user with permissions to that subdirectory
+	Store everything (config, builds, build-farm etc etc) under ~/.local/share
 	Make sure that user config etc is not overwritten by future upgrades

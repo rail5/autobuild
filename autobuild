@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# Directory structure:
-#  - deb
-#    Packages are built in this directory before being move to 'release'
-#
-#  - srconly
-#    Contains the source of the packages
-#
-#  - release
-#    All release binaries are moved to this directory after being built
+# autobuild
+# Copyright (C) 2023 rail5
+# Free software (GPL v3)
 
-scriptfile=$(readlink -f "$0")
-initdir=$(dirname "$scriptfile")
-pkgs_build_base_directory=builds/$(date +%Y-%h-%d-%H%M%S)
+if [ "$(whoami)" == "root" ]; then
+	echo "Warning: this script should NOT be run as root."
+	sleep 1
+fi
+
+tempdirectory=$(dirname $(mktemp -u))
+initdir=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
+storagedir="$HOME/.local/share/autobuild"
+pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
 
 basereleasedir=""
@@ -30,6 +30,10 @@ buildarm64pkgs=()
 pkgstopublish=()
 releasepagestomake=()
 
+# Where are we saving the built package files?
+# Current working directory by default. User can change with -o
+savedir="$(pwd)"
+
 ## SSH connection into the build-farm VMs
 SSHPASSWORD="debianpassword"
 SSHUSER="debian"
@@ -38,9 +42,18 @@ SSHPORT="22222"
 
 # Load configuration
 
-CONFIG_FILE="~/.local/share/autobuild/includes/config.sh"
+CONFIG_FILE="$storagedir/config"
 
-. $CONFIG_FILE
+if [ ! -d "$storagedir" ]; then
+	mkdir "$storagedir"
+fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+	cp -r "/usr/share/autobuild/"* "$storagedir/"
+	cp "$storagedir/config.example" "$CONFIG_FILE"
+fi
+
+. "$CONFIG_FILE"
 
 
 function setup_build_environment() {
@@ -49,6 +62,8 @@ function setup_build_environment() {
 	mkdir "$initdir/$pkgs_build_base_directory/srconly"
 	mkdir "$initdir/$pkgs_build_base_directory/deb"
 	mkdir "$initdir/$pkgs_build_base_directory/release"
+
+	mkdir "$initdir/buildfarm-debs"
 
 	basereleasedir="$initdir/$pkgs_build_base_directory/release/"
 }
@@ -100,14 +115,14 @@ function build_package_universal() {
 		# Build on the build-farm i386 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$GITURL" "i386"
-		mv "$initdir/build-farm/packages/debs/"*.deb "$releasedir/"
+		mv "$initdir/buildfarm-debs/"*.deb "$releasedir/"
 	fi
 	
 	if [[ ARM64BUILD -eq 1 ]]; then
 		# Build on the build-farm arm64 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$GITURL" "arm64"
-		mv "$initdir/build-farm/packages/debs/"*.deb "$releasedir/"
+		mv "$initdir/buildfarm-debs/"*.deb "$releasedir/"
 	fi
 	
 	# Move packages to 'release' directory
@@ -141,7 +156,7 @@ function start_build_vm() {
 	if [[ "$ARCH" == "i386" ]]; then
 		ARCHDIR="debian-stable-i386"
 		
-		cd "$initdir/build-farm/$ARCHDIR"
+		cd "$storagedir/build-farm/$ARCHDIR"
 		
 		make boot-notelnet &
 		# Give the VM some time to come online
@@ -150,7 +165,7 @@ function start_build_vm() {
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
 	
-		cd "$initdir/build-farm/$ARCHDIR"
+		cd "$storagedir/build-farm/$ARCHDIR"
 		
 		make boot-notelnet &
 		# Give the VM some time to come online (ARM emulation takes a lot longer)
@@ -207,13 +222,17 @@ exit
 EOF
 	
 	# Now we SCP download the packages to the host machine
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/build-farm/packages/$ARCH/packages.tar.gz"
+
+	# Create the tmp folder for this architecture
+	mkdir "$initdir/$ARCH"
+
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz"
 	
-	cd "$initdir/build-farm/packages/$ARCH"
+	cd "$initdir/$ARCH"
 	tar -xvzf packages.tar.gz
 	rm -f packages.tar.gz
-	mv "$initdir/build-farm/packages/$ARCH/"*.deb "$initdir/build-farm/packages/debs/"
-	rm -f "$initdir/build-farm/packages/$ARCH/"*
+	mv "$initdir/$ARCH/"*.deb "$initdir/buildfarm-debs/"
+	rm -f "$initdir/$ARCH/"*
 }
 
 function build_all_pkgs_in_pkgarrays() {
@@ -340,14 +359,14 @@ function push_github_release_page() {
 
 function prepare_ghpages_debian_repo() {
 	# Clone the git repo into a local directory
-	cd "$initdir"
+	cd "$storagedir"
 	git clone "$git_debianrepo" "$local_repodirectory"
 	cd "$local_repodirectory"
 	git pull
 }
 
 function close_ghpages_debian_repo() {
-	cd "$initdir/$local_repodirectory"
+	cd "$storagedir/$local_repodirectory"
 	
 	# Push the changes we've made before calling this function
 	git push origin
@@ -367,7 +386,7 @@ function push_to_ghpages_debian_repo() {
 	
 	local PKGNAME="$1" CHANGESFILE="" list_of_pkg_files=()
 	
-	cd "$initdir/$local_repodirectory"
+	cd "$storagedir/$local_repodirectory"
 	cd debian
 	
 	
@@ -391,7 +410,7 @@ function push_to_ghpages_debian_repo() {
 	done
 	
 	# Update indexes and commit changes
-	cd "$initdir/$local_repodirectory"
+	cd "$storagedir/$local_repodirectory"
 	./update-indexes.sh
 	git add --all
 	git commit -m "Updated $PKGNAME"
@@ -483,6 +502,14 @@ function maybe_make_github_release_page() {
 	fi
 }
 
+function save_debs() {
+		cp -r "$initdir/$pkgs_build_base_directory/release/"* "$savedir/"
+}
+
+function delete_temp_files() {
+	rm -rf "$tempdirectory/autobuild"*
+}
+
 function display_help() {
 	echo "autobuild"
 	echo "Copyright (C) 2023 rail5"
@@ -506,6 +533,10 @@ function display_help() {
 	echo "  --arm64"
 	echo "    Build packages on the arm64 Build Farm VM"
 	echo ""
+	echo "  -o"
+	echo "  --output"
+	echo "    Specify directory to save built package files (Default: current directory)"
+	echo ""
 	echo "  -d"
 	echo "  --debian-repo"
 	echo "    Distribute built packages to a Git-based Debian Repository managed with reprepro"
@@ -525,6 +556,7 @@ function display_help() {
 	echo "Example:"
 	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
+	echo "  autobuild -p liesel -o ~/Desktop/"
 	echo ""
 	echo "If no arguments are provided, the script will run in 'interactive mode'"
 }
@@ -535,7 +567,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 12cdghp:s --long i386,arm64,config,debian-repo,github-page,help,package:,setup \
+TEMP=$(getopt -o 12cdgho:p:s --long i386,arm64,config,debian-repo,github-page,help,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -556,13 +588,15 @@ while true; do
 		-2 | --arm64 )
 			cross_to_arm64=true; shift ;;
 		-c | --config )
-			xdg-open ~/.local/share/autobuild/includes/config.sh; exit 0; shift ;;
+			xdg-open "$CONFIG_FILE"; exit 0; shift ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-g | --github-page )
 		distribute_to_github_page=true; shift ;;
 		-h | --help )
 			display_help; exit 0; shift ;;
+		-o | --output )
+			savedir="$(realpath $2)"; shift 2 ;;
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
 				buildbasepkgs+=("$2");
@@ -626,5 +660,9 @@ if [ interactive_mode == true ]; then
 	ask_user_make_github_release_page
 fi
 
+save_debs
+
 maybe_publish_to_deb_repo
 maybe_make_github_release_page
+
+delete_temp_files
