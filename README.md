@@ -16,6 +16,17 @@ Autobuild is also used to build & distribute *itself*.
 
 ## How do I use it?
 
+### Installation
+
+Autobuild can be easily installed via the [deb.rail5.org](https://deb.rail5.org) repository:
+
+```
+sudo curl -s -o /etc/apt/trusted.gpg.d/rail5.gpg "https://deb.rail5.org/rail5.gpg"
+sudo curl -s -o /etc/apt/sources.list.d/rail5.list "https://deb.rail5.org/debian/rail5.list"
+sudo apt update
+sudo apt install autobuild
+```
+
 ### Set-up
 
 After installing, run `autobuild -c` to edit your configuration, followed by `autobuild -s` to complete set-up based on that configuration.
