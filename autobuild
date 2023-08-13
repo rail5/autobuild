@@ -158,7 +158,7 @@ function start_build_vm() {
 		
 		cd "$storagedir/build-farm/$ARCHDIR"
 		
-		make boot-notelnet &
+		make boot-nodisplay &
 		# Give the VM some time to come online
 		sleep 15
 		
@@ -167,7 +167,7 @@ function start_build_vm() {
 	
 		cd "$storagedir/build-farm/$ARCHDIR"
 		
-		make boot-notelnet &
+		make boot-nodisplay &
 		# Give the VM some time to come online (ARM emulation takes a lot longer)
 		sleep 60
 	fi
