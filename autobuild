@@ -174,7 +174,7 @@ function start_build_vm() {
 	
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
-(sudo apt update -y >/dev/null 2>&1 && sudo apt upgrade -y >/dev/null 2>&1) & disown
+sudo apt update -y >/dev/null 2>&1 && sudo apt upgrade -y >/dev/null 2>&1
 
 exit
 EOF
@@ -206,6 +206,9 @@ cd /home/debian/build/pkg
 rm -rf ./*
 cd /home/debian/build/src
 rm -rf ./*
+
+echo "Installing build dependencies"
+sudo apt install $build_dependencies
 
 echo "Getting source"
 git clone "$GITURL" "$PKGNAME"
