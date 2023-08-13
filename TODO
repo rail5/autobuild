@@ -3,9 +3,6 @@ TODO:
 	User-provided ISOs, etc, added on to the build farm list
 	Option to build only *some* of the VMs (eg, i386 but not arm64)
 
-- Add function to install new packages (build-dependencies) in the build-farm VMs
-	Check the CONFIG file, run the install command, get out
-
 - Some QoL:
 	- Default "yes" on y/n prompts
 	- 'autobuild -s' should have an option to edit the config then and there rather than having to run 'autobuild -c' first
