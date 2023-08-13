@@ -548,6 +548,10 @@ function display_help() {
 	echo "  --github-page"
 	echo "    Create a Release page on the built packages' Github repositories"
 	echo ""
+	echo "  -b"
+	echo "  --bell"
+	echo "    Ring a bell when finished"
+	echo ""
 	echo "  -s"
 	echo "  --setup"
 	echo "    Run the setup script (after editing your CONFIG file)"
@@ -570,7 +574,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 12cdgho:p:s --long i386,arm64,config,debian-repo,github-page,help,output:,package:,setup \
+TEMP=$(getopt -o 12bcdgho:p:s --long i386,arm64,bell,config,debian-repo,github-page,help,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -584,12 +588,16 @@ cross_to_arm64=false
 distribute_to_debian_repo=false
 distribute_to_github_page=false
 
+ring_bell=false
+
 while true; do
 	case "$1" in
 		-1 | --i386 )
 			cross_to_i386=true; shift ;;
 		-2 | --arm64 )
 			cross_to_arm64=true; shift ;;
+		-b | --bell )
+			ring_bell=true; shift ;;
 		-c | --config )
 			xdg-open "$CONFIG_FILE"; exit 0; shift ;;
 		-d | --debian-repo )
@@ -669,3 +677,7 @@ maybe_publish_to_deb_repo
 maybe_make_github_release_page
 
 delete_temp_files
+
+if [ $ring_bell == true ]; then
+	aplay /usr/share/autobuild/bell.wav
+done
