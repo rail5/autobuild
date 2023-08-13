@@ -1,3 +1,16 @@
+autobuild (1.2) bullseye; urgency=medium
+
+  * Build farm VMs now check for new build
+  dependencies on each run.
+  Removed some possibility for dpkg
+  interruptions in the build farm VMs.
+  Build farm VMs now boot with no display
+  to reduce screen clutter.
+  Added -b option to ring a bell when
+  finished
+
+ -- rail5 <andrew@rail5.org>  Sun, 13 Aug 2023 15:48:29 -0400
+
 autobuild (1.1) bullseye; urgency=medium
 
   * Added LICENSE file
