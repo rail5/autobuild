@@ -305,7 +305,7 @@ function push_github_release_page() {
 	### Finally, check if "double-spaces" exist (The double-spaces come after we remove the original newline chars, if the original changelog message spanned multiple lines). If so:
 	### (3) Replace double-spaces ('  ') with '\n' (literal)
 	if (echo "$CHANGELOG" | grep "  " >/dev/null); then
-		CHANGELOG=$(echo -n "$CHANGELOG" | sed -n 's/  /\\n/p')
+		CHANGELOG=$(echo -n "$CHANGELOG" | sed -n 's/  /\\n/pg')
 	fi
 
 	## Get version number from package source using dpkg-parsechangelog
