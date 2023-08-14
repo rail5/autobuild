@@ -680,4 +680,4 @@ delete_temp_files
 
 if [ $ring_bell == true ]; then
 	aplay /usr/share/autobuild/bell.wav
-done
+fi
