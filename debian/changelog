@@ -1,3 +1,14 @@
+autobuild (1.6) bullseye; urgency=medium
+
+  * Autobuild now escapes quote-marks
+  in changelog messages before pushing
+  to Github release pages. A string
+  "like this" would have failed before.
+  Newlines are now escaped in a more
+  sane way.
+
+ -- rail5 <andrew@rail5.org>  Tue, 15 Aug 2023 15:48:10 -0400
+
 autobuild (1.5) bullseye; urgency=medium
 
   * Autobuild now escapes backslashes
