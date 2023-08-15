@@ -298,12 +298,13 @@ function push_github_release_page() {
 	
 	## Get changelog from package source using dpkg-parsechangelog (dpkg-dev package)
 	### Pipe into sed to:
-	### (1) Remove newline chars
-	### (2) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\n//g' | sed -n 's/.*\* //p')
+	### (1) Escape backslashes (\ to \\)
+	### (2) Remove newline chars
+	### (3) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n//g' | sed -n 's/.*\* //p')
 
 	### Finally, check if "double-spaces" exist (The double-spaces come after we remove the original newline chars, if the original changelog message spanned multiple lines). If so:
-	### (3) Replace double-spaces ('  ') with '\n' (literal)
+	### (4) Replace double-spaces ('  ') with '\n' (literal)
 	if (echo "$CHANGELOG" | grep "  " >/dev/null); then
 		CHANGELOG=$(echo -n "$CHANGELOG" | sed -n 's/  /\\n/pg')
 	fi
