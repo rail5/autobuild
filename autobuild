@@ -300,8 +300,9 @@ function push_github_release_page() {
 	### Pipe into sed to:
 	### (1) Escape backslashes (\ to \\)
 	### (2) Replace newline chars with '\n' (literal)
-	### (3) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -n 's/.*\* //p')
+	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
+	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
 
 	## Get version number from package source using dpkg-parsechangelog
 	### Pipe into sed to remove the ending newline char
