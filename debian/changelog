@@ -1,3 +1,11 @@
+autobuild (1.5) bullseye; urgency=medium
+
+  * Autobuild now escapes backslashes
+  in changelog entries before posting
+  to Github
+
+ -- rail5 <andrew@rail5.org>  Tue, 15 Aug 2023 01:50:42 -0400
+
 autobuild (1.4) bullseye; urgency=medium
 
   * Patched a small bug in autobuild's
