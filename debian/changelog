@@ -1,3 +1,9 @@
+autobuild (1.7) stable; urgency=medium
+
+  * Moving everything to Debian 12
+
+ -- rail5 <andrew@rail5.org>  Fri, 18 Aug 2023 23:11:13 -0400
+
 autobuild (1.6) bullseye; urgency=medium
 
   * Autobuild now escapes quote-marks

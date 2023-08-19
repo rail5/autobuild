@@ -6,7 +6,7 @@
 # SYSTEM
 
 host_architecture="amd64"
-debian_distribution="bullseye"
+debian_distribution="bookworm"
 
 
 # PACKAGES
