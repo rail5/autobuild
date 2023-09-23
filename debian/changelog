@@ -1,3 +1,9 @@
+autobuild (1.10) stable; urgency=medium
+
+  * Replaced apt with apt-get for (hopefully) more reliability
+
+ -- rail5 <andrew@rail5.org>  Sat, 23 Sep 2023 16:13:46 +0800
+
 autobuild (1.9) stable; urgency=medium
 
   * Apt appears to be giving sshpass
