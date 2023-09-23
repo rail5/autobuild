@@ -1,6 +1,6 @@
 #!/bin/bash
 
-packagemanager="apt"
+packagemanager="apt-get"
 installcommand="install"
 updatecommand="update"
 
