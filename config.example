@@ -27,6 +27,7 @@ packages+=(["randomtext"]="https://github.com/rail5/randomtext.git")
 packages+=(["evolution-notify"]="https://github.com/rail5/evolution-notify.git")
 packages+=(["stepgrampa"]="https://github.com/rail5/stepgrampa.git")
 packages+=(["autobuild"]="https://github.com/rail5/autobuild.git")
+packages+=(["stranslate"]="https://github.com/rail5/stranslate.git")
 
 
 ## Build dependencies for your packages
