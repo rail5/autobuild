@@ -1,3 +1,9 @@
+autobuild (1.10.3) stable; urgency=medium
+
+  * Added 'addmake' to the config.example
+
+ -- rail5 <andrew@rail5.org>  Fri, 13 Oct 2023 11:22:13 +0800
+
 autobuild (1.10.2) stable; urgency=medium
 
   * Append newline to the end of autobuild's output to avoid
