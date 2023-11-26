@@ -8,3 +8,13 @@ TODO:
 	- 'autobuild -s' should have an option to edit the config then and there rather than having to run 'autobuild -c' first
 
 - There isn't any mechanism yet to detect problems in the build-farm VMs. There should be some kind of error reporting at the very least. Maybe automatic handling for the most likely errors when they're detected
+
+- Add option for "extra commands" / extra files to be added to Github Release pages
+	- Should be an option in the autobuild config script:
+		- Pre-build script
+		- Post-build script
+		- Extra files to add to releases
+	- Should be configured PER-PACKAGE
+
+- VMs should not clone the Git repository separately; the host machine should transfer the downloaded files to them directly.
+	- The build farm VMs are supposed to be entirely non-interactive. If a git repository is private, git will request login information before cloning. If this has to be obtained, it should only have to be obtained on the host machine.
