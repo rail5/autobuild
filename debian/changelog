@@ -1,3 +1,9 @@
+autobuild (1.10.4) stable; urgency=medium
+
+  * Build farm VMs no longer clone repos separately
+
+ -- rail5 <andrew@rail5.org>  Sun, 26 Nov 2023 18:32:39 +0800
+
 autobuild (1.10.3) stable; urgency=medium
 
   * Added 'addmake' to the config.example
