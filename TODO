@@ -15,6 +15,3 @@ TODO:
 		- Post-build script
 		- Extra files to add to releases
 	- Should be configured PER-PACKAGE
-
-- VMs should not clone the Git repository separately; the host machine should transfer the downloaded files to them directly.
-	- The build farm VMs are supposed to be entirely non-interactive. If a git repository is private, git will request login information before cloning. If this has to be obtained, it should only have to be obtained on the host machine.
