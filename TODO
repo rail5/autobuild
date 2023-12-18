@@ -18,3 +18,5 @@ TODO:
 
 - Can autobuild determine the build dependency packages just by reading debian/control, rather than having them specified separately in the config file?
 	This of course assumes a well-formed package, but I don't think that's unreasonable.
+
+- Autobuild should store local versions of the package repositories in question and just pull changes rather than cloning from scratch every time
