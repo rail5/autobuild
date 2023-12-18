@@ -26,3 +26,6 @@ TODO:
 
 - Build an optional web interface?
   Autobuild could be deployed to some server somewhere and you could have it distribute your changes remotely. Might be nice.
+
+- Consolidate the contents of the autobuild-setup script into either (1) the main script or (2) a config file
+  No reason we should have two scripts to this package.
