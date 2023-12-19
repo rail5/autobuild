@@ -1,3 +1,11 @@
+autobuild (1.11) stable; urgency=medium
+
+  * Autobuild now detects package build dependencies by reading
+  the debian/control file, and no longer requires that the user
+  specify the package build-deps in the autobuild config file.
+
+ -- rail5 <andrew@rail5.org>  Tue, 19 Dec 2023 19:38:07 +0800
+
 autobuild (1.10.4) stable; urgency=medium
 
   * Build farm VMs no longer clone repos separately
