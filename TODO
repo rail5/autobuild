@@ -7,10 +7,6 @@ TODO:
 	- Default "yes" on y/n prompts
 	- 'autobuild -s' should have an option to edit the config then and there rather than having to run 'autobuild -c' first
 
-- There isn't any mechanism yet to detect problems in the build-farm VMs. There should be some kind of error reporting at the very least. Maybe automatic handling for the most likely errors when they're detected
-	- Partially started. The user can now view the build logs from the VMs in real-time.
-	We should ensure that the build-farm VMs do not hang when they do not complete their builds successfully.
-
 - Add option for "extra commands" / extra files to be added to Github Release pages
 	- Should be an option in the autobuild config script:
 		- Pre-build script

@@ -129,6 +129,7 @@ function build_package_universal() {
 	cd "$packagedir"
 	git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
 	cd "$PKGNAME"
+	git reset --hard
 	git pull -q # Pull changes in case we do already have it (an older version)
 
 	# Copy the updated source code into a temp directory named PKGNAME
@@ -437,6 +438,7 @@ function prepare_ghpages_debian_repo() {
 	cd "$storagedir"
 	git clone "$git_debianrepo" "$local_repodirectory" -q 2>/dev/null
 	cd "$local_repodirectory"
+	git reset --hard
 	git pull -q
 }
 
