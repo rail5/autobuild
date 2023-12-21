@@ -1,3 +1,13 @@
+autobuild (1.11.3) stable; urgency=medium
+
+  * Autobuild now has a mechanism to prevent unauthorized
+  changes to locally-stored package sources by other users
+  or processes, making sure that the version of the source
+  pulled from the specified git repo takes precedence over
+  any unpushed local changes.
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 21:51:10 +0800
+
 autobuild (1.11.2) stable; urgency=medium
 
   * Autobuild now displays the build logs from the build-farm
