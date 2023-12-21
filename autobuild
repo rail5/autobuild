@@ -489,8 +489,8 @@ function push_to_ghpages_debian_repo() {
 	# Update indexes and commit changes
 	cd "$storagedir/$local_repodirectory"
 	./update-indexes.sh
-	git add --all -q
-	git commit -m "Updated $PKGNAME" -q
+	git add --all
+	git commit -m "Updated $PKGNAME"
 }
 
 
