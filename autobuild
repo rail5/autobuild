@@ -12,6 +12,7 @@ fi
 tempdirectory=$(dirname $(mktemp -u))
 initdir=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 storagedir="$HOME/.local/share/autobuild"
+packagedir="$storagedir/packages"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
 build_dependencies=""
@@ -55,7 +56,32 @@ if [ ! -f "$CONFIG_FILE" ]; then
 	cp "$storagedir/config.example" "$CONFIG_FILE"
 fi
 
+mkdir -p "$packagedir"
+
 . "$CONFIG_FILE"
+
+
+# BEFORE WE START:
+# Let's verify that ALL of the subdirectories under $packagedir correspond to key in the "packages" associative array
+## If we find a subdirectory under $packagedir which DOES NOT correspond to a key in "packages",
+## We should remove it.
+# This way, we avoid taking up unnecessary space on the user's machine
+## In the event that the user decides to remove a package from their autobuild config.
+OLDIFS="$IFS"
+IFS="
+"
+for subdir in $(ls "$packagedir"); do
+	if [[ "${packages[$subdir]+true}" ]]; then
+		# Package exists in our packages array
+		continue
+	else
+		# Package DOES NOT exist in our packages array
+		rm -rf "$packagedir/$subdir"
+	fi
+done
+IFS="$OLDIFS"
+
+# Now carry on
 
 
 function setup_build_environment() {
@@ -99,9 +125,16 @@ function build_package_universal() {
 	mkdir -p "$builddir"
 	mkdir -p "$releasedir"
 	
-	# Pull the source code from GITURL into directory named PKGNAME
+	# Pull updates to the source code from GITURL into our local package directory
+	cd "$packagedir"
+	git clone "$GITURL" "$PKGNAME" # Clone in case we don't already have it
+	cd "$PKGNAME"
+	git pull # Pull changes in case we do already have it (an older version)
+
+	# Copy the updated source code into a temp directory named PKGNAME
 	cd "$initdir/$pkgs_build_base_directory/srconly"
-	git clone "$GITURL" "$PKGNAME"
+	mkdir "$PKGNAME"
+	cp -r "$packagedir/$PKGNAME/"* "./$PKGNAME/"
 	
 	# Tar it up so we can pass it to the build farm VMs later
 	cd "$srcdir"
