@@ -1,3 +1,12 @@
+autobuild (1.11.1) UNRELEASED; urgency=medium
+
+  * Autobuild now stores package sources in the user's .local
+  directory, rather than cloning them anew each time we want
+  to build them. This saves a lot of time when building large
+  packages.
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 15:25:07 +0800
+
 autobuild (1.11) stable; urgency=medium
 
   * Autobuild now detects package build dependencies by reading
