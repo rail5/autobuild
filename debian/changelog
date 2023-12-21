@@ -1,4 +1,12 @@
-autobuild (1.11.1) UNRELEASED; urgency=medium
+autobuild (1.11.2) stable; urgency=medium
+
+  * Autobuild now displays the build logs from the build-farm
+  virtual machines in real-time, so that the user may witness
+  any errors which may or may not come up, etc.
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 18:32:46 +0800
+
+autobuild (1.11.1) stable; urgency=medium
 
   * Autobuild now stores package sources in the user's .local
   directory, rather than cloning them anew each time we want
