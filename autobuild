@@ -191,12 +191,12 @@ function build_package_universal() {
 	fi
 	
 	# Move packages to 'release' directory
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.deb "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.build "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.changes "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.build "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.changes "$releasedir/" 2>/dev/null
 }
 
 function clean_up() {
@@ -261,11 +261,14 @@ function build_other_arch() {
 	local PKGNAME="$1" SOURCETARBALL="$2" ARCH="$3"
 	
 	# First, pass the source tarball into the VM
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT "$SOURCETARBALL" $SSHUSER@127.0.0.1:/tmp/$(basename $SOURCETARBALL)
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT "$SOURCETARBALL" $SSHUSER@127.0.0.1:/tmp/$(basename $SOURCETARBALL) >/dev/null 2>&1
 	
 	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
 	# Here we connect and build the packages
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
+	echo "--------"
+	echo "BUILD LOG ($ARCH)"
+	echo "--------"
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 << EOF
 mkdir -p /home/debian/build/src
 mkdir -p /home/debian/build/pkg
 
@@ -293,16 +296,19 @@ tar -czf /home/debian/build/pkg/packages.tar.gz ./
 
 exit
 EOF
+	echo "--------"
+	echo "END BUILD LOG ($ARCH)"
+	echo "--------"
 	
 	# Now we SCP download the packages to the host machine
 
 	# Create the tmp folder for this architecture
 	mkdir "$initdir/$ARCH"
 
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz"
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz" >/dev/null 2>&1
 	
 	cd "$initdir/$ARCH"
-	tar -xvf packages.tar.gz
+	tar -xzf packages.tar.gz
 	rm -f packages.tar.gz
 	mv "$initdir/$ARCH/"*.deb "$initdir/buildfarm-debs/"
 	rm -f "$initdir/$ARCH/"*
