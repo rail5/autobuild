@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # autobuild
 # Copyright (C) 2023 rail5
@@ -127,9 +127,9 @@ function build_package_universal() {
 	
 	# Pull updates to the source code from GITURL into our local package directory
 	cd "$packagedir"
-	git clone "$GITURL" "$PKGNAME" # Clone in case we don't already have it
+	git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
 	cd "$PKGNAME"
-	git pull # Pull changes in case we do already have it (an older version)
+	git pull -q # Pull changes in case we do already have it (an older version)
 
 	# Copy the updated source code into a temp directory named PKGNAME
 	cd "$initdir/$pkgs_build_base_directory/srconly"
@@ -138,7 +138,7 @@ function build_package_universal() {
 	
 	# Tar it up so we can pass it to the build farm VMs later
 	cd "$srcdir"
-	tar -czvf "$sourcetarball" .
+	tar -czf "$sourcetarball" .
 
 
 	# Get the build dependencies for this package by reading debian/control
@@ -167,14 +167,13 @@ function build_package_universal() {
 	
 	if [[ BASEBUILD -eq 1 ]]; then
 		
-		cp -rv "$srcdir/"* "$builddir/"
+		cp -r "$srcdir/"* "$builddir/"
 		
 		# Move to the build directory, don't mess with the source directory
-		echo "MOVING TO $builddir"
 		cd "$builddir"
 		
 		# Build package
-		debuild
+		debuild -us -uc
 	fi
 	
 	if [[ I386BUILD -eq 1 ]]; then
@@ -282,7 +281,7 @@ mkdir "$PKGNAME"
 cd "$PKGNAME"
 
 mv /tmp/$(basename $SOURCETARBALL) .
-tar -xvzf ./$(basename $SOURCETARBALL)
+tar -xzf ./$(basename $SOURCETARBALL)
 rm ./$(basename $SOURCETARBALL)
 
 debuild -us -uc
@@ -290,7 +289,7 @@ debuild -us -uc
 cd ..
 rm -rf "$PKGNAME/"
 
-tar -czvf /home/debian/build/pkg/packages.tar.gz ./
+tar -czf /home/debian/build/pkg/packages.tar.gz ./
 
 exit
 EOF
@@ -303,7 +302,7 @@ EOF
 	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz"
 	
 	cd "$initdir/$ARCH"
-	tar -xvzf packages.tar.gz
+	tar -xvf packages.tar.gz
 	rm -f packages.tar.gz
 	mv "$initdir/$ARCH/"*.deb "$initdir/buildfarm-debs/"
 	rm -f "$initdir/$ARCH/"*
@@ -430,16 +429,16 @@ function push_github_release_page() {
 function prepare_ghpages_debian_repo() {
 	# Clone the git repo into a local directory
 	cd "$storagedir"
-	git clone "$git_debianrepo" "$local_repodirectory"
+	git clone "$git_debianrepo" "$local_repodirectory" -q 2>/dev/null
 	cd "$local_repodirectory"
-	git pull
+	git pull -q
 }
 
 function close_ghpages_debian_repo() {
 	cd "$storagedir/$local_repodirectory"
 	
 	# Push the changes we've made before calling this function
-	git push origin
+	git push origin -q
 	
 	# Move back to start
 	cd "$initdir"
@@ -482,8 +481,8 @@ function push_to_ghpages_debian_repo() {
 	# Update indexes and commit changes
 	cd "$storagedir/$local_repodirectory"
 	./update-indexes.sh
-	git add --all
-	git commit -m "Updated $PKGNAME"
+	git add --all -q
+	git commit -m "Updated $PKGNAME" -q
 }
 
 
