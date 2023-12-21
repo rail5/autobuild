@@ -16,8 +16,6 @@ TODO:
 		- Extra files to add to releases
 	- Should be configured PER-PACKAGE
 
-- Autobuild should store local versions of the package repositories in question and just pull changes rather than cloning from scratch every time
-
 - Add option to run build-farm VMs in parallel
   User should be able to choose how many VMs run simultaneously
 
