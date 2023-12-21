@@ -2,15 +2,17 @@
 
 Automatically build & distribute Debian packages
 
+![AGPL](https://www.gnu.org/graphics/agplv3-with-text-162x68.png)
+
 ## What does it do?
 
 This script will:
 
-  - Download Debian package sources from a git repo
-  - Build them on an x86_64/amd64 host machine
-  - Launch a virtual QEMU build-farm & build equivalents on other architectures
-  - Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
-  - Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
+- Download Debian package sources from a git repo
+- Build them on an x86_64/amd64 host machine
+- Launch a virtual QEMU build-farm & build equivalents on other architectures
+- Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
+- Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
 
 Autobuild is also used to build & distribute *itself*.
 
