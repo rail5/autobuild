@@ -2,7 +2,7 @@
 
 # autobuild
 # Copyright (C) 2023 rail5
-# Free software (GPL v3)
+# Free software (GNU Affero GPL v3)
 
 if [ "$(whoami)" == "root" ]; then
 	echo "Warning: this script should NOT be run as root."
@@ -592,7 +592,7 @@ function display_help() {
 	echo "Copyright (C) 2023 rail5"
 	echo ""
 	echo "This program comes with ABSOLUTELY NO WARRANTY."
-	echo "This is free software (GNU GPL V3), and you are welcome to redistribute it under certain conditions."
+	echo "This is free software (GNU Affero GPL V3), and you are welcome to redistribute it under certain conditions."
 	echo ""
 	echo "You should edit CONFIG and run setup before using this script"
 	echo ""
