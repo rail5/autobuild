@@ -35,5 +35,7 @@ TODO:
 - #7 | Build an optional web interface?
 	Autobuild could be deployed to some server somewhere and you could have it distribute your changes remotely. Might be nice.
 
-- #8 Consolidate the contents of the autobuild-setup script into either (1) the main script or (2) a config file
+- #8 | Consolidate the contents of the autobuild-setup script into either (1) the main script or (2) a config file
 	No reason we should have two scripts to this package.
+
+- #9 | Get rid of the "debian_distribution" and "host_architecture" variables from the autobuild config. Why are they there? I don't like them and they shouldn't have to be there.
