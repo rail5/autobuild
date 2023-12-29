@@ -12,6 +12,7 @@ fi
 tempdirectory=$(dirname $(mktemp -u))
 initdir=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 storagedir="$HOME/.local/share/autobuild"
+buildfarmdir="$storagedir/build-farm"
 packagedir="$storagedir/packages"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
@@ -47,6 +48,8 @@ SSHPORT="22222"
 
 CONFIG_FILE="$storagedir/config"
 
+BUILDFARM_SCRIPTS_FILE="$buildfarmdir/scripts/scripts.sh"
+
 if [ ! -d "$storagedir" ]; then
 	mkdir "$storagedir"
 fi
@@ -59,6 +62,7 @@ fi
 mkdir -p "$packagedir"
 
 . "$CONFIG_FILE"
+. "$BUILDFARM_SCRIPTS_FILE"
 
 
 # BEFORE WE START:
@@ -222,19 +226,25 @@ function start_build_vm() {
 	if [[ "$ARCH" == "i386" ]]; then
 		ARCHDIR="debian-stable-i386"
 		
-		cd "$storagedir/build-farm/$ARCHDIR"
+		SSHPORT=$(get_random_free_port)
 		
-		make boot-nodisplay &
+		boot_vm_nodisplay "$ARCH" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" &
+
 		# Give the VM some time to come online
 		sleep 15
 		
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
 	
-		cd "$storagedir/build-farm/$ARCHDIR"
+		SSHPORT=$(get_random_free_port)
 		
-		make boot-nodisplay &
+		boot_vm_nodisplay "aarch64" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" &
+			# Perhaps we should rename 'arm64' to 'aarch64' within Autobuild for consistency with the way Debian names things?
+
 		# Give the VM some time to come online (ARM emulation takes a lot longer)
+		## Note: This is only because, from an x86 host, we can't run ARM with KVM acceleration
+		## Instead of hardcoding arbitrary sleep values, we should just try to detect when the goddamn VM is ready.
+		## After all, what if an autobuild user is running on ARM to begin with? etc
 		sleep 60
 	fi
 	

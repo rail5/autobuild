@@ -1,3 +1,13 @@
+autobuild (1.12-rc1) UNRELEASED; urgency=medium
+
+  * Generalizing the build-farm launch system, or rather,
+  beginning to generalize it. We should determine things like
+  the SSH ports, the kind of acceleration, etc, intelligently,
+  rather than relying on pre-scripted hard-coded makefiles
+  as autobuild has so far.
+
+ -- rail5 <andrew@rail5.org>  Sat, 30 Dec 2023 00:06:58 +0800
+
 autobuild (1.11.5) stable; urgency=medium
 
   * Cleaned up the ancient autobuild-setup script, also now
