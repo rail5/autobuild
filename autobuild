@@ -502,29 +502,26 @@ function ask_user_build_pkg() {
 	local PKGNAME="$1"
 	
 	while true; do
-		read -p "Do you want to build $PKGNAME? (y/n) " yn
+		read -p "Do you want to build $PKGNAME? (y/N) " yn
 		case $yn in
 			[Yy]* ) buildbasepkgs+=("$PKGNAME"); break;;
-			[Nn]* ) return 1; break;;
-			* ) echo "Answer yes or no";;
+			* ) return 1;;
 		esac
 	done
 	
 	while true; do
-		read -p "  $PKGNAME: Build on i386 as well? (y/n) " yn
+		read -p "  $PKGNAME: Build on i386 as well? (y/N) " yn
 		case $yn in
 			[Yy]* ) buildi386pkgs+=("$PKGNAME"); break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
+			* ) break;;
 		esac
 	done
 	
 	while true; do
-		read -p "  $PKGNAME: Build on arm64 as well? (y/n) " yn
+		read -p "  $PKGNAME: Build on arm64 as well? (y/N) " yn
 		case $yn in
 			[Yy]* ) buildarm64pkgs+=("$PKGNAME"); break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
+			* ) break;;
 		esac
 	done
 }
