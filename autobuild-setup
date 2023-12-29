@@ -5,11 +5,9 @@ installcommand="install"
 updatecommand="update"
 
 # Build Dependencies
-basepkgslist="build-essential gcc g++ make git wget tar curl"
+basepkgslist="sudo build-essential gcc g++ make git wget tar curl"
 
-packagingdeps="devscripts make sed unzip xz-utils jq reprepro"
-
-buildfarmdeps="sshpass libarchive-tools syslinux syslinux-utils cpio genisoimage coreutils qemu-system qemu-system-x86 qemu-utils util-linux"
+packagingdeps="devscripts make sed unzip xz-utils jq"
 
 # For restoring the CWD
 scriptfile=$(readlink -f "$0")
@@ -25,59 +23,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 . "$CONFIG_FILE"
-
-echo "This script is to set up your machine to use autobuild"
-echo ""
-echo "EDIT YOUR CONFIG **BEFORE** RUNNING THIS SCRIPT! (Run 'autobuild -c')"
-echo ""
-echo ""
-
-while true; do
-	read -p "Have you edited your config? (y/n) " yn
-	case $yn in
-		[Yy]* ) echo "Alright then"; break;;
-		[Nn]* ) exit 1; break;;
-		* ) echo "Answer yes or no";;
-	esac
-done
-
-echo "----"
-echo "----"
-
-echo "Updating package lists..."
-
-sudo $packagemanager $updatecommand
-
-echo "----"
-echo "----"
-echo "Base necessary packages are:"
-echo "$basepkgslist $build_dependencies $packagingdeps"
-
-installingbasedeps=0
-while true; do
-	read -p "Do you want to install these now? (y/n) " yn
-	case $yn in
-		[Yy]* ) echo "Alright then"; installingbasedeps=1; break;;
-		[Nn]* ) echo "Moving on"; break;;
-		* ) echo "Answer yes or no";;
-	esac
-done
-
-if [[ installingbasedeps -eq 1 ]]; then
-
-	echo "Installing build dependencies..."
-
-	sudo $packagemanager $installcommand $basepkgslist $build_dependencies $packagingdeps
-
-	echo "----"
-	echo "----"
-	echo "----"
-	echo "----"
-
-	echo "Build dependencies installed"
-	echo "--"
-
-fi
 
 setupgithubhttps=0
 while true; do
@@ -148,7 +93,6 @@ fi
 echo "--"
 echo "This script can also set up a virtual-machine Build Farm"
 echo "This can be used to build packages on other architectures or for other distributions"
-echo "This requires QEMU and a few more free (libre) utilities as well"
 echo "Currently the build farm contains the following VMs:"
 echo "  - Debian Stable i386"
 echo "  - Debian Stable arm64"
@@ -167,16 +111,14 @@ while true; do
 	esac
 done
 
-if [[ buildingvms -eq 1 ]]; then
-	sudo $packagemanager $installcommand $buildfarmdeps
-	
+if [[ buildingvms -eq 1 ]]; then	
 	cd $storagedir/build-farm
 	
 	echo "  Creating i386 VM..."
 	
 	cd debian-stable-i386
 	
-	bash ./set-install-packages.sh $basepkgslist $build_dependencies $packagingdeps
+	bash ./set-install-packages.sh $basepkgslist $packagingdeps
 	
 	make download
 	make image
@@ -188,7 +130,7 @@ if [[ buildingvms -eq 1 ]]; then
 	
 	cd ../debian-stable-arm64
 	
-	bash ./set-install-packages.sh $basepkgslist $build_dependencies $packagingdeps
+	bash ./set-install-packages.sh $basepkgslist $packagingdeps
 	
 	make download
 	make image
