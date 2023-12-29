@@ -35,3 +35,5 @@ TODO:
 	No reason we should have two scripts to this package.
 
 - #8 | Get rid of the "debian_distribution" and "host_architecture" variables from the autobuild config. Why are they there? I don't like them and they shouldn't have to be there.
+
+- #9 | Get rid of the arbitrary "sleep" commands after starting build VMs. There's got to be some way to just get a signal or otherwise figure out when it's finally online and ready.
