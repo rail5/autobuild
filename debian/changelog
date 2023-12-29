@@ -1,3 +1,11 @@
+autobuild (1.11.5) stable; urgency=medium
+
+  * Cleaned up the ancient autobuild-setup script, also now
+  have default N on some y/n prompts in autobuild's
+  interactive mode.
+
+ -- rail5 <andrew@rail5.org>  Fri, 29 Dec 2023 16:31:32 +0800
+
 autobuild (1.11.4) stable; urgency=medium
 
   * Patched a silly bug in the debian repo publishing function
