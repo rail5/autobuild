@@ -1,9 +1,5 @@
 #!/bin/bash
 
-packagemanager="apt-get"
-installcommand="install"
-updatecommand="update"
-
 # Build Dependencies
 basepkgslist="sudo build-essential gcc g++ make git wget tar curl"
 
