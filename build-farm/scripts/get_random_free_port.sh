@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 function get_random_free_port() {
 	while true; do
 		RANDOM_PORT=$(expr $(expr $RANDOM % 16372) + 49152 )
