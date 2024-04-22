@@ -57,7 +57,7 @@ function boot_vm_nodisplay() {
 
 	BOOT_SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
-	. $BOOT_SCRIPT_DIR/../scripts/scripts.sh # Get some functions we'll be using
+	. "$BOOT_SCRIPT_DIR/../scripts/scripts.sh" # Get some functions we'll be using
 
 	QEMU=qemu-system-$ARCH
 
