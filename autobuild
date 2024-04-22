@@ -419,7 +419,7 @@ function push_github_release_page() {
 				\"generate_release_notes\": false}" > release-info
 	
 	## Get GitHub Release ID
-	RELEASEID=$(cat "$basereleasedir/$PKGNAME/release-info" | jq -r '.id')
+	RELEASEID=$(jq -r '.id' "$basereleasedir/$PKGNAME/release-info")
 	
 	## Declare array which will be filled with filenames of attachments (.debs, .exes)
 	local list_of_pkg_files=()
@@ -428,7 +428,7 @@ function push_github_release_page() {
 	for file in $(ls); do
 		list_of_pkg_files+=("$(echo "$file" | grep -P -e $PKGNAME.*.deb)")
 	done
-	
+
 	## Upload the attachments via POST request to the GitHub API
 	for file in "${list_of_pkg_files[@]}"; do
 		if [[ "$file" != "" ]]; then
