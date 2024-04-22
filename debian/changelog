@@ -1,3 +1,14 @@
+autobuild (1.11.8) stable; urgency=medium
+
+  * More code cleanup. Patched two bugs: one which would have
+  affected users with spaces in their usernames (an unquoted
+  string), and one which (through a silly oversight) affected
+  packages which included the word 'changes' in their names,
+  preventing autobuild from pushing them to Debian repos.
+  General code style improvements as well.
+
+ -- rail5 <andrew@rail5.org>  Mon, 22 Apr 2024 19:32:05 +0800
+
 autobuild (1.11.7) stable; urgency=medium
 
   * Some minor code cleanup with the help of shellcheck
