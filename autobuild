@@ -379,7 +379,7 @@ function push_github_release_page() {
 	# Get repo name from PKG url
 	
 	## This first line trims a URL like "https://github.com/user/repo.git" to just "repo.git"
-	REPOSITORY=$(echo "${packages[$PKGNAME]}" | grep -P -o -e "/[^/]*\.git" | cut -c2-)
+	REPOSITORY=$(echo "${packages[$PKGNAME]}" | grep -P -o -e "/[^/]*" | cut -c2- | tail -n 1)
 	
 	## This second line removes the ".git" if it's there, making it just "repo"
 	REPOSITORY="${REPOSITORY/.git/""}"
