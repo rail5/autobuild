@@ -459,7 +459,7 @@ function push_to_ghpages_debian_repo() {
 		echo "bag args to push_to_ghpages_debian_repo" && exit 5
 	fi
 	
-	local PKGNAME="$1" CHANGESFILE="" list_of_pkg_files=()
+	local PKGNAME="$1" CHANGESFILE=""
 	
 	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
 	cd debian || { echo "$PKGNAME does not appear to contain a 'debian' subdirectory"; exit 1; }
@@ -473,12 +473,9 @@ function push_to_ghpages_debian_repo() {
 	
 	
 	# Get the list of all .deb package files that are NOT marked with $host_architecture (default: amd64)
-	for file in $(ls "$basereleasedir/$PKGNAME/"); do
-		list_of_pkg_files+=("$(echo "$file" | grep -P -e $PKGNAME.*.deb | grep -v "$host_architecture")")
-	done
-	
-	# Add those to the repo with includedeb
-	for file in "${list_of_pkg_files[@]}"; do
+	# And add those to the repo with includedeb
+	for file in "$basereleasedir/$PKGNAME/"*; do
+		file="$(basename "$file" | grep -P -e "$PKGNAME.*deb" | grep -v "$host_architecture")"
 		if [[ "$file" != "" ]]; then
 			reprepro includedeb $debian_distribution "$basereleasedir/$PKGNAME/$file"
 		fi
