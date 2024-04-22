@@ -466,7 +466,7 @@ function push_to_ghpages_debian_repo() {
 	
 	
 	# Get the .changes file
-	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep -P -e .changes | head -n 1)"
+	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep -P -e "\.changes" | head -n 1)"
 	
 	# Add that to the repo
 	reprepro -P optional include $debian_distribution "$basereleasedir/$PKGNAME/$CHANGESFILE"
