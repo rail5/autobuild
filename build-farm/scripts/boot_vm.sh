@@ -2,19 +2,18 @@
 
 function boot_vm() {
 
-	if [[ $# != 5 ]]; then
+	if [[ $# != 6 ]]; then
 		echo "bad args to boot_vm"
 		exit
 	fi
 
-	local QEMU="$1" IMAGE="$2" MEMORY="$3" ACCEL="$4" SSHPORT="$5"
+	local QEMU="$1" IMAGE="$2" MEMORY="$3" ACCEL="$4" SSHPORT="$5" TELNET_PORT="$6"
 	
 	IMAGE_DIRECTORY=$(dirname "$IMAGE")
 	
 	QEMU_COMMAND=""
 	
 	# I hate this. So much.
-	# TODO: Either git rid of the telnet deal (without screwing up the user's terminal window), or randomize the telnet port like we do with the SSH port.
 	if [[ "$QEMU" == "qemu-system-aarch64" ]]; then
 		
 		QEMU_COMMAND="$QEMU -m $MEMORY \
@@ -29,7 +28,7 @@ function boot_vm() {
 			-net user,hostfwd=tcp::$SSHPORT-:22 \
 			-net nic \
 			-drive if=virtio,file=$IMAGE_DIRECTORY/image.qcow,format=qcow2,id=hd \
-			-serial telnet:localhost:33333,server,nowait \
+			-serial telnet:localhost:$TELNET_PORT,server,nowait \
 			-nographic"
 	else
 		QEMU_COMMAND="$QEMU -m $MEMORY \
@@ -37,7 +36,7 @@ function boot_vm() {
 			-net user,hostfwd=tcp::$SSHPORT-:22 \
 			-net nic \
 			-hda $IMAGE \
-			-serial telnet:localhost:33333,server,nowait \
+			-serial telnet:localhost:$TELNET_PORT,server,nowait \
 			-nographic"
 	fi
 	
@@ -48,12 +47,12 @@ function boot_vm() {
 
 function boot_vm_nodisplay() {
 
-	if [[ $# != 3 ]]; then
+	if [[ $# != 4 ]]; then
 		echo "bad args to boot_vm_nodisplay"
 		exit
 	fi
 
-	local ARCH="$1" IMAGE="$2" SSH_PORT="$3"
+	local ARCH="$1" IMAGE="$2" SSH_PORT="$3" TELNET_PORT="$4"
 
 	BOOT_SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
@@ -65,7 +64,7 @@ function boot_vm_nodisplay() {
 	MEMORY_TO_USE=$(get_vm_memory)
 
 	# Try with KVM acceleration
-	boot_vm "$QEMU" "$IMAGE" "$MEMORY_TO_USE" "$ACCEL_OPTION" "$SSH_PORT" &
+	boot_vm "$QEMU" "$IMAGE" "$MEMORY_TO_USE" "$ACCEL_OPTION" "$SSH_PORT" "$TELNET_PORT" &
 	
 	qemu_pid=$!
 	
@@ -75,6 +74,6 @@ function boot_vm_nodisplay() {
 		# Try without KVM acceleration
 		echo "Booting VM with KVM acceleration failed. Trying without KVM..."
 		ACCEL_OPTION="-accel tcg"
-		boot_vm "$QEMU" "$IMAGE" "$MEMORY_TO_USE" "$ACCEL_OPTION" "$SSH_PORT" &
+		boot_vm "$QEMU" "$IMAGE" "$MEMORY_TO_USE" "$ACCEL_OPTION" "$SSH_PORT" "$TELNET_PORT" &
 	fi
 }

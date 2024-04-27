@@ -209,22 +209,27 @@ function start_build_vm() {
 	## IE, if we want to build using the VM stored in ./build-farm/debian-stable-arm64
 	## Then we would set ARCHDIR="debian-stable-arm64"
 	local ARCHDIR=""
+
+	SSHPORT=$(get_random_free_port)
+	TELNETPORT=$(get_random_free_port) # FIXME: Tiny possibility of the two calls generating the same port number
 	
 	if [[ "$ARCH" == "i386" ]]; then
 		ARCHDIR="debian-stable-i386"
 		
-		SSHPORT=$(get_random_free_port)
-		
-		boot_vm_nodisplay "$ARCH" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" &
+		boot_vm_nodisplay "$ARCH" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
 		
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
-	
-		SSHPORT=$(get_random_free_port)
 		
-		boot_vm_nodisplay "aarch64" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" &
+		boot_vm_nodisplay "aarch64" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
 			# Perhaps we should rename 'arm64' to 'aarch64' within Autobuild for consistency with the way Debian names things?
 	fi
+
+	echo "---"
+	echo "$ARCH VM started. You can connect to it (if you want) as follows:"
+	echo "  SSH Port: $SSHPORT"
+	echo "  TELNET Port: $TELNETPORT"
+	echo "---"
 	
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
