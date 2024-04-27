@@ -17,8 +17,6 @@ packagedir="$storagedir/packages"
 autobuilddir="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
-build_dependencies=""
-
 
 basereleasedir=""
 
@@ -150,29 +148,15 @@ function build_package_universal() {
 	tar -czf "$sourcetarball" .
 
 
-	# Get the build dependencies for this package by reading debian/control
-	tmp_build_dependencies=$(grep "Build-Depends:" $srcdir/debian/control)
+	# Install build dependencies
+	mk-build-deps -i -s sudo -r -t "apt-get --no-install-recommends -y" # Might be unnecessary on the host machine? May as well.
 
-	# Remove the "Build-Depends: " prefix
-	tmp_build_dependencies="${tmp_build_dependencies/Build-Depends: /}"
-
-	# Explode by comma, and push back any element that doesn't look like a version number
-	## The format will be like so:
-	### package1, package2, package3 (>= some.version), package4
-	## And we want the list to look like something we can just pass to "apt install"
-	## Meaning:
-	### package1 package2 package3 package4
-	for element in $(echo $tmp_build_dependencies | tr "," "\n"); do
-		if [[ $element == "("* ]]; then
-			continue;
-		fi
-		
-		if [[ $element == *")" ]]; then
-			continue;
-		fi
-		
-		build_dependencies+="$element " # Add the "element" (package name) + a space to the build_dependencies string
-	done
+	## Notes:
+	### mk-build-deps parses debian/changelog to get a list of build dependencies, and creates a .deb package (and some other metadata files) which "depends" on those packages, and can be installed to satisfy those dependencies
+	### '-i' tells it to automatically install the package it builds
+	### '-s sudo' tells it to escalate privileges using 'sudo' when it installs (so that it *can* install)
+	### '-r' tells it to clean up its own mess after installing (remove the package & metadata files), so that it doesn't alter the source tree of the package.
+	### '-t' tells it to use the following command (apt-get -y, passing -y to avoid a requirement for user interaction)
 	
 	if [[ BASEBUILD -eq 1 ]]; then
 		
@@ -254,7 +238,7 @@ function start_build_vm() {
 	
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
-(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1 && sudo apt-get install $build_dependencies -y >/dev/null 2>&1) && exit || exit
+(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1) && exit || exit
 
 exit
 EOF
@@ -302,14 +286,8 @@ mv /tmp/$(basename "$SOURCETARBALL") .
 tar -xzf ./$(basename "$SOURCETARBALL")
 rm ./$(basename "$SOURCETARBALL")
 
-debuild -us -uc
-
-cd ..
-rm -rf "$PKGNAME/"
-
-tar -czf /home/debian/build/pkg/packages.tar.gz ./
-
-exit
+echo "Installing build dependencies"
+mk-build-deps -i -s sudo -r -t "apt-get --no-install-recommends -y" && debuild -us -uc; cd .. && rm -rf "$PKGNAME/"; tar -czf /home/debian/build/pkg/packages.tar.gz ./; exit
 EOF
 	echo "--------"
 	echo "END BUILD LOG ($ARCH)"
