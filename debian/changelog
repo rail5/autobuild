@@ -1,3 +1,16 @@
+autobuild (1.11.10) stable; urgency=medium
+
+  * Assume the host machine has necessary build-deps. This removes an
+    unwanted prompt for interactive input called by sudo
+    Autobuild now connects to the build farm VMs as soon as it can
+    Fixed a bug where build-farm scripts did not upgrade with the
+    package
+    Now running the view-progress script from /usr/share instead of
+    home
+    Progress terminal window exits after completion
+
+ -- rail5 <andrew@rail5.org>  Sat, 27 Apr 2024 17:59:31 +0800
+
 autobuild (1.11.9) stable; urgency=medium
 
   * Improved build dependency handling by using mk-build-deps
