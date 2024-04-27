@@ -150,10 +150,6 @@ function build_package_universal() {
 	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; exit 1; }
 	tar -czf "$sourcetarball" .
 
-
-	# Install build dependencies
-	mk-build-deps -i -s sudo -r -t "apt-get --no-install-recommends -y" # Might be unnecessary on the host machine? May as well.
-
 	## Notes:
 	### mk-build-deps parses debian/changelog to get a list of build dependencies, and creates a .deb package (and some other metadata files) which "depends" on those packages, and can be installed to satisfy those dependencies
 	### '-i' tells it to automatically install the package it builds
