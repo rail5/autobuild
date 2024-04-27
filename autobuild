@@ -723,7 +723,7 @@ maybe_make_github_release_page
 delete_temp_files
 
 if [ $ring_bell == true ]; then
-	aplay /usr/share/autobuild/bell.wav
+	paplay /usr/share/autobuild/bell.ogg
 fi
 
 echo "" # End with newline

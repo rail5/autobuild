@@ -5,6 +5,6 @@
 override_dh_auto_install:
 	install -D -m 0755 config.example "$$(pwd)/debian/autobuild/usr/share/autobuild/config.example"
 	cp -r build-farm "$$(pwd)/debian/autobuild/usr/share/autobuild/build-farm"
-	cp bell.wav "$$(pwd)/debian/autobuild/usr/share/autobuild/bell.wav"
+	cp bell.ogg "$$(pwd)/debian/autobuild/usr/share/autobuild/bell.ogg"
 	install -D -m 0755 autobuild "$$(pwd)/debian/autobuild/usr/bin/autobuild"
 	install -D -m 0755 autobuild-setup "$$(pwd)/debian/autobuild/usr/bin/autobuild-setup"
