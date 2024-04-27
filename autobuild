@@ -220,9 +220,6 @@ function start_build_vm() {
 		SSHPORT=$(get_random_free_port)
 		
 		boot_vm_nodisplay "$ARCH" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" &
-
-		# Give the VM some time to come online
-		sleep 15
 		
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
@@ -231,12 +228,6 @@ function start_build_vm() {
 		
 		boot_vm_nodisplay "aarch64" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" &
 			# Perhaps we should rename 'arm64' to 'aarch64' within Autobuild for consistency with the way Debian names things?
-
-		# Give the VM some time to come online (ARM emulation takes a lot longer)
-		## Note: This is only because, from an x86 host, we can't run ARM with KVM acceleration
-		## Instead of hardcoding arbitrary sleep values, we should just try to detect when the goddamn VM is ready.
-		## After all, what if an autobuild user is running on ARM to begin with? etc
-		sleep 60
 	fi
 	
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
@@ -263,7 +254,11 @@ function build_other_arch() {
 	local PKGNAME="$1" SOURCETARBALL="$2" ARCH="$3"
 	
 	# First, pass the source tarball into the VM
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT "$SOURCETARBALL" "$SSHUSER@127.0.0.1:/tmp/$(basename "$SOURCETARBALL")" >/dev/null 2>&1
+	## Wrapping this in "until (cmd); do sleep 5; done" ensures that we wait until the VM *can* be SSH'd into
+	## The VM may take some time to come online
+	until (sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT "$SOURCETARBALL" "$SSHUSER@127.0.0.1:/tmp/$(basename "$SOURCETARBALL")" >/dev/null 2>&1); do
+		sleep 5
+	done
 	
 	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
 	# Here we connect and build the packages
