@@ -1,3 +1,10 @@
+autobuild (1.11.11) stable; urgency=medium
+
+  * Replaced bell.wav with bell.ogg, reducing file size 10x
+    Telnet ports for the VMs are now randomized
+
+ -- rail5 <andrew@rail5.org>  Sat, 27 Apr 2024 18:54:53 +0800
+
 autobuild (1.11.10) stable; urgency=medium
 
   * Assume the host machine has necessary build-deps. This removes an
