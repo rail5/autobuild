@@ -14,6 +14,7 @@ initdir=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 storagedir="$HOME/.local/share/autobuild"
 buildfarmdir="$storagedir/build-farm"
 packagedir="$storagedir/packages"
+autobuilddir="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
 build_dependencies=""
@@ -48,7 +49,7 @@ SSHPORT="22222"
 
 CONFIG_FILE="$storagedir/config"
 
-BUILDFARM_SCRIPTS_FILE="$buildfarmdir/scripts/scripts.sh"
+BUILDFARM_SCRIPTS_FILE="$autobuilddir/build-farm/scripts/scripts.sh"
 
 if [ ! -d "$storagedir" ]; then
 	mkdir "$storagedir"
