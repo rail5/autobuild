@@ -1,3 +1,13 @@
+autobuild (1.11.9) stable; urgency=medium
+
+  * Improved build dependency handling by using mk-build-deps
+    Now calling build-farm scripts from /usr/share instead of home
+    Statically included base packaging dependencies in the build-farm
+    VM preseeds
+    Also changed the repo mirror to the global URL deb.debian.org
+
+ -- rail5 <andrew@rail5.org>  Sat, 27 Apr 2024 15:18:56 +0800
+
 autobuild (1.11.8) stable; urgency=medium
 
   * More code cleanup. Patched two bugs: one which would have
