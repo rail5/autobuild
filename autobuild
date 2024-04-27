@@ -51,10 +51,13 @@ BUILDFARM_SCRIPTS_FILE="$autobuilddir/build-farm/scripts/scripts.sh"
 
 if [ ! -d "$storagedir" ]; then
 	mkdir "$storagedir"
+	cp -r "/usr/share/autobuild/"* "$storagedir/"
 fi
 
+# Copy the build-farm scripts to $storagedir in case an upgrade took place
+cp -r "/usr/share/autobuild/build-farm/"* "$storagedir/build-farm/"
+
 if [ ! -f "$CONFIG_FILE" ]; then
-	cp -r "/usr/share/autobuild/"* "$storagedir/"
 	cp "$storagedir/config.example" "$CONFIG_FILE"
 fi
 
