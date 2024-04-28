@@ -17,6 +17,16 @@ packagedir="$storagedir/packages"
 autobuilddir="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
+i386_vm_is_configured=false
+arm64_vm_is_configured=false
+
+if [[ -f "$storagedir/build-farm/debian-stable-i386/image.qcow" ]]; then
+	i386_vm_is_configured=true
+fi
+
+if [[ -f "$storagedir/build-farm/debian-stable-arm64/image.qcow" ]]; then
+	arm64_vm_is_configured=true
+fi
 
 basereleasedir=""
 
@@ -637,9 +647,9 @@ ring_bell=false
 while true; do
 	case "$1" in
 		-1 | --i386 )
-			cross_to_i386=true; shift ;;
+			if [[ $i386_vm_is_configured == "true" ]]; then cross_to_i386=true; else echo "The i386 VM is not configured."; fi; shift ;;
 		-2 | --arm64 )
-			cross_to_arm64=true; shift ;;
+			if [[ $arm64_vm_is_configured == "true" ]]; then cross_to_arm64=true; else echo "The arm64 VM is not configured"; fi; shift ;;
 		-b | --bell )
 			ring_bell=true; shift ;;
 		-c | --config )
