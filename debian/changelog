@@ -1,3 +1,14 @@
+autobuild (1.11.12) stable; urgency=medium
+
+  * Users can now choose to build (if they want) only some of the build
+    farm VMs. This used to be all-or-nothing, but users can now select
+    which ones they want, if any, etc
+    General code cleanup
+    Bugfix: asking for cross-compilation when VMs aren't configured no
+    longer hangs indefinitely
+
+ -- rail5 <andrew@rail5.org>  Sun, 28 Apr 2024 15:07:39 +0800
+
 autobuild (1.11.11) stable; urgency=medium
 
   * Replaced bell.wav with bell.ogg, reducing file size 10x
