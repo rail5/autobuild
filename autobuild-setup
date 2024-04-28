@@ -100,28 +100,55 @@ while true; do
 done
 
 if [[ buildingvms -eq 1 ]]; then	
-	cd $storagedir/build-farm  || (echo "Could not enter $storagedir/build-farm. Run this script through 'autobuild -s'"; exit)
-	
-	echo "  Creating i386 VM..."
-	
-	cd debian-stable-i386 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
-	
-	make download
-	make image
-	make boot-install
-	make clean
-	
-	echo "  Created i386 VM."
-	echo "  Creating arm64 VM..."
-	
-	cd ../debian-stable-arm64 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
-	
-	make download
-	make image
-	make boot-install
-	make clean
-	
-	echo "  Created arm64 VM."
+	cd "$storagedir/build-farm" || (echo "Could not enter $storagedir/build-farm. Run this script through 'autobuild -s'"; exit)
+
+	building_i386vm=0
+	building_arm64vm=0
+
+	while true; do
+		read -p "BUILD FARM: Do you want to build packages for i386? (y/n) " yn
+		case $yn in
+			[Yy]* ) building_i386vm=1; break;;
+			[Nn]* ) break;;
+			* ) echo "Answer yes or no";;
+		esac
+	done
+
+	while true; do
+		read -p "BUILD FARM: Do you want to build packages for arm64? (y/n) " yn
+		case $yn in
+			[Yy]* ) building_arm64vm=1; break;;
+			[Nn]* ) break;;
+			* ) echo "Answer yes or no";;
+		esac
+	done
+
+	if [[ $building_i386vm -eq 1 ]]; then
+		echo "  Creating i386 VM..."
+		
+		cd debian-stable-i386 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
+		
+		make download
+		make image
+		make boot-install
+		make clean
+		
+		echo "  Created i386 VM."
+		cd ..
+	fi
+
+	if [[ $building_arm64vm -eq 1 ]]; then
+		echo "  Creating arm64 VM..."
+		
+		cd debian-stable-arm64 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
+		
+		make download
+		make image
+		make boot-install
+		make clean
+		
+		echo "  Created arm64 VM."
+	fi
 fi
 
 exit 0
