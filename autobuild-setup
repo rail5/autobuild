@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# For restoring the CWD
-scriptfile=$(readlink -f "$0")
-initdir=$(dirname "$scriptfile")
-
 storagedir="$HOME/.local/share/autobuild"
 
 CONFIG_FILE="$storagedir/config"
@@ -13,6 +9,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 	exit 1
 fi
 
+# shellcheck source="./config.example"
 . "$CONFIG_FILE"
 
 setupgithubhttps=0
@@ -27,7 +24,7 @@ done
 
 if [[ setupgithubhttps -eq 1 ]]; then
 
-	cd "$storagedir"
+	cd "$storagedir" || (echo "Could not enter $storagedir. Run this script through 'autobuild -s'"; exit)
 	
 	read -p "Enter the email address associated with your GPG key: " gpgemail
 	read -p "Enter your GitHub username: " ghuser
@@ -103,11 +100,11 @@ while true; do
 done
 
 if [[ buildingvms -eq 1 ]]; then	
-	cd $storagedir/build-farm
+	cd $storagedir/build-farm  || (echo "Could not enter $storagedir/build-farm. Run this script through 'autobuild -s'"; exit)
 	
 	echo "  Creating i386 VM..."
 	
-	cd debian-stable-i386
+	cd debian-stable-i386 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
 	
 	make download
 	make image
@@ -117,7 +114,7 @@ if [[ buildingvms -eq 1 ]]; then
 	echo "  Created i386 VM."
 	echo "  Creating arm64 VM..."
 	
-	cd ../debian-stable-arm64
+	cd ../debian-stable-arm64 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
 	
 	make download
 	make image
@@ -126,7 +123,5 @@ if [[ buildingvms -eq 1 ]]; then
 	
 	echo "  Created arm64 VM."
 fi
-
-cd $initdir
 
 exit 0
