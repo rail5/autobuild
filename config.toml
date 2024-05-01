@@ -1,8 +1,5 @@
 # Autobuild configuration
 
-[system]
-host_architecture = "amd64"
-
 [packages]
 package_urls = [
 	"https://github.com/rail5/polonius.git",

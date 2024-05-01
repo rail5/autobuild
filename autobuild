@@ -38,16 +38,16 @@ basereleasedir=""
 
 # Declare the lists of packages we'll be building
 # These arrays will be populated with the packages selected by the user
-buildbasepkgs=()
-buildamd64pkgs=()
-buildi386pkgs=()
-buildarm64pkgs=()
+packages_to_build=()
+amd64_builds=()
+i386_builds=()
+arm64_builds=()
 
 
 # How will we distribute the built packages?
 # These arrays will be populated etc etc
-pkgstopublish=()
-releasepagestomake=()
+packages_to_publish_to_repo=()
+release_pages_to_make=()
 
 # Where are we saving the built package files?
 # Current working directory by default. User can change with -o
@@ -84,9 +84,6 @@ mkdir -p "$packagedir"
 # Parse config file
 #
 config_json=$(toml2json "$CONFIG_FILE")
-
-## System settings
-host_architecture=$(jq -r ".system.host_architecture" <<<"$config_json")
 
 ## Package settings
 number_of_packages=$(jq -r ".packages.package_urls | length" <<<"$config_json")
@@ -162,15 +159,15 @@ function build_package_universal() {
 		echo "bag args to build_package_universal" && exit 1
 	fi
 	
-	local PKGNAME="$1" GITURL="$2" BASEBUILD="$3" I386BUILD="$4" ARM64BUILD="$5"
+	local PKGNAME="$1" GITURL="$2" this_is_amd64_build="$3" this_is_i386_build="$4" this_is_arm64_build="$5"
 	
 	# Variables:
 	## PKGNAME, GITURL: Self-explanatory
-	## BASEBUILD:
-	### 1 or 0: are we cloning the sources & building the .deb on this local machine?
-	## I386BUILD:
+	## this_is_amd64_build:
+	### 1 or 0: are we connecting to the amd64 build-farm VM and building there?
+	## this_is_i386_build:
 	### 1 or 0: are we connecting to the i386 build-farm VM and building there?
-	## ARM64BUILD:
+	## this_is_arm64_build:
 	### 1 or 0: are we connecting to the arm64 build-farm VM and building there?
 	
 	# Start by creating directories:
@@ -200,37 +197,26 @@ function build_package_universal() {
 	# Tar it up so we can pass it to the build farm VMs later
 	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; exit 1; }
 	tar -czf "$sourcetarball" .
-
-	## Notes:
-	### mk-build-deps parses debian/changelog to get a list of build dependencies, and creates a .deb package (and some other metadata files) which "depends" on those packages, and can be installed to satisfy those dependencies
-	### '-i' tells it to automatically install the package it builds
-	### '-s sudo' tells it to escalate privileges using 'sudo' when it installs (so that it *can* install)
-	### '-r' tells it to clean up its own mess after installing (remove the package & metadata files), so that it doesn't alter the source tree of the package.
-	### '-t' tells it to use the following command (apt-get -y, passing -y to avoid a requirement for user interaction)
 	
-	if [[ BASEBUILD -eq 1 ]]; then
-		
-		cp -r "$srcdir/"* "$builddir/"
-		
-		# Move to the build directory, don't mess with the source directory
-		cd "$builddir" || { echo "Could not cd into \"$builddir\""; exit 1; }
-		
-		# Build package
-		debuild -us -uc
+	if [[ this_is_amd64_build -eq 1 ]]; then
+		# Build on the build-farm amd64 VM
+		# This should only run if the VM has been turned on already
+		build_other_arch "$PKGNAME" "$sourcetarball" "amd64"
+		mv "$initdir/buildfarm-debs/"* "$releasedir/"
 	fi
 	
-	if [[ I386BUILD -eq 1 ]]; then
+	if [[ this_is_i386_build -eq 1 ]]; then
 		# Build on the build-farm i386 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "i386"
-		mv "$initdir/buildfarm-debs/"*.deb "$releasedir/"
+		mv "$initdir/buildfarm-debs/"* "$releasedir/"
 	fi
 	
-	if [[ ARM64BUILD -eq 1 ]]; then
+	if [[ this_is_arm64_build -eq 1 ]]; then
 		# Build on the build-farm arm64 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "arm64"
-		mv "$initdir/buildfarm-debs/"*.deb "$releasedir/"
+		mv "$initdir/buildfarm-debs/"* "$releasedir/"
 	fi
 	
 	# Move packages to 'release' directory
@@ -264,10 +250,15 @@ function start_build_vm() {
 	SSHPORT=$(get_random_free_port)
 	TELNETPORT=$(get_random_free_port) # FIXME: Tiny possibility of the two calls generating the same port number
 	
-	if [[ "$ARCH" == "i386" ]]; then
+	if [[ "$ARCH" == "amd64" ]]; then
+		ARCHDIR="debian-stable-amd64"
+
+		boot_vm_nodisplay "x86_64" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
+
+	elif [[ "$ARCH" == "i386" ]]; then
 		ARCHDIR="debian-stable-i386"
 		
-		boot_vm_nodisplay "$ARCH" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
+		boot_vm_nodisplay "i386" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
 		
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
@@ -353,49 +344,52 @@ EOF
 	cd "$initdir/$ARCH" || { echo "Could not cd into \"$initdir/$ARCH\""; exit 1; }
 	tar -xzf packages.tar.gz
 	rm -f packages.tar.gz
-	mv "$initdir/$ARCH/"*.deb "$initdir/buildfarm-debs/"
+	mv "$initdir/$ARCH/"* "$initdir/buildfarm-debs/"
 	rm -f "$initdir/$ARCH/"*
 }
 
 function build_all_pkgs_in_pkgarrays() {
 
-	local buildingsomei386=0 buildingsomearm64=0
-	if [[ ${#buildi386pkgs[@]} -gt 0 ]]; then
-		buildingsomei386=1
-	fi
-	
-	if [[ ${#buildarm64pkgs[@]} -gt 0 ]]; then
-		buildingsomearm64=1
+	local building_some_on_amd64=0 building_some_on_i386=0 building_some_on_arm64=0
+
+	if [[ ${#amd64_builds[@]} -gt 0 ]]; then
+		building_some_on_amd64=1
 	fi
 
-	for pkgname in "${buildbasepkgs[@]}"; do
-		build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0
-	done
+	if [[ ${#i386_builds[@]} -gt 0 ]]; then
+		building_some_on_i386=1
+	fi
 	
-	if [[ buildingsomei386 -eq 1 ]]; then
+	if [[ ${#arm64_builds[@]} -gt 0 ]]; then
+		building_some_on_arm64=1
+	fi
+
+	if [[ building_some_on_amd64 -eq 1 ]]; then
+		# Start the VM, build all the packages, and then shut it down
+		start_build_vm "amd64"
+		for pkgname in "${packages_to_build[@]}"; do
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0
+		done
+		shutdown_build_vm
+	fi
+
+	if [[ building_some_on_i386 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "i386"
-		for pkgname in "${buildi386pkgs[@]}"; do
+		for pkgname in "${i386_builds[@]}"; do
 			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0
 		done
 		shutdown_build_vm
-		
-		# Allow a few seconds for the VM to shut down before we potentially try to start another one
-		sleep 10
 	fi
 	
-	if [[ buildingsomearm64 -eq 1 ]]; then
+	if [[ building_some_on_arm64 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "arm64"
-		for pkgname in "${buildarm64pkgs[@]}"; do
+		for pkgname in "${arm64_builds[@]}"; do
 			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1
 		done
 		shutdown_build_vm
 	fi
-}
-
-function push_to_ubuntu_ppa() {
-	echo "Not implemented yet"
 }
 
 function push_github_release_page() {
@@ -488,14 +482,6 @@ function push_to_ghpages_debian_repo() {
 	for changes_file in "$basereleasedir/$PKGNAME/"*.changes; do
 		reprepro -P optional include "$debian_distribution" "$changes_file"
 	done
-
-	# Get the list of all .deb package files that are NOT marked with $host_architecture (default: amd64)
-	# And add those to the repo with includedeb
-	for file in "$basereleasedir/$PKGNAME/"*.deb; do
-		if [[ "$file" != *"$host_architecture"* ]]; then
-			reprepro includedeb "$debian_distribution" "$basereleasedir/$PKGNAME/$file"
-		fi
-	done
 	
 	# Update indexes and commit changes
 	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
@@ -514,7 +500,7 @@ function ask_user_build_pkg() {
 	while true; do
 		read -r -p "Do you want to build $PKGNAME? (y/N) " yn
 		case $yn in
-			[Yy]* ) buildbasepkgs+=("$PKGNAME"); break;;
+			[Yy]* ) packages_to_build+=("$PKGNAME"); break;;
 			* ) return 1;;
 		esac
 	done
@@ -522,7 +508,7 @@ function ask_user_build_pkg() {
 	while true; do
 		read -r -p "  $PKGNAME: Build on i386 as well? (y/N) " yn
 		case $yn in
-			[Yy]* ) buildi386pkgs+=("$PKGNAME"); break;;
+			[Yy]* ) i386_builds+=("$PKGNAME"); break;;
 			* ) break;;
 		esac
 	done
@@ -530,18 +516,18 @@ function ask_user_build_pkg() {
 	while true; do
 		read -r -p "  $PKGNAME: Build on arm64 as well? (y/N) " yn
 		case $yn in
-			[Yy]* ) buildarm64pkgs+=("$PKGNAME"); break;;
+			[Yy]* ) arm64_builds+=("$PKGNAME"); break;;
 			* ) break;;
 		esac
 	done
 }
 
 function ask_user_publish_to_deb_repo() {
-	for pkgname in "${buildbasepkgs[@]}"; do
+	for pkgname in "${packages_to_build[@]}"; do
 		while true; do
 			read -r -p "Do you want to publish $pkgname to your Git-based Debian Repository? (y/n) " yn
 			case $yn in
-				[Yy]* ) pkgstopublish+=("$pkgname"); break;;
+				[Yy]* ) packages_to_publish_to_repo+=("$pkgname"); break;;
 				[Nn]* ) break;;
 				* ) echo "Answer yes or no";;
 			esac
@@ -550,12 +536,12 @@ function ask_user_publish_to_deb_repo() {
 }
 
 function maybe_publish_to_deb_repo() {
-	if [[ ${#pkgstopublish[@]} -gt 0 ]]; then
+	if [[ ${#packages_to_publish_to_repo[@]} -gt 0 ]]; then
 		echo "Publishing to repo..."
 		
 		prepare_ghpages_debian_repo
 		
-		for pkg in "${pkgstopublish[@]}"; do
+		for pkg in "${packages_to_publish_to_repo[@]}"; do
 			push_to_ghpages_debian_repo "$pkg"
 		done
 		
@@ -564,11 +550,11 @@ function maybe_publish_to_deb_repo() {
 }
 
 function ask_user_make_github_release_page() {	
-	for pkgname in "${buildbasepkgs[@]}"; do
+	for pkgname in "${packages_to_build[@]}"; do
 		while true; do
 			read -r -p "Do you want to make a GITHUB RELEASE PAGE for $pkgname? (y/n) " yn
 			case $yn in
-				[Yy]* ) releasepagestomake+=("$pkgname"); break;;
+				[Yy]* ) release_pages_to_make+=("$pkgname"); break;;
 				[Nn]* ) break;;
 				* ) echo "Answer yes or no";;
 			esac
@@ -577,10 +563,10 @@ function ask_user_make_github_release_page() {
 }
 
 function maybe_make_github_release_page() {
-	if [[ ${#releasepagestomake[@]} -gt 0 ]]; then
+	if [[ ${#release_pages_to_make[@]} -gt 0 ]]; then
 		echo "Making release pages..."
 		
-		for pkg in "${releasepagestomake[@]}"; do
+		for pkg in "${release_pages_to_make[@]}"; do
 			push_github_release_page "$pkg"
 		done
 	fi
@@ -668,9 +654,10 @@ eval set -- "$TEMP"
 
 interactive_mode=true # By default, until we received --package "something"
 
-cross_to_amd64=false
-cross_to_i386=false
-cross_to_arm64=false
+target_architecture_provided=false
+building_on_amd64=false
+building_on_i386=false
+building_on_arm64=false
 distribute_to_debian_repo=false
 distribute_to_github_page=false
 
@@ -679,11 +666,11 @@ ring_bell=false
 while true; do
 	case "$1" in
 		-1 | --amd64 )
-			if [[ $amd64_vm_is_configured == "true" ]]; then cross_to_amd64=true; else echo "The amd64 VM is not configured."; fi; shift ;;
+			if [[ $amd64_vm_is_configured == "true" ]]; then building_on_amd64=true; target_architecture_provided=true; else echo "The amd64 VM is not configured."; fi; shift ;;
 		-2 | --i386 )
-			if [[ $i386_vm_is_configured == "true" ]]; then cross_to_i386=true; else echo "The i386 VM is not configured."; fi; shift ;;
+			if [[ $i386_vm_is_configured == "true" ]]; then building_on_i386=true; target_architecture_provided=true; else echo "The i386 VM is not configured."; fi; shift ;;
 		-3 | --arm64 )
-			if [[ $arm64_vm_is_configured == "true" ]]; then cross_to_arm64=true; else echo "The arm64 VM is not configured"; fi; shift ;;
+			if [[ $arm64_vm_is_configured == "true" ]]; then building_on_arm64=true; target_architecture_provided=true; else echo "The arm64 VM is not configured"; fi; shift ;;
 		-b | --bell )
 			ring_bell=true; shift ;;
 		-c | --config )
@@ -698,7 +685,7 @@ while true; do
 			savedir="$(realpath "$2")"; shift 2 ;;
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
-				buildbasepkgs+=("$2");
+				packages_to_build+=("$2");
 				interactive_mode=false;
 				echo "Building $2"
 			else
@@ -722,38 +709,42 @@ if [ $interactive_mode == true ]; then
 else
 	# Non-interactive mode
 
-	# Check if we're using the build farm
-	if [ $cross_to_amd64 == true ]; then
-		echo "Crossing to amd64"
-		for pkgname in "${buildbasepkgs[@]}"; do
-			buildamd64pkgs+=("$pkgname")
+	if [ $target_architecture_provided == false ]; then
+		echo "Error: No target architecture provided. Assuming amd64..."
+		building_on_amd64=true
+	fi
+
+	if [ $building_on_amd64 == true ]; then
+		echo "Building amd64"
+		for pkgname in "${packages_to_build[@]}"; do
+			amd64_builds+=("$pkgname")
 		done
 	fi
 
-	if [ $cross_to_i386 == true ]; then
-		echo "Crossing to i386"
-		for pkgname in "${buildbasepkgs[@]}"; do
-			buildi386pkgs+=("$pkgname")
+	if [ $building_on_i386 == true ]; then
+		echo "Building i386"
+		for pkgname in "${packages_to_build[@]}"; do
+			i386_builds+=("$pkgname")
 		done
 	fi
 
-	if [ $cross_to_arm64 == true ]; then
-		echo "Crossing to arm64"
-		for pkgname in "${buildbasepkgs[@]}"; do
-			buildarm64pkgs+=("$pkgname")
+	if [ $building_on_arm64 == true ]; then
+		echo "Building arm64"
+		for pkgname in "${packages_to_build[@]}"; do
+			arm64_builds+=("$pkgname")
 		done
 	fi
 
 	# Check if and how we're distributing the built packages
 	if [ $distribute_to_debian_repo == true ]; then
-		for pkgname in "${buildbasepkgs[@]}"; do
-			pkgstopublish+=("$pkgname")
+		for pkgname in "${packages_to_build[@]}"; do
+			packages_to_publish_to_repo+=("$pkgname")
 		done
 	fi
 
 	if [ $distribute_to_github_page == true ]; then
-		for pkgname in "${buildbasepkgs[@]}"; do
-			releasepagestomake+=("$pkgname")
+		for pkgname in "${packages_to_build[@]}"; do
+			release_pages_to_make+=("$pkgname")
 		done
 	fi
 fi
