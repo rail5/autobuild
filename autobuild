@@ -155,11 +155,11 @@ function setup_build_environment() {
 	
 
 function build_package_universal() {
-	if [[ $# -lt 5 ]]; then
+	if [[ $# -lt 6 ]]; then
 		echo "bag args to build_package_universal" && exit 1
 	fi
 	
-	local PKGNAME="$1" GITURL="$2" this_is_amd64_build="$3" this_is_i386_build="$4" this_is_arm64_build="$5"
+	local PKGNAME="$1" GITURL="$2" this_is_amd64_build="$3" this_is_i386_build="$4" this_is_arm64_build="$5" this_is_local_build="$6"
 	
 	# Variables:
 	## PKGNAME, GITURL: Self-explanatory
@@ -217,6 +217,17 @@ function build_package_universal() {
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "arm64"
 		mv "$initdir/buildfarm-debs/"* "$releasedir/"
+	fi
+
+	if [[ this_is_local_build -eq 1 ]]; then
+		# Build locally
+		cp -r "$srcdir/"* "$builddir/"
+		
+		# Move to the build directory, don't mess with the source directory
+		cd "$builddir" || { echo "Could not cd into \"$builddir\""; exit 1; }
+		
+		# Build package
+		debuild -us -uc
 	fi
 	
 	# Move packages to 'release' directory
@@ -368,7 +379,7 @@ function build_all_pkgs_in_pkgarrays() {
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "amd64"
 		for pkgname in "${packages_to_build[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0 0
 		done
 		shutdown_build_vm
 	fi
@@ -377,7 +388,7 @@ function build_all_pkgs_in_pkgarrays() {
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "i386"
 		for pkgname in "${i386_builds[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0 0
 		done
 		shutdown_build_vm
 	fi
@@ -386,9 +397,16 @@ function build_all_pkgs_in_pkgarrays() {
 		# Start the VM, build all the packages, and then shut it down
 		start_build_vm "arm64"
 		for pkgname in "${arm64_builds[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1 0
 		done
 		shutdown_build_vm
+	fi
+
+	if [[ building_some_on_amd64 -eq 0 && building_some_on_i386 -eq 0 && building_some_on_i386 -eq 0 ]]; then
+		# Building packages locally
+		for pkgname in "${packages_to_build[@]}"; do
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 0 1
+		done
 	fi
 }
 
@@ -536,6 +554,10 @@ function display_help() {
 	echo "  --package"
 	echo "    Add a package to the build list"
 	echo ""
+	echo "  -0"
+	echo "  --local"
+	echo "    Build packages locally (do not use the Build Farm)"
+	echo ""
 	echo "  -1"
 	echo "  --amd64"
 	echo "    Build packages on the amd64 Build Farm VM"
@@ -588,7 +610,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 123bcdghlo:p:s --long amd64,i386,arm64,bell,config,debian-repo,github-page,help,list,output:,package:,setup \
+TEMP=$(getopt -o 0123bcdghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -597,6 +619,7 @@ eval set -- "$TEMP"
 
 package_provided=false
 target_architecture_provided=false
+building_locally=false
 building_on_amd64=false
 building_on_i386=false
 building_on_arm64=false
@@ -607,6 +630,10 @@ ring_bell=false
 
 while true; do
 	case "$1" in
+		-0 | --local )
+			building_locally=true
+			target_architecture_provided=true
+			shift ;;
 		-1 | --amd64 )
 			if [[ $amd64_vm_is_configured == "true" ]]; then
 				building_on_amd64=true
@@ -674,26 +701,33 @@ if [ $package_provided == false ]; then
 fi
 
 if [ $target_architecture_provided == false ]; then
-	echo "Error: No target architecture provided. Assuming amd64..."
-	building_on_amd64=true
+	echo "Warning: No target architecture provided."
+	building_locally=true
+fi
+
+if [ $building_locally == true ]; then
+	echo "Building packages locally"
+	building_on_amd64=false
+	building_on_i386=false
+	building_on_arm64=false
 fi
 
 if [ $building_on_amd64 == true ]; then
-	echo "Building amd64"
+	echo "Building packages for amd64"
 	for pkgname in "${packages_to_build[@]}"; do
 		amd64_builds+=("$pkgname")
 	done
 fi
 
 if [ $building_on_i386 == true ]; then
-	echo "Building i386"
+	echo "Building packages for i386"
 	for pkgname in "${packages_to_build[@]}"; do
 		i386_builds+=("$pkgname")
 	done
 fi
 
 if [ $building_on_arm64 == true ]; then
-	echo "Building arm64"
+	echo "Building packages for arm64"
 	for pkgname in "${packages_to_build[@]}"; do
 		arm64_builds+=("$pkgname")
 	done
