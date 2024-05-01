@@ -2,7 +2,7 @@
 
 storagedir="$HOME/.local/share/autobuild"
 
-CONFIG_FILE="$storagedir/config"
+CONFIG_FILE="$storagedir/config.toml"
 
 if [ ! -f "$CONFIG_FILE" ]; then
 	echo "Error: Run this script through 'autobuild -s'"
