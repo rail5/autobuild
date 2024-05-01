@@ -141,6 +141,8 @@ if [[ buildingvms -eq 1 ]]; then
 		make image
 		make boot-install
 		make clean
+
+		rm -f "./"*.iso
 		
 		echo "  Created amd64 VM."
 		cd ..
@@ -157,6 +159,8 @@ if [[ buildingvms -eq 1 ]]; then
 		make image
 		make boot-install
 		make clean
+
+		rm -f "./"*.iso
 		
 		echo "  Created i386 VM."
 		cd ..
@@ -173,6 +177,8 @@ if [[ buildingvms -eq 1 ]]; then
 		make image
 		make boot-install
 		make clean
+
+		rm -f "./"*.iso
 		
 		echo "  Created arm64 VM."
 	fi
