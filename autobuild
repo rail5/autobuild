@@ -491,7 +491,7 @@ function push_to_ghpages_debian_repo() {
 	# Get the list of all .deb package files that are NOT marked with $host_architecture (default: amd64)
 	# And add those to the repo with includedeb
 	for file in "$basereleasedir/$PKGNAME/"*; do
-		file="$(basename "$file" | grep -P -e "$PKGNAME.*deb" | grep -v "$host_architecture")"
+		file="$(basename "$file" | grep -P -e "\.deb" | grep -v "$host_architecture")"
 		if [[ "$file" != "" ]]; then
 			reprepro includedeb "$debian_distribution" "$basereleasedir/$PKGNAME/$file"
 		fi
