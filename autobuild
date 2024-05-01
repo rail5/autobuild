@@ -276,7 +276,7 @@ function start_build_vm() {
 	echo "  TELNET Port: $TELNETPORT"
 	echo "---"
 	
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
 (sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1) && exit || exit
 
@@ -286,7 +286,7 @@ EOF
 
 function shutdown_build_vm() {
 	# Connect to it on SSH and send the shutdown command
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 sudo shutdown now >/dev/null 2>&1
 
 EOF
@@ -302,7 +302,7 @@ function build_other_arch() {
 	# First, pass the source tarball into the VM
 	## Wrapping this in "until (cmd); do sleep 5; done" ensures that we wait until the VM *can* be SSH'd into
 	## The VM may take some time to come online
-	until (sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT "$SOURCETARBALL" "$SSHUSER@127.0.0.1:/tmp/$(basename "$SOURCETARBALL")" >/dev/null 2>&1); do
+	until (sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" "$SOURCETARBALL" "$SSHUSER@127.0.0.1:/tmp/$(basename "$SOURCETARBALL")" >/dev/null 2>&1); do
 		sleep 5
 	done
 	
@@ -311,7 +311,7 @@ function build_other_arch() {
 	echo "--------"
 	echo "BUILD LOG ($ARCH)"
 	echo "--------"
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 << EOF
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 << EOF
 mkdir -p /home/debian/build/src
 mkdir -p /home/debian/build/pkg
 
@@ -342,7 +342,7 @@ EOF
 	# Create the tmp folder for this architecture
 	mkdir "$initdir/$ARCH"
 
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz" >/dev/null 2>&1
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz" >/dev/null 2>&1
 	
 	cd "$initdir/$ARCH" || { echo "Could not cd into \"$initdir/$ARCH\""; exit 1; }
 	tar -xzf packages.tar.gz
@@ -674,13 +674,13 @@ while true; do
 		-b | --bell )
 			ring_bell=true; shift ;;
 		-c | --config )
-			xdg-open "$CONFIG_FILE"; exit 0; shift ;;
+			xdg-open "$CONFIG_FILE"; exit 0 ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-g | --github-page )
 		distribute_to_github_page=true; shift ;;
 		-h | --help )
-			display_help; exit 0; shift ;;
+			display_help; exit 0 ;;
 		-o | --output )
 			savedir="$(realpath "$2")"; shift 2 ;;
 		-p | --package )
@@ -694,7 +694,7 @@ while true; do
 			shift 2 ;;
 		-s | --setup )
 			autobuild-setup;
-			exit 0; shift ;;
+			exit 0 ;;
 		-- ) shift; break ;;
 		* ) break ;;
 	esac
