@@ -572,6 +572,10 @@ function display_help() {
 	echo "  --config"
 	echo "    Open the CONFIG file for editing"
 	echo ""
+	echo "  -l"
+	echo "  --list"
+	echo "    List packages available to build (list can be modified via the CONFIG file)"
+	echo ""
 	echo "Example:"
 	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
@@ -584,7 +588,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 12bcdgho:p:s --long i386,arm64,bell,config,debian-repo,github-page,help,output:,package:,setup \
+TEMP=$(getopt -o 123bcdghlo:p:s --long amd64,i386,arm64,bell,config,debian-repo,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -637,6 +641,11 @@ while true; do
 			distribute_to_github_page=true; shift ;;
 		-h | --help )
 			display_help; exit 0 ;;
+		-l | --list )
+			for pkgname in "${!packages[@]}"; do
+				echo "$pkgname"
+			done
+			exit 0 ;;
 		-o | --output )
 			savedir="$(realpath "$2")"; shift 2 ;;
 		-p | --package )
