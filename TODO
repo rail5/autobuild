@@ -1,10 +1,48 @@
+The numbering to this todo list does not necessarily imply any order of priority.
 TODO:
-- Customizable build farm
 
-- POSIX-compliant shell(?)
+- #1 | Customizable build farm
+	User-provided ISOs, etc, added on to the build farm list
+	Option to build only *some* of the VMs (eg, i386 but not arm64)
 
-- Add function to update/upgrade the software in the build farm VMs
+- #2 | Add option for "extra commands" / extra files to be added to Github Release pages
+	- Should be an option in the autobuild config script:
+		- Pre-build script
+		- Post-build script
+		- Extra files to add to releases
+	- Should be configured PER-PACKAGE
 
-- Package autobuild itself as a Debian package
-	Store everything (config, builds, build-farm etc etc) under ~/.local/share
-	Make sure that user config etc is not overwritten by future upgrades
+- #3 | Autobuild should be able to "update" or "replace" a release which has already been made
+	For example, a GitHub release page has already been published for package Foo 1.2.3
+	This release page included binaries for x86_64 and i386
+	The developer would now like to run autobuild to create a package for arm64, without having to re-publish the package as a "new version" just because of a change in the way it's distributed.
+	This change would go nicely with #2.
+
+- #4 | The build-farm VM QEMU commands should be generated intelligently rather than relying on pre-scripted makefiles
+	For instance, why do we assume that the user is running on x86_64 architecture?
+	Why do we assume that the user's machine is capable of KVM acceleration?
+	Why do we assume that the '22222' port is available?
+	These things should be checked AT RUNTIME and adjusted accordingly
+	This change would go hand-in-hand with #5 and #1.
+		****IN PROGRESS.****
+
+- #5 | Add option to run build-farm VMs in parallel
+	User should be able to choose how many VMs run simultaneously
+
+- #6 | Build an optional web interface?
+	Autobuild could be deployed to some server somewhere and you could have it distribute your changes remotely. Might be nice.
+
+- #7 | Consolidate the contents of the autobuild-setup script into either (1) the main script or (2) a config file
+	No reason we should have two scripts to this package.
+
+- #8 | Get rid of the "debian_distribution" and "host_architecture" variables from the autobuild config. Why are they there? I don't like them and they shouldn't have to be there.
+
+- #9 | Get rid of the arbitrary "sleep" commands after starting build VMs. There's got to be some way to just get a signal or otherwise figure out when it's finally online and ready.
+
+- #10 | Add option to skip "host-machine" builds and only build on the build farm VMs
+
+- #11 | Fix a bug that was introduced: Autobuild's build-farms can't boot images if there's a space in the path leading up to the VM directory (~/.local/share/autobuild/build-farm/{machine})
+	Not likely to affect anyone, it would require there being a space in their username (realistically)
+	Still, shouldn't be a bug.
+
+- #12 | Tell the user when a VM is upgrading packages

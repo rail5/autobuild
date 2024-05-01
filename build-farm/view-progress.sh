@@ -1,3 +1,4 @@
 #!/bin/sh
-sleep 5; telnet localhost 33333
-exec "$SHELL"
+port=$1
+until (telnet localhost "$port"); do sleep 5; done
+exec "exit"

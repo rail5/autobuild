@@ -1,19 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # autobuild
 # Copyright (C) 2023 rail5
-# Free software (GPL v3)
+# Free software (GNU Affero GPL v3)
 
 if [ "$(whoami)" == "root" ]; then
 	echo "Warning: this script should NOT be run as root."
 	sleep 1
 fi
 
-tempdirectory=$(dirname $(mktemp -u))
+tempdirectory=$(dirname "$(mktemp -u)")
 initdir=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 storagedir="$HOME/.local/share/autobuild"
+buildfarmdir="$storagedir/build-farm"
+packagedir="$storagedir/packages"
+autobuilddir="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
+i386_vm_is_configured=false
+arm64_vm_is_configured=false
+
+if [[ -f "$storagedir/build-farm/debian-stable-i386/image.qcow" ]]; then
+	i386_vm_is_configured=true
+fi
+
+if [[ -f "$storagedir/build-farm/debian-stable-arm64/image.qcow" ]]; then
+	arm64_vm_is_configured=true
+fi
 
 basereleasedir=""
 
@@ -44,16 +57,50 @@ SSHPORT="22222"
 
 CONFIG_FILE="$storagedir/config"
 
+BUILDFARM_SCRIPTS_FILE="$autobuilddir/build-farm/scripts/scripts.sh"
+
 if [ ! -d "$storagedir" ]; then
 	mkdir "$storagedir"
+	cp -r "/usr/share/autobuild/"* "$storagedir/"
 fi
 
+# Copy the build-farm scripts to $storagedir in case an upgrade took place
+cp -r "/usr/share/autobuild/build-farm/"* "$storagedir/build-farm/"
+
 if [ ! -f "$CONFIG_FILE" ]; then
-	cp -r "/usr/share/autobuild/"* "$storagedir/"
 	cp "$storagedir/config.example" "$CONFIG_FILE"
 fi
 
+mkdir -p "$packagedir"
+
+# shellcheck source=./config.example
 . "$CONFIG_FILE"
+# shellcheck source=./build-farm/scripts/scripts.sh
+. "$BUILDFARM_SCRIPTS_FILE"
+
+
+# BEFORE WE START:
+# Let's verify that ALL of the subdirectories under $packagedir correspond to key in the "packages" associative array
+## If we find a subdirectory under $packagedir which DOES NOT correspond to a key in "packages",
+## We should remove it.
+# This way, we avoid taking up unnecessary space on the user's machine
+## In the event that the user decides to remove a package from their autobuild config.
+OLDIFS="$IFS"
+IFS="
+"
+for subdir in "$packagedir/"*; do
+	subdir="$(basename "$subdir")"
+	if [[ "${packages[$subdir]+true}" ]]; then
+		# Package exists in our packages array
+		continue
+	else
+		# Package DOES NOT exist in our packages array
+		rm -rf "${packagedir:?}/${subdir:?}"
+	fi
+done
+IFS="$OLDIFS"
+
+# Now carry on
 
 
 function setup_build_environment() {
@@ -74,7 +121,7 @@ function build_package_universal() {
 		echo "bag args to build_package_universal" && exit 1
 	fi
 	
-	local PKGNAME="$1" GITURL="$2" BASEBUILD="$3" I386BUILD="$4" ARM64BUILD="$5" CLONESOURCES=0
+	local PKGNAME="$1" GITURL="$2" BASEBUILD="$3" I386BUILD="$4" ARM64BUILD="$5"
 	
 	# Variables:
 	## PKGNAME, GITURL: Self-explanatory
@@ -90,48 +137,68 @@ function build_package_universal() {
 	##	builddir: Directory where we build the .deb package
 	##	releasedir: Directory where we move the .debs after they've been built
 	local srcdir="$initdir/$pkgs_build_base_directory/srconly/$PKGNAME"
+	local sourcetarball="$initdir/$pkgs_build_base_directory/srconly/$PKGNAME-src.tar.gz"
 	local builddir="$initdir/$pkgs_build_base_directory/deb/$PKGNAME"
 	local releasedir="$basereleasedir/$PKGNAME"
 	
 	mkdir -p "$builddir"
 	mkdir -p "$releasedir"
 	
+	# Pull updates to the source code from GITURL into our local package directory
+	cd "$packagedir" || { echo "Could not cd into \"$packagedir\""; exit 1; }
+	git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
+	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; exit 1; }
+	git reset --hard
+	git pull -q # Pull changes in case we do already have it (an older version)
+
+	# Copy the updated source code into a temp directory named PKGNAME
+	cd "$initdir/$pkgs_build_base_directory/srconly" || { echo "Could not cd into package source directory"; exit 1; }
+	mkdir "$PKGNAME"
+	cp -r "$packagedir/$PKGNAME/"* "./$PKGNAME/"
+	
+	# Tar it up so we can pass it to the build farm VMs later
+	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; exit 1; }
+	tar -czf "$sourcetarball" .
+
+	## Notes:
+	### mk-build-deps parses debian/changelog to get a list of build dependencies, and creates a .deb package (and some other metadata files) which "depends" on those packages, and can be installed to satisfy those dependencies
+	### '-i' tells it to automatically install the package it builds
+	### '-s sudo' tells it to escalate privileges using 'sudo' when it installs (so that it *can* install)
+	### '-r' tells it to clean up its own mess after installing (remove the package & metadata files), so that it doesn't alter the source tree of the package.
+	### '-t' tells it to use the following command (apt-get -y, passing -y to avoid a requirement for user interaction)
+	
 	if [[ BASEBUILD -eq 1 ]]; then
-		# Pull the source code from GITURL into directory named PKGNAME
-		cd "$initdir/$pkgs_build_base_directory/srconly"
-		git clone "$GITURL" "$PKGNAME"
 		
-		cp -rv "$srcdir/"* "$builddir/"
+		cp -r "$srcdir/"* "$builddir/"
 		
 		# Move to the build directory, don't mess with the source directory
-		echo "MOVING TO $builddir"
-		cd "$builddir"
+		cd "$builddir" || { echo "Could not cd into \"$builddir\""; exit 1; }
 		
 		# Build package
-		debuild
+		debuild -us -uc
 	fi
 	
 	if [[ I386BUILD -eq 1 ]]; then
 		# Build on the build-farm i386 VM
 		# This should only run if the VM has been turned on already
-		build_other_arch "$PKGNAME" "$GITURL" "i386"
+		build_other_arch "$PKGNAME" "$sourcetarball" "i386"
 		mv "$initdir/buildfarm-debs/"*.deb "$releasedir/"
 	fi
 	
 	if [[ ARM64BUILD -eq 1 ]]; then
 		# Build on the build-farm arm64 VM
 		# This should only run if the VM has been turned on already
-		build_other_arch "$PKGNAME" "$GITURL" "arm64"
+		build_other_arch "$PKGNAME" "$sourcetarball" "arm64"
 		mv "$initdir/buildfarm-debs/"*.deb "$releasedir/"
 	fi
 	
 	# Move packages to 'release' directory
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.deb "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.build "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/"
-	mv "$initdir/$pkgs_build_base_directory/deb/"*.changes "$releasedir/"
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.build "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/" 2>/dev/null
+	mv "$initdir/$pkgs_build_base_directory/deb/"*.changes "$releasedir/" 2>/dev/null
 }
 
 function clean_up() {
@@ -152,29 +219,31 @@ function start_build_vm() {
 	## IE, if we want to build using the VM stored in ./build-farm/debian-stable-arm64
 	## Then we would set ARCHDIR="debian-stable-arm64"
 	local ARCHDIR=""
+
+	SSHPORT=$(get_random_free_port)
+	TELNETPORT=$(get_random_free_port) # FIXME: Tiny possibility of the two calls generating the same port number
 	
 	if [[ "$ARCH" == "i386" ]]; then
 		ARCHDIR="debian-stable-i386"
 		
-		cd "$storagedir/build-farm/$ARCHDIR"
-		
-		make boot-notelnet &
-		# Give the VM some time to come online
-		sleep 15
+		boot_vm_nodisplay "$ARCH" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
 		
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
-	
-		cd "$storagedir/build-farm/$ARCHDIR"
 		
-		make boot-notelnet &
-		# Give the VM some time to come online (ARM emulation takes a lot longer)
-		sleep 60
+		boot_vm_nodisplay "aarch64" "$buildfarmdir/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
+			# Perhaps we should rename 'arm64' to 'aarch64' within Autobuild for consistency with the way Debian names things?
 	fi
+
+	echo "---"
+	echo "$ARCH VM started. You can connect to it (if you want) as follows:"
+	echo "  SSH Port: $SSHPORT"
+	echo "  TELNET Port: $TELNETPORT"
+	echo "---"
 	
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
-(sudo apt update -y >/dev/null 2>&1 && sudo apt upgrade -y >/dev/null 2>&1) & disown
+(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1) && exit || exit
 
 exit
 EOF
@@ -193,11 +262,21 @@ function build_other_arch() {
 		echo "bag args to build_other_arch" && exit 3
 	fi
 	
-	local PKGNAME="$1" GITURL="$2" ARCH="$3"
+	local PKGNAME="$1" SOURCETARBALL="$2" ARCH="$3"
+	
+	# First, pass the source tarball into the VM
+	## Wrapping this in "until (cmd); do sleep 5; done" ensures that we wait until the VM *can* be SSH'd into
+	## The VM may take some time to come online
+	until (sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT "$SOURCETARBALL" "$SSHUSER@127.0.0.1:/tmp/$(basename "$SOURCETARBALL")" >/dev/null 2>&1); do
+		sleep 5
+	done
 	
 	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
 	# Here we connect and build the packages
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
+	echo "--------"
+	echo "BUILD LOG ($ARCH)"
+	echo "--------"
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p $SSHPORT $SSHUSER@127.0.0.1 << EOF
 mkdir -p /home/debian/build/src
 mkdir -p /home/debian/build/pkg
 
@@ -208,28 +287,30 @@ cd /home/debian/build/src
 rm -rf ./*
 
 echo "Getting source"
-git clone "$GITURL" "$PKGNAME"
+mkdir "$PKGNAME"
 
 cd "$PKGNAME"
-debuild -us -uc
 
-cd ..
-rm -rf "$PKGNAME/"
+mv /tmp/$(basename "$SOURCETARBALL") .
+tar -xzf ./$(basename "$SOURCETARBALL")
+rm ./$(basename "$SOURCETARBALL")
 
-tar -czvf /home/debian/build/pkg/packages.tar.gz ./
-
-exit
+echo "Installing build dependencies"
+mk-build-deps -i -s sudo -r -t "apt-get --no-install-recommends -y" && debuild -us -uc; cd .. && rm -rf "$PKGNAME/"; tar -czf /home/debian/build/pkg/packages.tar.gz ./; exit
 EOF
+	echo "--------"
+	echo "END BUILD LOG ($ARCH)"
+	echo "--------"
 	
 	# Now we SCP download the packages to the host machine
 
 	# Create the tmp folder for this architecture
 	mkdir "$initdir/$ARCH"
 
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz"
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P $SSHPORT -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initdir/$ARCH/packages.tar.gz" >/dev/null 2>&1
 	
-	cd "$initdir/$ARCH"
-	tar -xvzf packages.tar.gz
+	cd "$initdir/$ARCH" || { echo "Could not cd into \"$initdir/$ARCH\""; exit 1; }
+	tar -xzf packages.tar.gz
 	rm -f packages.tar.gz
 	mv "$initdir/$ARCH/"*.deb "$initdir/buildfarm-debs/"
 	rm -f "$initdir/$ARCH/"*
@@ -286,7 +367,7 @@ function push_github_release_page() {
 	# Get repo name from PKG url
 	
 	## This first line trims a URL like "https://github.com/user/repo.git" to just "repo.git"
-	REPOSITORY=$(echo "${packages[$PKGNAME]}" | grep -P -o -e "/[^/]*\.git" | cut -c2-)
+	REPOSITORY=$(echo "${packages[$PKGNAME]}" | grep -P -o -e "/[^/]*" | cut -c2- | tail -n 1)
 	
 	## This second line removes the ".git" if it's there, making it just "repo"
 	REPOSITORY="${REPOSITORY/.git/""}"
@@ -295,15 +376,11 @@ function push_github_release_page() {
 	
 	## Get changelog from package source using dpkg-parsechangelog (dpkg-dev package)
 	### Pipe into sed to:
-	### (1) Remove newline chars
-	### (2) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\n//g' | sed -n 's/.*\* //p')
-
-	### Finally, check if "double-spaces" exist (The double-spaces come after we remove the original newline chars, if the original changelog message spanned multiple lines). If so:
-	### (3) Replace double-spaces ('  ') with '\n' (literal)
-	if (echo "$CHANGELOG" | grep "  " >/dev/null); then
-		CHANGELOG=$(echo -n "$CHANGELOG" | sed -n 's/  /\\n/p')
-	fi
+	### (1) Escape backslashes (\ to \\)
+	### (2) Replace newline chars with '\n' (literal)
+	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
+	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$initdir/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
 
 	## Get version number from package source using dpkg-parsechangelog
 	### Pipe into sed to remove the ending newline char
@@ -311,65 +388,51 @@ function push_github_release_page() {
 	
 	# Create GitHub Release
 	
-	## Make sure we're in the package's release directory
-	cd $basereleasedir/$PKGNAME
-	
 	## Send POST request to GitHub API to create a release page
 	curl -L \
 			-X POST \
 			-H "Accept: application/vnd.github+json" \
 			-H "Authorization: Bearer $ACCESS_TOKEN" \
 			-H "X-GitHub-Api-Version: 2022-11-28" \
-			https://api.github.com/repos/$OWNER/$REPOSITORY/releases \
+			"https://api.github.com/repos/$OWNER/$REPOSITORY/releases" \
 			-d "{\"tag_name\": \"v$VERSION\",
 				\"target_commitish\": \"main\",
 				\"name\": \"v$VERSION\",
 				\"body\": \"$CHANGELOG\",
 				\"draft\": false,
 				\"prerelease\": false,
-				\"generate_release_notes\": false}" > release-info
+				\"generate_release_notes\": false}" > "$basereleasedir/$PKGNAME/release-info"
 	
 	## Get GitHub Release ID
-	RELEASEID=$(cat "$basereleasedir/$PKGNAME/release-info" | jq -r '.id')
-	
-	## Declare array which will be filled with filenames of attachments (.debs, .exes)
-	local list_of_pkg_files=()
-	
-	## Get the list of package files
-	for file in $(ls); do
-		list_of_pkg_files+=("$(echo $file | grep -P -e $PKGNAME.*.deb)")
-	done
-	
+	RELEASEID=$(jq -r '.id' "$basereleasedir/$PKGNAME/release-info")
+
 	## Upload the attachments via POST request to the GitHub API
-	for file in "${list_of_pkg_files[@]}"; do
-		if [[ "$file" != "" ]]; then
-			curl -L \
-				-X POST \
-				-H "Accept: application/vnd.github+json" \
-				-H "Authorization: Bearer $ACCESS_TOKEN" \
-				-H "X-Github-Api-Version: 2022-11-28" \
-				-H "Content-Type: application/octet-stream" \
-				https://uploads.github.com/repos/$OWNER/$REPOSITORY/releases/$RELEASEID/assets?name=$file \
-				--data-binary "@$file"
-		fi
+	for file in "$basereleasedir/$PKGNAME/"*.deb; do
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "X-Github-Api-Version: 2022-11-28" \
+			-H "Content-Type: application/octet-stream" \
+			"https://uploads.github.com/repos/$OWNER/$REPOSITORY/releases/$RELEASEID/assets?name=$(basename "$file")" \
+			--data-binary "@$file"
 	done
-	
-	cd $initdir
 }
 
 function prepare_ghpages_debian_repo() {
 	# Clone the git repo into a local directory
-	cd "$storagedir"
-	git clone "$git_debianrepo" "$local_repodirectory"
-	cd "$local_repodirectory"
-	git pull
+	cd "$storagedir" || { echo "Could not cd into \"$storagedir\""; exit 1; }
+	git clone "$git_debianrepo" "$local_repodirectory" -q 2>/dev/null
+	cd "$local_repodirectory" || { echo "Could not cd into \"$local_repodirectory\""; exit 1; }
+	git reset --hard
+	git pull -q
 }
 
 function close_ghpages_debian_repo() {
-	cd "$storagedir/$local_repodirectory"
+	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
 	
 	# Push the changes we've made before calling this function
-	git push origin
+	git push origin -q
 	
 	# Move back to start
 	cd "$initdir"
@@ -384,33 +447,30 @@ function push_to_ghpages_debian_repo() {
 		echo "bag args to push_to_ghpages_debian_repo" && exit 5
 	fi
 	
-	local PKGNAME="$1" CHANGESFILE="" list_of_pkg_files=()
+	local PKGNAME="$1" CHANGESFILE=""
 	
-	cd "$storagedir/$local_repodirectory"
-	cd debian
+	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
+	cd debian || { echo "$PKGNAME does not appear to contain a 'debian' subdirectory"; exit 1; }
 	
 	
 	# Get the .changes file
-	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep -P -e .changes | head -n 1)"
+	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep -P -e "\.changes" | head -n 1)"
 	
 	# Add that to the repo
 	reprepro -P optional include $debian_distribution "$basereleasedir/$PKGNAME/$CHANGESFILE"
 	
 	
 	# Get the list of all .deb package files that are NOT marked with $host_architecture (default: amd64)
-	for file in $(ls "$basereleasedir/$PKGNAME/"); do
-		list_of_pkg_files+=("$(echo $file | grep -P -e $PKGNAME.*.deb | grep -v "$host_architecture")")
-	done
-	
-	# Add those to the repo with includedeb
-	for file in "${list_of_pkg_files[@]}"; do
+	# And add those to the repo with includedeb
+	for file in "$basereleasedir/$PKGNAME/"*; do
+		file="$(basename "$file" | grep -P -e "$PKGNAME.*deb" | grep -v "$host_architecture")"
 		if [[ "$file" != "" ]]; then
 			reprepro includedeb $debian_distribution "$basereleasedir/$PKGNAME/$file"
 		fi
 	done
 	
 	# Update indexes and commit changes
-	cd "$storagedir/$local_repodirectory"
+	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
 	./update-indexes.sh
 	git add --all
 	git commit -m "Updated $PKGNAME"
@@ -425,29 +485,26 @@ function ask_user_build_pkg() {
 	local PKGNAME="$1"
 	
 	while true; do
-		read -p "Do you want to build $PKGNAME? (y/n) " yn
+		read -r -p "Do you want to build $PKGNAME? (y/N) " yn
 		case $yn in
 			[Yy]* ) buildbasepkgs+=("$PKGNAME"); break;;
-			[Nn]* ) return 1; break;;
-			* ) echo "Answer yes or no";;
+			* ) return 1;;
 		esac
 	done
 	
 	while true; do
-		read -p "  $PKGNAME: Build on i386 as well? (y/n) " yn
+		read -r -p "  $PKGNAME: Build on i386 as well? (y/N) " yn
 		case $yn in
 			[Yy]* ) buildi386pkgs+=("$PKGNAME"); break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
+			* ) break;;
 		esac
 	done
 	
 	while true; do
-		read -p "  $PKGNAME: Build on arm64 as well? (y/n) " yn
+		read -r -p "  $PKGNAME: Build on arm64 as well? (y/N) " yn
 		case $yn in
 			[Yy]* ) buildarm64pkgs+=("$PKGNAME"); break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
+			* ) break;;
 		esac
 	done
 }
@@ -455,7 +512,7 @@ function ask_user_build_pkg() {
 function ask_user_publish_to_deb_repo() {
 	for pkgname in "${buildbasepkgs[@]}"; do
 		while true; do
-			read -p "Do you want to publish $pkgname to your Git-based Debian Repository? (y/n) " yn
+			read -r -p "Do you want to publish $pkgname to your Git-based Debian Repository? (y/n) " yn
 			case $yn in
 				[Yy]* ) pkgstopublish+=("$pkgname"); break;;
 				[Nn]* ) break;;
@@ -482,7 +539,7 @@ function maybe_publish_to_deb_repo() {
 function ask_user_make_github_release_page() {	
 	for pkgname in "${buildbasepkgs[@]}"; do
 		while true; do
-			read -p "Do you want to make a GITHUB RELEASE PAGE for $pkgname? (y/n) " yn
+			read -r -p "Do you want to make a GITHUB RELEASE PAGE for $pkgname? (y/n) " yn
 			case $yn in
 				[Yy]* ) releasepagestomake+=("$pkgname"); break;;
 				[Nn]* ) break;;
@@ -515,7 +572,7 @@ function display_help() {
 	echo "Copyright (C) 2023 rail5"
 	echo ""
 	echo "This program comes with ABSOLUTELY NO WARRANTY."
-	echo "This is free software (GNU GPL V3), and you are welcome to redistribute it under certain conditions."
+	echo "This is free software (GNU Affero GPL V3), and you are welcome to redistribute it under certain conditions."
 	echo ""
 	echo "You should edit CONFIG and run setup before using this script"
 	echo ""
@@ -545,6 +602,10 @@ function display_help() {
 	echo "  --github-page"
 	echo "    Create a Release page on the built packages' Github repositories"
 	echo ""
+	echo "  -b"
+	echo "  --bell"
+	echo "    Ring a bell when finished"
+	echo ""
 	echo "  -s"
 	echo "  --setup"
 	echo "    Run the setup script (after editing your CONFIG file)"
@@ -567,7 +628,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 12cdgho:p:s --long i386,arm64,config,debian-repo,github-page,help,output:,package:,setup \
+TEMP=$(getopt -o 12bcdgho:p:s --long i386,arm64,bell,config,debian-repo,github-page,help,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -581,12 +642,16 @@ cross_to_arm64=false
 distribute_to_debian_repo=false
 distribute_to_github_page=false
 
+ring_bell=false
+
 while true; do
 	case "$1" in
 		-1 | --i386 )
-			cross_to_i386=true; shift ;;
+			if [[ $i386_vm_is_configured == "true" ]]; then cross_to_i386=true; else echo "The i386 VM is not configured."; fi; shift ;;
 		-2 | --arm64 )
-			cross_to_arm64=true; shift ;;
+			if [[ $arm64_vm_is_configured == "true" ]]; then cross_to_arm64=true; else echo "The arm64 VM is not configured"; fi; shift ;;
+		-b | --bell )
+			ring_bell=true; shift ;;
 		-c | --config )
 			xdg-open "$CONFIG_FILE"; exit 0; shift ;;
 		-d | --debian-repo )
@@ -596,7 +661,7 @@ while true; do
 		-h | --help )
 			display_help; exit 0; shift ;;
 		-o | --output )
-			savedir="$(realpath $2)"; shift 2 ;;
+			savedir="$(realpath "$2")"; shift 2 ;;
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
 				buildbasepkgs+=("$2");
@@ -655,7 +720,7 @@ fi
 build_all_pkgs_in_pkgarrays
 clean_up
 
-if [ interactive_mode == true ]; then
+if [ $interactive_mode == true ]; then
 	ask_user_publish_to_deb_repo
 	ask_user_make_github_release_page
 fi
@@ -666,3 +731,9 @@ maybe_publish_to_deb_repo
 maybe_make_github_release_page
 
 delete_temp_files
+
+if [ $ring_bell == true ]; then
+	paplay /usr/share/autobuild/bell.ogg
+fi
+
+echo "" # End with newline

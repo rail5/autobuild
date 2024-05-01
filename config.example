@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 ## Configuration file
 ## This file contains the settings for autobuild to use
@@ -6,7 +6,7 @@
 # SYSTEM
 
 host_architecture="amd64"
-debian_distribution="bullseye"
+debian_distribution="bookworm"
 
 
 # PACKAGES
@@ -27,13 +27,8 @@ packages+=(["randomtext"]="https://github.com/rail5/randomtext.git")
 packages+=(["evolution-notify"]="https://github.com/rail5/evolution-notify.git")
 packages+=(["stepgrampa"]="https://github.com/rail5/stepgrampa.git")
 packages+=(["autobuild"]="https://github.com/rail5/autobuild.git")
-
-
-## Build dependencies for your packages
-## SET THIS **BEFORE** RUNNING THE SETUP SCRIPT
-## AND ESPECIALLY BEFORE CREATING THE BUILD FARM VMS
-build_dependencies="fpc-3.2.2 lazarus lcl-2.2 lcl-utils-2.2 fp-units-misc-3.2.2 graphicsmagick-libmagick-dev-compat libmagick++-6-headers libfontconfig1-dev libpoppler-cpp-dev libhpdf-dev"
-
+packages+=(["stranslate"]="https://github.com/rail5/stranslate.git")
+packages+=(["addmake"]="https://github.com/rail5/addmake.git")
 
 # GITHUB
 

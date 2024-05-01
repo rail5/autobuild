@@ -2,17 +2,32 @@
 
 Automatically build & distribute Debian packages
 
+![AGPL](https://www.gnu.org/graphics/agplv3-with-text-162x68.png)
+
 ## What does it do?
 
 This script will:
 
-  - Download Debian package sources from a git repo
-  - Build them on an x86_64/amd64 host machine
-  - Launch a virtual QEMU build-farm & build equivalents on other architectures
-  - Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
-  - Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
+- Download Debian package sources from a git repo
+- Build them on an x86_64/amd64 host machine
+- Launch a virtual QEMU build-farm & build equivalents on other architectures
+- Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
+- Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
+
+Autobuild is also used to build & distribute *itself*.
 
 ## How do I use it?
+
+### Installation
+
+Autobuild can be easily installed via the [deb.rail5.org](https://deb.rail5.org) repository:
+
+```
+sudo curl -s -o /etc/apt/trusted.gpg.d/rail5.gpg "https://deb.rail5.org/rail5.gpg"
+sudo curl -s -o /etc/apt/sources.list.d/rail5.list "https://deb.rail5.org/debian/rail5.list"
+sudo apt update
+sudo apt install autobuild
+```
 
 ### Set-up
 

@@ -1,3 +1,225 @@
+autobuild (1.11.12) stable; urgency=medium
+
+  * Users can now choose to build (if they want) only some of the build
+    farm VMs. This used to be all-or-nothing, but users can now select
+    which ones they want, if any, etc
+    General code cleanup
+    Bugfix: asking for cross-compilation when VMs aren't configured no
+    longer hangs indefinitely
+
+ -- rail5 <andrew@rail5.org>  Sun, 28 Apr 2024 15:07:39 +0800
+
+autobuild (1.11.11) stable; urgency=medium
+
+  * Replaced bell.wav with bell.ogg, reducing file size 10x
+    Telnet ports for the VMs are now randomized
+
+ -- rail5 <andrew@rail5.org>  Sat, 27 Apr 2024 18:54:53 +0800
+
+autobuild (1.11.10) stable; urgency=medium
+
+  * Assume the host machine has necessary build-deps. This removes an
+    unwanted prompt for interactive input called by sudo
+    Autobuild now connects to the build farm VMs as soon as it can
+    Fixed a bug where build-farm scripts did not upgrade with the
+    package
+    Now running the view-progress script from /usr/share instead of
+    home
+    Progress terminal window exits after completion
+
+ -- rail5 <andrew@rail5.org>  Sat, 27 Apr 2024 17:59:31 +0800
+
+autobuild (1.11.9) stable; urgency=medium
+
+  * Improved build dependency handling by using mk-build-deps
+    Now calling build-farm scripts from /usr/share instead of home
+    Statically included base packaging dependencies in the build-farm
+    VM preseeds
+    Also changed the repo mirror to the global URL deb.debian.org
+
+ -- rail5 <andrew@rail5.org>  Sat, 27 Apr 2024 15:18:56 +0800
+
+autobuild (1.11.8) stable; urgency=medium
+
+  * More code cleanup. Patched two bugs: one which would have
+  affected users with spaces in their usernames (an unquoted
+  string), and one which (through a silly oversight) affected
+  packages which included the word 'changes' in their names,
+  preventing autobuild from pushing them to Debian repos.
+  General code style improvements as well.
+
+ -- rail5 <andrew@rail5.org>  Mon, 22 Apr 2024 19:32:05 +0800
+
+autobuild (1.11.7) stable; urgency=medium
+
+  * Some minor code cleanup with the help of shellcheck
+
+ -- rail5 <andrew@rail5.org>  Sun, 21 Apr 2024 10:05:12 +0800
+
+autobuild (1.11.6) stable; urgency=medium
+
+  * Generalizing the build-farm launch system, or rather,
+  beginning to generalize it. We should determine things like
+  the SSH ports, the kind of acceleration, etc, intelligently,
+  rather than relying on pre-scripted hard-coded makefiles
+  as autobuild has so far.
+
+ -- rail5 <andrew@rail5.org>  Sun, 21 Apr 2024 10:04:33 +0800
+
+autobuild (1.11.5) stable; urgency=medium
+
+  * Cleaned up the ancient autobuild-setup script, also now
+  have default N on some y/n prompts in autobuild's
+  interactive mode.
+
+ -- rail5 <andrew@rail5.org>  Fri, 29 Dec 2023 16:31:32 +0800
+
+autobuild (1.11.4) stable; urgency=medium
+
+  * Patched a silly bug in the debian repo publishing function
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 21:56:53 +0800
+
+autobuild (1.11.3) stable; urgency=medium
+
+  * Autobuild now has a mechanism to prevent unauthorized
+  changes to locally-stored package sources by other users
+  or processes, making sure that the version of the source
+  pulled from the specified git repo takes precedence over
+  any unpushed local changes.
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 21:51:10 +0800
+
+autobuild (1.11.2) stable; urgency=medium
+
+  * Autobuild now displays the build logs from the build-farm
+  virtual machines in real-time, so that the user may witness
+  any errors which may or may not come up, etc.
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 18:32:46 +0800
+
+autobuild (1.11.1) stable; urgency=medium
+
+  * Autobuild now stores package sources in the user's .local
+  directory, rather than cloning them anew each time we want
+  to build them. This saves a lot of time when building large
+  packages.
+
+ -- rail5 <andrew@rail5.org>  Thu, 21 Dec 2023 15:25:07 +0800
+
+autobuild (1.11) stable; urgency=medium
+
+  * Autobuild now detects package build dependencies by reading
+  the debian/control file, and no longer requires that the user
+  specify the package build-deps in the autobuild config file.
+
+ -- rail5 <andrew@rail5.org>  Tue, 19 Dec 2023 19:38:07 +0800
+
+autobuild (1.10.4) stable; urgency=medium
+
+  * Build farm VMs no longer clone repos separately
+
+ -- rail5 <andrew@rail5.org>  Sun, 26 Nov 2023 18:32:39 +0800
+
+autobuild (1.10.3) stable; urgency=medium
+
+  * Added 'addmake' to the config.example
+
+ -- rail5 <andrew@rail5.org>  Fri, 13 Oct 2023 11:22:13 +0800
+
+autobuild (1.10.2) stable; urgency=medium
+
+  * Append newline to the end of autobuild's output to avoid
+  messing up anyone's terminal window
+
+ -- rail5 <andrew@rail5.org>  Mon, 25 Sep 2023 13:00:14 +0800
+
+autobuild (1.10.1) stable; urgency=medium
+
+  * Added stranslate to default config for my own convenience
+
+ -- rail5 <andrew@rail5.org>  Sun, 24 Sep 2023 12:50:11 +0800
+
+autobuild (1.10) stable; urgency=medium
+
+  * Replaced apt with apt-get for (hopefully) more reliability
+
+ -- rail5 <andrew@rail5.org>  Sat, 23 Sep 2023 16:13:46 +0800
+
+autobuild (1.9) stable; urgency=medium
+
+  * Apt appears to be giving sshpass
+  scripting some serious trouble.
+  I've patched it for now but this
+  should be looked at soon
+
+ -- rail5 <andrew@rail5.org>  Sat, 19 Aug 2023 00:06:03 -0400
+
+autobuild (1.8) stable; urgency=medium
+
+  * Patched small bug that caused
+  occasional hanging on build-farm
+  VM package updates
+
+ -- rail5 <andrew@rail5.org>  Fri, 18 Aug 2023 23:55:06 -0400
+
+autobuild (1.7) stable; urgency=medium
+
+  * Moving everything to Debian 12
+
+ -- rail5 <andrew@rail5.org>  Fri, 18 Aug 2023 23:11:13 -0400
+
+autobuild (1.6) bullseye; urgency=medium
+
+  * Autobuild now escapes quote-marks
+  in changelog messages before pushing
+  to Github release pages. A string
+  "like this" would have failed before.
+  Newlines are now escaped in a more
+  sane way.
+
+ -- rail5 <andrew@rail5.org>  Tue, 15 Aug 2023 15:48:10 -0400
+
+autobuild (1.5) bullseye; urgency=medium
+
+  * Autobuild now escapes backslashes
+  in changelog entries before posting
+  to Github
+
+ -- rail5 <andrew@rail5.org>  Tue, 15 Aug 2023 01:50:42 -0400
+
+autobuild (1.4) bullseye; urgency=medium
+
+  * Patched a small bug in autobuild's
+  usage of sed
+
+ -- rail5 <andrew@rail5.org>  Mon, 14 Aug 2023 13:33:20 -0400
+
+autobuild (1.3) bullseye; urgency=medium
+
+  * Fixed a silly typo
+
+ -- rail5 <andrew@rail5.org>  Mon, 14 Aug 2023 01:15:04 -0400
+
+autobuild (1.2) bullseye; urgency=medium
+
+  * Build farm VMs now check for new build
+  dependencies on each run.
+  Removed some possibility for dpkg
+  interruptions in the build farm VMs.
+  Build farm VMs now boot with no display
+  to reduce screen clutter.
+  Added -b option to ring a bell when
+  finished
+
+ -- rail5 <andrew@rail5.org>  Sun, 13 Aug 2023 15:48:29 -0400
+
+autobuild (1.1) bullseye; urgency=medium
+
+  * Added LICENSE file
+
+ -- rail5 <andrew@rail5.org>  Sat, 12 Aug 2023 16:41:50 -0400
+
 autobuild (1.0) bullseye; urgency=low
 
   * Initial release
