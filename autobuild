@@ -477,9 +477,8 @@ function push_to_ghpages_debian_repo() {
 	
 	local PKGNAME="$1" CHANGESFILE=""
 	
-	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
-	cd debian || { echo "$PKGNAME does not appear to contain a 'debian' subdirectory"; exit 1; }
-	
+	repo_base_directory=$(dirname "$(find "$storagedir/repo" -name "pool")")
+	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; exit 1; }
 	
 	# Get the .changes file
 	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep -P -e "\.changes" | head -n 1)"
@@ -499,7 +498,7 @@ function push_to_ghpages_debian_repo() {
 	
 	# Update indexes and commit changes
 	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
-	./update-indexes.sh
+	./update-indexes.sh # FIXME: Why would other people have this script in their repo directory?
 	git add --all
 	git commit -m "Updated $PKGNAME"
 }
