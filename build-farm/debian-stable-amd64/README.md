@@ -1,4 +1,4 @@
-# Build Farm
+# Debian headless/remote installation
 
 Many thanks to [Philipp Pagel](https://github.com/philpagel/debian-headless) for writing the original script that this is based on
 
@@ -11,17 +11,11 @@ This script has been modified to:
 
 With these changes, it's usable as the basis for a "build farm" to build packages for multiple distributions/architectures
 
-## What's included
+## This one
 
-So far, build scripts for VMs of:
-
-  - Debian Stable amd64
-  - Debian Stable i386
-  - Debian Stable arm64
+This one builds Debian Stable amd64.
 
 ## Usage
-
-Descend into one of the VM directories and then follow the following procedure:
 
 ```
 make install-depends
@@ -35,4 +29,4 @@ make boot-install
 
 After installation, you can run `make boot-run`, and the script will open a terminal window with a telnet connection to your new VM
 
-**If you see an error complaining that "kvm" is not a valid accelerator, or something similar**, this is because your host system is running on a different architecture than what these scripts were made for. You can remove the lines from the Makefile that say **"-accel kvm"**
+**If you see an error complaining that "kvm" is not a valid accelerator, or something similar**, this is because your host system is running on a different architecture (likely **ARM**). You can remove the lines from the Makefile that say **"-accel kvm"**, or try perhaps replacing them with **"-accel tcg"**

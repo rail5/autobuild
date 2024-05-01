@@ -17,8 +17,13 @@ packagedir="$storagedir/packages"
 autobuilddir="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
+amd64_vm_is_configured=false
 i386_vm_is_configured=false
 arm64_vm_is_configured=false
+
+if [[ -f "$storagedir/build-farm/debian-stable-amd64/image.qcow" ]]; then
+	amd64_vm_is_configured=true
+fi
 
 if [[ -f "$storagedir/build-farm/debian-stable-i386/image.qcow" ]]; then
 	i386_vm_is_configured=true
@@ -34,6 +39,7 @@ basereleasedir=""
 # Declare the lists of packages we'll be building
 # These arrays will be populated with the packages selected by the user
 buildbasepkgs=()
+buildamd64pkgs=()
 buildi386pkgs=()
 buildarm64pkgs=()
 
@@ -604,10 +610,14 @@ function display_help() {
 	echo "    Add a package to the build list"
 	echo ""
 	echo "  -1"
+	echo "  --amd64"
+	echo "    Build packages on the amd64 Build Farm VM"
+	echo ""
+	echo "  -2"
 	echo "  --i386"
 	echo "    Build packages on the i386 Build Farm VM"
 	echo ""
-	echo "  -2"
+	echo "  -3"
 	echo "  --arm64"
 	echo "    Build packages on the arm64 Build Farm VM"
 	echo ""
@@ -658,6 +668,7 @@ eval set -- "$TEMP"
 
 interactive_mode=true # By default, until we received --package "something"
 
+cross_to_amd64=false
 cross_to_i386=false
 cross_to_arm64=false
 distribute_to_debian_repo=false
@@ -667,9 +678,11 @@ ring_bell=false
 
 while true; do
 	case "$1" in
-		-1 | --i386 )
+		-1 | --amd64 )
+			if [[ $amd64_vm_is_configured == "true" ]]; then cross_to_amd64=true; else echo "The amd64 VM is not configured."; fi; shift ;;
+		-2 | --i386 )
 			if [[ $i386_vm_is_configured == "true" ]]; then cross_to_i386=true; else echo "The i386 VM is not configured."; fi; shift ;;
-		-2 | --arm64 )
+		-3 | --arm64 )
 			if [[ $arm64_vm_is_configured == "true" ]]; then cross_to_arm64=true; else echo "The arm64 VM is not configured"; fi; shift ;;
 		-b | --bell )
 			ring_bell=true; shift ;;
@@ -710,6 +723,13 @@ else
 	# Non-interactive mode
 
 	# Check if we're using the build farm
+	if [ $cross_to_amd64 == true ]; then
+		echo "Crossing to amd64"
+		for pkgname in "${buildbasepkgs[@]}"; do
+			buildamd64pkgs+=("$pkgname")
+		done
+	fi
+
 	if [ $cross_to_i386 == true ]; then
 		echo "Crossing to i386"
 		for pkgname in "${buildbasepkgs[@]}"; do
