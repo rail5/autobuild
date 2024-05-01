@@ -2,7 +2,6 @@
 
 [system]
 host_architecture = "amd64"
-debian_distribution = "bookworm"
 
 [packages]
 package_urls = [
