@@ -41,7 +41,7 @@ autobuild --amd64 --i386 --arm64 --package my-debian-package --package my-other-
 ```
 
 ```
-autobuild -123 -p my-debian-package -p my-other-debian-package -g
+autobuild -1 -2 -3 -p my-debian-package -p my-other-debian-package -g
 ```
 
 The above examples will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to GitHub Release pages.
