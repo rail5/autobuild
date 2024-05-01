@@ -55,7 +55,7 @@ SSHPORT="22222"
 
 # Load configuration
 
-CONFIG_FILE="$storagedir/config"
+CONFIG_FILE="$storagedir/config.toml"
 
 BUILDFARM_SCRIPTS_FILE="$autobuilddir/build-farm/scripts/scripts.sh"
 
@@ -68,13 +68,49 @@ fi
 cp -r "/usr/share/autobuild/build-farm/"* "$storagedir/build-farm/"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-	cp "$storagedir/config.example" "$CONFIG_FILE"
+	cp "$autobuilddir/config.toml" "$CONFIG_FILE"
 fi
 
 mkdir -p "$packagedir"
 
-# shellcheck source=./config.example
-. "$CONFIG_FILE"
+
+##################################################
+# Parse config file
+#
+config_json=$(toml2json "$CONFIG_FILE")
+
+## System settings
+host_architecture=$(jq -r ".system.host_architecture" <<<"$config_json")
+debian_distribution=$(jq -r ".system.debian_distribution" <<<"$config_json")
+
+## Package settings
+number_of_packages=$(jq -r ".packages.package_urls | length" <<<"$config_json")
+declare -A packages
+packages=()
+for ((i = 0; i < number_of_packages; i++)); do
+	package_url=$(jq -r ".packages.package_urls[$i]" <<<"$config_json")
+	package_name=$(basename "$package_url")
+	package_name="${package_name/.git/""}"
+
+	packages+=(["$package_name"]="$package_url")
+done
+
+## Distribution settings
+OWNER=$(jq -r ".distribution.repo_owner" <<<"$config_json")
+
+### Check for Github access token
+### If the user provided a path to a GPG-encrypted file, prefer that
+ACCESS_TOKEN=$(jq -r ".distribution.access_token" <<<"$config_json")
+ACCESS_TOKEN_FILE=$(jq -r ".distribution.access_token_gpg_encrypted_file" <<<"$config_json")
+
+if [[ "$ACCESS_TOKEN_FILE" != "null" ]]; then
+	ACCESS_TOKEN=$(gpg -d "$ACCESS_TOKEN_FILE" 2>/dev/null)
+fi
+
+git_debianrepo=$(jq -r ".distribution.git_debian_repo" <<<"$config_json")
+##################################################
+
+
 # shellcheck source=./build-farm/scripts/scripts.sh
 . "$BUILDFARM_SCRIPTS_FILE"
 
@@ -422,14 +458,14 @@ function push_github_release_page() {
 function prepare_ghpages_debian_repo() {
 	# Clone the git repo into a local directory
 	cd "$storagedir" || { echo "Could not cd into \"$storagedir\""; exit 1; }
-	git clone "$git_debianrepo" "$local_repodirectory" -q 2>/dev/null
-	cd "$local_repodirectory" || { echo "Could not cd into \"$local_repodirectory\""; exit 1; }
+	git clone "$git_debianrepo" "repo" -q 2>/dev/null
+	cd "repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
 	git reset --hard
 	git pull -q
 }
 
 function close_ghpages_debian_repo() {
-	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
+	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
 	
 	# Push the changes we've made before calling this function
 	git push origin -q
@@ -449,7 +485,7 @@ function push_to_ghpages_debian_repo() {
 	
 	local PKGNAME="$1" CHANGESFILE=""
 	
-	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
+	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
 	cd debian || { echo "$PKGNAME does not appear to contain a 'debian' subdirectory"; exit 1; }
 	
 	
@@ -470,7 +506,7 @@ function push_to_ghpages_debian_repo() {
 	done
 	
 	# Update indexes and commit changes
-	cd "$storagedir/$local_repodirectory" || { echo "Could not cd into \"$storagedir/$local_repodirectory\""; exit 1; }
+	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
 	./update-indexes.sh
 	git add --all
 	git commit -m "Updated $PKGNAME"

@@ -1,0 +1,26 @@
+# Autobuild configuration
+
+[system]
+host_architecture = "amd64"
+debian_distribution = "bookworm"
+
+[packages]
+package_urls = [
+	"https://github.com/rail5/polonius.git",
+	"https://github.com/rail5/liesel.git",
+	"https://github.com/rail5/bookthief.git",
+	"https://github.com/rail5/ocrshot.git",
+	"https://github.com/rail5/randomtext.git",
+	"https://github.com/rail5/evolution-notify.git",
+	"https://github.com/rail5/stepgrampa.git",
+	"https://github.com/rail5/autobuild.git",
+	"https://github.com/rail5/stranslate.git",
+	"https://github.com/rail5/addmake.git"
+]
+
+[distribution]
+repo_owner = "rail5"
+#access_token = "github_access_token_here"
+access_token_gpg_encrypted_file = "/etc/git/github-token.gpg"
+
+git_debian_repo = "https://github.com/rail5/ppa.git"
