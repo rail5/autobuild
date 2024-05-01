@@ -493,7 +493,6 @@ function push_to_ghpages_debian_repo() {
 	
 	# Update indexes and commit changes
 	cd "$storagedir/repo" || { echo "Could not cd into \"$storagedir/repo\""; exit 1; }
-	./update-indexes.sh # FIXME: Why would other people have this script in their repo directory?
 	git add --all
 	git commit -m "Updated $PKGNAME"
 }
