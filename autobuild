@@ -489,52 +489,6 @@ function push_to_ghpages_debian_repo() {
 	git commit -m "Updated $PKGNAME"
 }
 
-
-function ask_user_build_pkg() {
-	if [[ $# != 1 ]]; then
-		echo "bag args to ask_user_build_pkg" && exit 6
-	fi
-	
-	local PKGNAME="$1"
-	
-	while true; do
-		read -r -p "Do you want to build $PKGNAME? (y/N) " yn
-		case $yn in
-			[Yy]* ) packages_to_build+=("$PKGNAME"); break;;
-			* ) return 1;;
-		esac
-	done
-	
-	while true; do
-		read -r -p "  $PKGNAME: Build on i386 as well? (y/N) " yn
-		case $yn in
-			[Yy]* ) i386_builds+=("$PKGNAME"); break;;
-			* ) break;;
-		esac
-	done
-	
-	while true; do
-		read -r -p "  $PKGNAME: Build on arm64 as well? (y/N) " yn
-		case $yn in
-			[Yy]* ) arm64_builds+=("$PKGNAME"); break;;
-			* ) break;;
-		esac
-	done
-}
-
-function ask_user_publish_to_deb_repo() {
-	for pkgname in "${packages_to_build[@]}"; do
-		while true; do
-			read -r -p "Do you want to publish $pkgname to your Git-based Debian Repository? (y/n) " yn
-			case $yn in
-				[Yy]* ) packages_to_publish_to_repo+=("$pkgname"); break;;
-				[Nn]* ) break;;
-				* ) echo "Answer yes or no";;
-			esac
-		done
-	done
-}
-
 function maybe_publish_to_deb_repo() {
 	if [[ ${#packages_to_publish_to_repo[@]} -gt 0 ]]; then
 		echo "Publishing to repo..."
@@ -547,19 +501,6 @@ function maybe_publish_to_deb_repo() {
 		
 		close_ghpages_debian_repo
 	fi
-}
-
-function ask_user_make_github_release_page() {	
-	for pkgname in "${packages_to_build[@]}"; do
-		while true; do
-			read -r -p "Do you want to make a GITHUB RELEASE PAGE for $pkgname? (y/n) " yn
-			case $yn in
-				[Yy]* ) release_pages_to_make+=("$pkgname"); break;;
-				[Nn]* ) break;;
-				* ) echo "Answer yes or no";;
-			esac
-		done
-	done
 }
 
 function maybe_make_github_release_page() {
@@ -587,7 +528,7 @@ function display_help() {
 	echo "This program comes with ABSOLUTELY NO WARRANTY."
 	echo "This is free software (GNU Affero GPL V3), and you are welcome to redistribute it under certain conditions."
 	echo ""
-	echo "You should edit CONFIG and run setup before using this script"
+	echo "You should edit CONFIG and run setup before using this program"
 	echo ""
 	echo "Options:"
 	echo ""
@@ -635,8 +576,6 @@ function display_help() {
 	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
 	echo "  autobuild -p liesel -o ~/Desktop/"
-	echo ""
-	echo "If no arguments are provided, the script will run in 'interactive mode'"
 }
 
 
@@ -652,8 +591,6 @@ if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
 eval set -- "$TEMP"
 
-interactive_mode=true # By default, until we received --package "something"
-
 target_architecture_provided=false
 building_on_amd64=false
 building_on_i386=false
@@ -666,11 +603,29 @@ ring_bell=false
 while true; do
 	case "$1" in
 		-1 | --amd64 )
-			if [[ $amd64_vm_is_configured == "true" ]]; then building_on_amd64=true; target_architecture_provided=true; else echo "The amd64 VM is not configured."; fi; shift ;;
+			if [[ $amd64_vm_is_configured == "true" ]]; then
+				building_on_amd64=true
+				target_architecture_provided=true
+			else
+				echo "The amd64 VM is not configured."
+			fi
+			shift ;;
 		-2 | --i386 )
-			if [[ $i386_vm_is_configured == "true" ]]; then building_on_i386=true; target_architecture_provided=true; else echo "The i386 VM is not configured."; fi; shift ;;
+			if [[ $i386_vm_is_configured == "true" ]]; then
+				building_on_i386=true
+				target_architecture_provided=true
+			else
+				echo "The i386 VM is not configured."
+			fi
+			shift ;;
 		-3 | --arm64 )
-			if [[ $arm64_vm_is_configured == "true" ]]; then building_on_arm64=true; target_architecture_provided=true; else echo "The arm64 VM is not configured"; fi; shift ;;
+			if [[ $arm64_vm_is_configured == "true" ]]; then
+				building_on_arm64=true
+				target_architecture_provided=true
+			else
+				echo "The arm64 VM is not configured"
+			fi
+			shift ;;
 		-b | --bell )
 			ring_bell=true; shift ;;
 		-c | --config )
@@ -678,7 +633,7 @@ while true; do
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-g | --github-page )
-		distribute_to_github_page=true; shift ;;
+			distribute_to_github_page=true; shift ;;
 		-h | --help )
 			display_help; exit 0 ;;
 		-o | --output )
@@ -686,7 +641,6 @@ while true; do
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
 				packages_to_build+=("$2");
-				interactive_mode=false;
 				echo "Building $2"
 			else
 				echo "ERROR: Package '$2' not in CONFIG!";
@@ -702,60 +656,47 @@ done
 
 setup_build_environment
 
-if [ $interactive_mode == true ]; then
-	for pkgname in "${!packages[@]}"; do
-		ask_user_build_pkg "$pkgname"
+if [ $target_architecture_provided == false ]; then
+	echo "Error: No target architecture provided. Assuming amd64..."
+	building_on_amd64=true
+fi
+
+if [ $building_on_amd64 == true ]; then
+	echo "Building amd64"
+	for pkgname in "${packages_to_build[@]}"; do
+		amd64_builds+=("$pkgname")
 	done
-else
-	# Non-interactive mode
+fi
 
-	if [ $target_architecture_provided == false ]; then
-		echo "Error: No target architecture provided. Assuming amd64..."
-		building_on_amd64=true
-	fi
+if [ $building_on_i386 == true ]; then
+	echo "Building i386"
+	for pkgname in "${packages_to_build[@]}"; do
+		i386_builds+=("$pkgname")
+	done
+fi
 
-	if [ $building_on_amd64 == true ]; then
-		echo "Building amd64"
-		for pkgname in "${packages_to_build[@]}"; do
-			amd64_builds+=("$pkgname")
-		done
-	fi
+if [ $building_on_arm64 == true ]; then
+	echo "Building arm64"
+	for pkgname in "${packages_to_build[@]}"; do
+		arm64_builds+=("$pkgname")
+	done
+fi
 
-	if [ $building_on_i386 == true ]; then
-		echo "Building i386"
-		for pkgname in "${packages_to_build[@]}"; do
-			i386_builds+=("$pkgname")
-		done
-	fi
+# Check if and how we're distributing the built packages
+if [ $distribute_to_debian_repo == true ]; then
+	for pkgname in "${packages_to_build[@]}"; do
+		packages_to_publish_to_repo+=("$pkgname")
+	done
+fi
 
-	if [ $building_on_arm64 == true ]; then
-		echo "Building arm64"
-		for pkgname in "${packages_to_build[@]}"; do
-			arm64_builds+=("$pkgname")
-		done
-	fi
-
-	# Check if and how we're distributing the built packages
-	if [ $distribute_to_debian_repo == true ]; then
-		for pkgname in "${packages_to_build[@]}"; do
-			packages_to_publish_to_repo+=("$pkgname")
-		done
-	fi
-
-	if [ $distribute_to_github_page == true ]; then
-		for pkgname in "${packages_to_build[@]}"; do
-			release_pages_to_make+=("$pkgname")
-		done
-	fi
+if [ $distribute_to_github_page == true ]; then
+	for pkgname in "${packages_to_build[@]}"; do
+		release_pages_to_make+=("$pkgname")
+	done
 fi
 
 build_all_pkgs_in_pkgarrays
 clean_up
-
-if [ $interactive_mode == true ]; then
-	ask_user_publish_to_deb_repo
-	ask_user_make_github_release_page
-fi
 
 save_debs
 
