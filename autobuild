@@ -474,25 +474,22 @@ function push_to_ghpages_debian_repo() {
 		echo "bag args to push_to_ghpages_debian_repo" && exit 5
 	fi
 	
-	local PKGNAME="$1" CHANGESFILE=""
+	local PKGNAME="$1"
 	
 	repo_base_directory=$(dirname "$(find "$storagedir/repo" -name "pool")")
 	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; exit 1; }
 
 	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
 	
-	# Get the .changes file
-	CHANGESFILE="$(ls "$basereleasedir/$PKGNAME/" | grep "\.changes" | head -n 1)"
-	
-	# Add that to the repo
-	reprepro -P optional include "$debian_distribution" "$basereleasedir/$PKGNAME/$CHANGESFILE"
-	
-	
+	# Add .changes files to the repo
+	for changes_file in "$basereleasedir/$PKGNAME/"*.changes; do
+		reprepro -P optional include "$debian_distribution" "$changes_file"
+	done
+
 	# Get the list of all .deb package files that are NOT marked with $host_architecture (default: amd64)
 	# And add those to the repo with includedeb
-	for file in "$basereleasedir/$PKGNAME/"*; do
-		file="$(basename "$file" | grep "\.deb" | grep -v "$host_architecture")"
-		if [[ "$file" != "" ]]; then
+	for file in "$basereleasedir/$PKGNAME/"*.deb; do
+		if [[ "$file" != *"$host_architecture"* ]]; then
 			reprepro includedeb "$debian_distribution" "$basereleasedir/$PKGNAME/$file"
 		fi
 	done
