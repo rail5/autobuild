@@ -1,10 +1,10 @@
 .\" Manpage for autobuild
 .\" Contact andrew@rail5.org to correct errors or typos.
-.TH man 8 "12 August 2023" "1.0" "autobuild man page"
+.TH man 8 "1 May 2024" "2.0" "autobuild man page"
 .SH NAME
 autobuild
 .SH SYNOPSIS
-autobuild
+autobuild --amd64 --i386 --arm64 -p package-name
 .SH DESCRIPTION
 Autobuild automatically retrieves Debian package sources from Git, builds them, and distributes them.
 It can save the built packages locally, distribute them to a GitHub Release Page, and distribute them to a Git-based Debian Repository with reprepro.
@@ -13,12 +13,21 @@ It can save the built packages locally, distribute them to a GitHub Release Page
   --package
     Add a package to the build list
 
+  -0
+  --local
+    Build packages on local machine (do not use the Build Farm)
+
   -1
+  --amd64
+    Build packages on the amd64 Build Farm VM
+    The amd64 VM must have already been built by the setup script (Run 'autobuild -s')
+
+  -2
   --i386
     Build packages on the i386 Build Farm VM
     The i386 VM must have already been built by the setup script (Run 'autobuild -s')
 
-  -2
+  -3
   --arm64
     Build packages on the arm64 Build Farm VM
     The arm64 VM must have already been built by the setup script (Run 'autobuild -s')
@@ -26,7 +35,7 @@ It can save the built packages locally, distribute them to a GitHub Release Page
   -o
   --output
     Specify directory to save built package files
-    (Default: current directory)
+    (Default: current working directory)
 
   -d
   --debian-repo
@@ -50,11 +59,20 @@ It can save the built packages locally, distribute them to a GitHub Release Page
   --config
     Open the CONFIG file for editing
 
-Example:
-  autobuild -12dg -p liesel -p bookthief -p polonius
-  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius
-  autobuild -p liesel -o ~/Desktop/
+  -l
+  --list
+    List all packages available to build
 
-If no arguments are provided, the script will run in 'interactive mode'
+.SH EXAMPLES
+  autobuild -123dg -p package-1 -p package-2
+
+  autobuild --amd64 --i386 --arm64 --debian-repo --github-page --package package-1 --package package-2
+
+  autobuild -0 -p package-1 -o /path/to/save/packages/
+
+  autobuild -c
+
+  autobuild -s
+
 .SH AUTHOR
 rail5 (andrew@rail5.org)
