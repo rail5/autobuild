@@ -3,6 +3,7 @@
 	dh $@
 
 override_dh_auto_install:
+	mkdir -p "$$(pwd)/debian/autobuild/usr/share/autobuild"
 	cp config.toml "$$(pwd)/debian/autobuild/usr/share/autobuild/config.toml"
 	cp -r build-farm "$$(pwd)/debian/autobuild/usr/share/autobuild/build-farm"
 	cp bell.ogg "$$(pwd)/debian/autobuild/usr/share/autobuild/bell.ogg"
