@@ -460,9 +460,6 @@ function close_ghpages_debian_repo() {
 	
 	# Push the changes we've made before calling this function
 	git push origin -q
-	
-	# Move back to start
-	cd "$initdir"
 }
 
 function push_to_ghpages_debian_repo() {
