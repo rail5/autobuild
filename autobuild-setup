@@ -9,9 +9,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
 	exit 1
 fi
 
-# shellcheck source="./config.example"
-. "$CONFIG_FILE"
-
 setupgithubhttps=0
 while true; do
 	read -p "Do you want to set up GitHub over HTTPS? (y/n) " yn
