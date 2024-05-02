@@ -17,14 +17,6 @@ This one builds Debian Stable arm64 on an x86_64 host.
 
 ## Usage
 
-Decide what packages you want to be installed by default, and run:
-
-`set-install-packages.sh package1 package2 package3` etc
-
-This script edits the preseed.cfg file
-
-Then:
-
 ```
 make install-depends
 

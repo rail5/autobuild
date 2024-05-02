@@ -1,3 +1,18 @@
+autobuild (2.0.0) stable; urgency=medium
+
+  * v2 release
+    VMs are now stateless during package builds. This means that the
+    state of the build farm virtual machines is not altered by the
+    building of any one package. This reduces the chance that we might
+    corrupt our build environments.
+    All builds now happen in build VMs by default, unless a local build
+    is requested by the user. Added -l option to list available packages.
+    Removed 'interactive mode'
+    Config file is now TOML rather than a shell script. Much easier to
+    read, much easier to edit, much less dangerous.
+
+ -- rail5 <andrew@rail5.org>  Thu, 02 May 2024 15:33:07 +0800
+
 autobuild (1.11.12) stable; urgency=medium
 
   * Users can now choose to build (if they want) only some of the build
