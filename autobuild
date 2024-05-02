@@ -286,7 +286,7 @@ function start_build_vm() {
 	
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
-(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1) && exit || exit
+(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1 && sudo apt-get autoremove -y >/dev/null 2>&1) && exit || exit
 
 exit
 EOF
