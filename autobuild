@@ -244,60 +244,104 @@ function clean_up() {
 	rm -rf "$initial_directory/$pkgs_build_base_directory/deb"
 }
 
+function upgrade_vm() {
+	echo "---"
+	echo "Upgrading VM..."
+	echo "---"
+	until (sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1 && sudo apt-get autoremove -y >/dev/null 2>&1) && exit || exit; exit"); do
+		sleep 1
+	done
+}
+
 function start_build_vm() {
 	# Turn on the VM
-	if [[ $# != 1 ]]; then
+	if [[ $# != 2 ]]; then
 		echo "bad args to start_build_vm" && exit 2
 	fi
 	
-	local ARCH="$1"
+	local ARCH="$1" STATELESS="$2"
 	
-	# Set ARCHDIR
+
+	# Set ARCHDIR, ARCH_STRING, and VM_IMAGE
+
 	## ARCHDIR is the subdirectory underneath 'build-farm/' containing the QEMU VM for the arch in question
 	## IE, if we want to build using the VM stored in ./build-farm/debian-stable-arm64
 	## Then we would set ARCHDIR="debian-stable-arm64"
-	local ARCHDIR=""
+
+	## ARCH_STRING is the arch that must be passed to qemu to boot
+	## In the case of "amd64", for example, ARCH_STRING should be "x86_64" because we have to run the command
+	## qemu-system-x86_64
+
+	## VM_IMAGE is the image we will be booting.
+	## The system is stored in a file named image.qcow
+	## If we are booting statelessly, this will be replaced with a snapshot image
+	## So that the VM's permanent state will not be altered.
+
+	local ARCHDIR="" ARCH_STRING="" VM_IMAGE="image.qcow"
 
 	SSHPORT=$(get_random_free_port)
 	TELNETPORT=$(get_random_free_port) # FIXME: Tiny possibility of the two calls generating the same port number
 	
 	if [[ "$ARCH" == "amd64" ]]; then
 		ARCHDIR="debian-stable-amd64"
-
-		boot_vm_nodisplay "x86_64" "$build_farm_directory/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
-
+		ARCH_STRING="x86_64"
 	elif [[ "$ARCH" == "i386" ]]; then
 		ARCHDIR="debian-stable-i386"
-		
-		boot_vm_nodisplay "i386" "$build_farm_directory/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
-		
+		ARCH_STRING="i386"
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCHDIR="debian-stable-arm64"
-		
-		boot_vm_nodisplay "aarch64" "$build_farm_directory/$ARCHDIR/image.qcow" "$SSHPORT" "$TELNETPORT" &
-			# Perhaps we should rename 'arm64' to 'aarch64' within Autobuild for consistency with the way Debian names things?
+		ARCH_STRING="aarch64"
 	fi
 
-	echo "---"
-	echo "$ARCH VM started. You can connect to it (if you want) as follows:"
-	echo "  SSH Port: $SSHPORT"
-	echo "  TELNET Port: $TELNETPORT"
-	echo "---"
-	
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
 
-(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1 && sudo apt-get autoremove -y >/dev/null 2>&1) && exit || exit
+	# Wait for any VMs using our image to shut down
+	## We're ready to boot up again when our vm image file is not locked
+	## FIXME: This would mean that other VMs (unrelated to autobuild) cannot run at the same time as autobuild.
+	## I've tried checking when the lock is gone with lslocks as recommended here: https://www.qemu.org/docs/master/system/qemu-block-drivers.html
+	## But qemu's file locks seem to not actually be reported by lslocks.
+	until [[ $(pgrep -f "qemu-system-$ARCH_STRING") == "" ]]; do
+		sleep 1
+	done
 
-exit
-EOF
+
+	# Statelessness
+
+	## If STATELESS=0,
+	### Then we load the VM's base image, and any changes we make will permanently alter the VM's state
+	### This is used for system upgrades, etc, before building packages
+
+	## If STATELESS=1
+	### Then we create a snapshot of the base image & boot that one instead
+	### And any changes we make will NOT be reflected in the base image
+	### And will disappear the moment the VM is shut down
+	### This is used to actually build packages, so that the build environment
+	### Is not permanently altered by the building of any package.
+
+	if [[ STATELESS -eq 1 ]]; then
+		# Clear any pre-existing snapshots, in case they're there
+		rm -f "$build_farm_directory/$ARCHDIR/snapshot.qcow"
+
+		# Create snapshot
+		qemu-img create -f qcow2 -b "$build_farm_directory/$ARCHDIR/$VM_IMAGE" -F qcow2 "$build_farm_directory/$ARCHDIR/snapshot.qcow"
+		VM_IMAGE="snapshot.qcow"
+	fi
+
+	# Boot the VM
+	boot_vm_nodisplay "$ARCH_STRING" "$build_farm_directory/$ARCHDIR/$VM_IMAGE" "$SSHPORT" "$TELNETPORT" &
+
+	if [[ STATELESS -eq 1 ]]; then
+		echo "---"
+		echo "$ARCH VM started. You can connect to it (if you want) as follows:"
+		echo "  SSH Port: $SSHPORT"
+		echo "  TELNET Port: $TELNETPORT"
+		echo "---"
+	fi
 }
 
 function shutdown_build_vm() {
 	# Connect to it on SSH and send the shutdown command
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 << EOF
-sudo shutdown now >/dev/null 2>&1
-
-EOF
+	echo "Shutting down VM..."
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"sudo shutdown now >/dev/null 2>&1"
 }
 
 function build_other_arch() {
@@ -377,29 +421,38 @@ function build_all_pkgs_in_pkgarrays() {
 
 	if [[ building_some_on_amd64 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
-		start_build_vm "amd64"
-		for pkgname in "${packages_to_build[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0 0
-		done
+		start_build_vm "amd64" 0
+		upgrade_vm # Run upgrades on the VM first
 		shutdown_build_vm
+		for pkgname in "${packages_to_build[@]}"; do
+			start_build_vm "amd64" 1 # Start in stateless mode
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0 0
+			shutdown_build_vm # Restore state
+		done
 	fi
 
 	if [[ building_some_on_i386 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
-		start_build_vm "i386"
-		for pkgname in "${i386_builds[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0 0
-		done
+		start_build_vm "i386" 0
+		upgrade_vm # Run upgrades on the VM first
 		shutdown_build_vm
+		for pkgname in "${i386_builds[@]}"; do
+			start_build_vm "i386" 1 # Start in stateless mode
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0 0
+			shutdown_build_vm # Restore state
+		done
 	fi
 	
 	if [[ building_some_on_arm64 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
-		start_build_vm "arm64"
-		for pkgname in "${arm64_builds[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1 0
-		done
+		start_build_vm "arm64" 0
+		upgrade_vm # Run upgrades on the VM first
 		shutdown_build_vm
+		for pkgname in "${arm64_builds[@]}"; do
+			start_build_vm "arm64" 1 # Start in stateless mode
+			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1 0
+			shutdown_build_vm # Restore state
+		done
 	fi
 
 	if [[ building_some_on_amd64 -eq 0 && building_some_on_i386 -eq 0 && building_some_on_i386 -eq 0 ]]; then
