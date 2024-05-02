@@ -291,7 +291,12 @@ function start_build_vm() {
 	local ARCHDIR="" ARCH_STRING="" VM_IMAGE="image.qcow"
 
 	SSHPORT=$(get_random_free_port)
-	TELNETPORT=$(get_random_free_port) # FIXME: Tiny possibility of the two calls generating the same port number
+	TELNETPORT=$(get_random_free_port)
+
+	# Just in case we accidentally gave the same port to both protocols:
+	while [[ "$TELNETPORT" == "$SSHPORT" ]]; do
+		TELNETPORT=$(get_random_free_port)
+	done
 	
 	if [[ "$ARCH" == "amd64" ]]; then
 		ARCHDIR="debian-stable-amd64"
