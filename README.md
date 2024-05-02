@@ -6,7 +6,7 @@ Automatically build & distribute Debian packages
 
 ## What does it do?
 
-This program will:
+This program will **automatically**:
 
 - Download Debian package sources from a git repo
 
