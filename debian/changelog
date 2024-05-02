@@ -1,3 +1,11 @@
+autobuild (2.0.1) stable; urgency=medium
+
+  * Fixed tiny possibility that generated telnet and ssh ports for VMs
+    would be the same
+    Consolidated update function into one single upgrade_vm call
+
+ -- rail5 <andrew@rail5.org>  Thu, 02 May 2024 22:35:26 +0800
+
 autobuild (2.0.0) stable; urgency=medium
 
   * v2 release
