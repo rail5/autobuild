@@ -6,12 +6,15 @@ Automatically build & distribute Debian packages
 
 ## What does it do?
 
-This script will:
+This program will:
 
 - Download Debian package sources from a git repo
+
 - Launch a virtual QEMU build-farm & build those packages for various architectures
-- Create GitHub release pages *(again, assuming you have ownership of the repos they came from)*
-- Push these packages to a Debian Repository hosted on GitHub Pages (or similar) *(assuming you have write access to one)*
+
+- Create GitHub release pages for those packages
+
+- Push those packages to a Debian Repository hosted on GitHub Pages
 
 Autobuild is also used to build & distribute itself.
 
@@ -45,5 +48,11 @@ autobuild -1 -2 -3 -p my-debian-package -p my-other-debian-package -g
 ```
 
 The above examples will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to GitHub Release pages.
+
+The following example will build your package *locally* (without using the virtual build farm) and save the resulting build in /home/user:
+
+```
+autobuild --local -p my-debian-package -o /home/user/
+```
 
 See `autobuild --help`, `autobuild -h`, or `man autobuild` for a list of options and how to use them.
