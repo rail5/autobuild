@@ -250,12 +250,18 @@ function clean_up() {
 }
 
 function upgrade_vm() {
+	if [[ $# != 1 ]]; then
+		echo "bag args to upgrade_vm" && exit 2
+	fi
+	local ARCH="$1"
 	echo "---"
-	echo "Upgrading VM..."
+	echo "Upgrading $ARCH VM..."
 	echo "---"
+	start_build_vm "$ARCH" 0
 	until (sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1 && sudo apt-get autoremove -y >/dev/null 2>&1) && exit || exit; exit"); do
 		sleep 1
 	done
+	shutdown_build_vm
 }
 
 function start_build_vm() {
@@ -426,9 +432,7 @@ function build_all_pkgs_in_pkgarrays() {
 
 	if [[ building_some_on_amd64 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
-		start_build_vm "amd64" 0
-		upgrade_vm # Run upgrades on the VM first
-		shutdown_build_vm
+		upgrade_vm "amd64" # Run upgrades on the VM first
 		for pkgname in "${packages_to_build[@]}"; do
 			start_build_vm "amd64" 1 # Start in stateless mode
 			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0 0
@@ -438,9 +442,7 @@ function build_all_pkgs_in_pkgarrays() {
 
 	if [[ building_some_on_i386 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
-		start_build_vm "i386" 0
-		upgrade_vm # Run upgrades on the VM first
-		shutdown_build_vm
+		upgrade_vm "i386" # Run upgrades on the VM first
 		for pkgname in "${i386_builds[@]}"; do
 			start_build_vm "i386" 1 # Start in stateless mode
 			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0 0
@@ -450,9 +452,7 @@ function build_all_pkgs_in_pkgarrays() {
 	
 	if [[ building_some_on_arm64 -eq 1 ]]; then
 		# Start the VM, build all the packages, and then shut it down
-		start_build_vm "arm64" 0
-		upgrade_vm # Run upgrades on the VM first
-		shutdown_build_vm
+		upgrade_vm "arm64" # Run upgrades on the VM first
 		for pkgname in "${arm64_builds[@]}"; do
 			start_build_vm "arm64" 1 # Start in stateless mode
 			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1 0
