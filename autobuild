@@ -674,7 +674,7 @@ while true; do
 			done
 			exit 0 ;;
 		-o | --output )
-			savedir="$(realpath "$2")"; shift 2 ;;
+			savedir=$(realpath "$2"); shift 2 ;;
 		-p | --package )
 			if [ ${packages[$2]+1} ]; then
 				packages_to_build+=("$2");
