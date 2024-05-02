@@ -242,6 +242,11 @@ function build_package_universal() {
 function clean_up() {
 	# Keep only the 'release' and 'srconly' directories
 	rm -rf "$initial_directory/$pkgs_build_base_directory/deb"
+	
+	# Clear VM snapshots
+	rm -f "$build_farm_directory/debian-stable-amd64/snapshot.qcow"
+	rm -f "$build_farm_directory/debian-stable-i386/snapshot.qcow"
+	rm -f "$build_farm_directory/debian-stable-arm64/snapshot.qcow"
 }
 
 function upgrade_vm() {
