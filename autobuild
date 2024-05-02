@@ -735,12 +735,14 @@ fi
 
 # Check if and how we're distributing the built packages
 if [ $distribute_to_debian_repo == true ]; then
+	echo "Publishing packages to Debian repo"
 	for pkgname in "${packages_to_build[@]}"; do
 		packages_to_publish_to_repo+=("$pkgname")
 	done
 fi
 
 if [ $distribute_to_github_page == true ]; then
+	echo "Publishing packages to Github release pages"
 	for pkgname in "${packages_to_build[@]}"; do
 		release_pages_to_make+=("$pkgname")
 	done
