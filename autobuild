@@ -314,7 +314,7 @@ function start_build_vm() {
 	## We're ready to boot up again when our vm image file is not locked
 	## FIXME: This would mean that other VMs (unrelated to autobuild) cannot run at the same time as autobuild.
 	## I've tried checking when the lock is gone with lslocks as recommended here: https://www.qemu.org/docs/master/system/qemu-block-drivers.html
-	## But qemu's file locks seem to not actually be reported by lslocks.
+	## But qemu's file locks being OFD make it impossible to tell when they're released from that output alone
 	until [[ $(pgrep -f "qemu-system-$ARCH_STRING") == "" ]]; do
 		sleep 1
 	done
