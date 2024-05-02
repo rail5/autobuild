@@ -49,10 +49,10 @@ autobuild -1 -2 -3 -p my-debian-package -p my-other-debian-package -g
 
 The above examples will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to GitHub Release pages.
 
-The following example will build your package *locally* (without using the virtual build farm) and save the resulting build in /home/user:
-
 ```
 autobuild --local -p my-debian-package -o /home/user/
 ```
+
+The above example will build your package *locally* (without using the virtual build farm) and save the resulting build in /home/user
 
 See `autobuild --help`, `autobuild -h`, or `man autobuild` for a list of options and how to use them.
