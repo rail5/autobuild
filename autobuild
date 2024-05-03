@@ -209,19 +209,19 @@ function build_package_universal() {
 	mkdir -p "$releasedir"
 	
 	# Pull updates to the source code from GITURL into our local package directory
-	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; graceful_exit 1; }
+	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
-	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; graceful_exit 1; }
+	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	git reset --hard
 	git pull -q # Pull changes in case we do already have it (an older version)
 
 	# Copy the updated source code into a temp directory named PKGNAME
-	cd "$autobuild_temp_directory/$pkgs_build_base_directory/srconly" || { echo "Could not cd into package source directory"; exit 1; }
+	cd "$autobuild_temp_directory/$pkgs_build_base_directory/srconly" || { echo "Could not cd into package source directory"; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	mkdir "$PKGNAME"
 	cp -r "$package_directory/$PKGNAME/"* "./$PKGNAME/"
 	
 	# Tar it up so we can pass it to the build farm VMs later
-	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; graceful_exit 1; }
+	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	tar -czf "$sourcetarball" .
 	
 	if [[ this_is_amd64_build -eq 1 ]]; then
@@ -250,7 +250,7 @@ function build_package_universal() {
 		cp -r "$srcdir/"* "$builddir/"
 		
 		# Move to the build directory, don't mess with the source directory
-		cd "$builddir" || { echo "Could not cd into \"$builddir\""; graceful_exit 1; }
+		cd "$builddir" || { echo "Could not cd into \"$builddir\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 		
 		# Build package
 		debuild -us -uc
@@ -441,7 +441,7 @@ EOF
 
 	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$autobuild_temp_directory/$ARCH/packages.tar.gz" >/dev/null 2>&1
 	
-	cd "$autobuild_temp_directory/$ARCH" || { echo "Could not cd into \"$autobuild_temp_directory/$ARCH\""; graceful_exit 1; }
+	cd "$autobuild_temp_directory/$ARCH" || { echo "Could not cd into \"$autobuild_temp_directory/$ARCH\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	tar -xzf packages.tar.gz
 	rm -f packages.tar.gz
 	mv "$autobuild_temp_directory/$ARCH/"* "$autobuild_temp_directory/buildfarm-debs/"
@@ -610,15 +610,15 @@ function push_forgejo_release_page() {
 
 function prepare_ghpages_debian_repo() {
 	# Clone the git repo into a local directory
-	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; graceful_exit 1; }
+	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	git clone "$git_debianrepo" "repo" -q 2>/dev/null
-	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; graceful_exit 1; }
+	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	git reset --hard
 	git pull -q
 }
 
 function close_ghpages_debian_repo() {
-	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; graceful_exit 1; }
+	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	
 	# Push the changes we've made before calling this function
 	git push origin -q
@@ -636,7 +636,7 @@ function push_to_ghpages_debian_repo() {
 	local PKGNAME="$1"
 	
 	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool")")
-	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; graceful_exit 1; }
+	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 
 	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
 	
@@ -646,7 +646,7 @@ function push_to_ghpages_debian_repo() {
 	done
 	
 	# Update indexes and commit changes
-	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; graceful_exit 1; }
+	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	git add --all
 	git commit -m "Updated $PKGNAME"
 }
