@@ -9,13 +9,20 @@ if [ "$(whoami)" == "root" ]; then
 	sleep 1
 fi
 
-tempdirectory=$(dirname "$(mktemp -u)")
-initial_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
+autobuild_temp_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 local_storage_directory="$HOME/.local/share/autobuild"
 build_farm_directory="$local_storage_directory/build-farm"
 package_directory="$local_storage_directory/packages"
 autobuild_directory="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
+
+
+# Signal trapping so we can exit gracefully
+# Reroute SIGINT, SIGTERM, and SIGEXIT to the graceful_exit function defined below
+trap 'graceful_exit INT' "1"
+trap 'graceful_exit TERM' "1"
+trap 'graceful_exit EXIT' "1"
+
 
 amd64_vm_is_configured=false
 i386_vm_is_configured=false
@@ -161,21 +168,21 @@ IFS="$OLDIFS"
 
 
 function setup_build_environment() {
-	mkdir -p "$initial_directory/$pkgs_build_base_directory"
+	mkdir -p "$autobuild_temp_directory/$pkgs_build_base_directory"
 
-	mkdir "$initial_directory/$pkgs_build_base_directory/srconly"
-	mkdir "$initial_directory/$pkgs_build_base_directory/deb"
-	mkdir "$initial_directory/$pkgs_build_base_directory/release"
+	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/srconly"
+	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/deb"
+	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/release"
 
-	mkdir "$initial_directory/buildfarm-debs"
+	mkdir "$autobuild_temp_directory/buildfarm-debs"
 
-	base_release_directory="$initial_directory/$pkgs_build_base_directory/release/"
+	base_release_directory="$autobuild_temp_directory/$pkgs_build_base_directory/release/"
 }
 	
 
 function build_package_universal() {
 	if [[ $# -lt 6 ]]; then
-		echo "bag args to build_package_universal" && exit 1
+		echo "bag args to build_package_universal" && graceful_exit 1
 	fi
 	
 	local PKGNAME="$1" GITURL="$2" this_is_amd64_build="$3" this_is_i386_build="$4" this_is_arm64_build="$5" this_is_local_build="$6"
@@ -193,49 +200,49 @@ function build_package_universal() {
 	##	srcdir: Source-only directory, also Git root
 	##	builddir: Directory where we build the .deb package
 	##	releasedir: Directory where we move the .debs after they've been built
-	local srcdir="$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME"
-	local sourcetarball="$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME-src.tar.gz"
-	local builddir="$initial_directory/$pkgs_build_base_directory/deb/$PKGNAME"
+	local srcdir="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME"
+	local sourcetarball="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME-src.tar.gz"
+	local builddir="$autobuild_temp_directory/$pkgs_build_base_directory/deb/$PKGNAME"
 	local releasedir="$base_release_directory/$PKGNAME"
 	
 	mkdir -p "$builddir"
 	mkdir -p "$releasedir"
 	
 	# Pull updates to the source code from GITURL into our local package directory
-	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; exit 1; }
+	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; graceful_exit 1; }
 	git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
-	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; exit 1; }
+	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; graceful_exit 1; }
 	git reset --hard
 	git pull -q # Pull changes in case we do already have it (an older version)
 
 	# Copy the updated source code into a temp directory named PKGNAME
-	cd "$initial_directory/$pkgs_build_base_directory/srconly" || { echo "Could not cd into package source directory"; exit 1; }
+	cd "$autobuild_temp_directory/$pkgs_build_base_directory/srconly" || { echo "Could not cd into package source directory"; exit 1; }
 	mkdir "$PKGNAME"
 	cp -r "$package_directory/$PKGNAME/"* "./$PKGNAME/"
 	
 	# Tar it up so we can pass it to the build farm VMs later
-	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; exit 1; }
+	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; graceful_exit 1; }
 	tar -czf "$sourcetarball" .
 	
 	if [[ this_is_amd64_build -eq 1 ]]; then
 		# Build on the build-farm amd64 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "amd64"
-		mv "$initial_directory/buildfarm-debs/"* "$releasedir/"
+		mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/"
 	fi
 	
 	if [[ this_is_i386_build -eq 1 ]]; then
 		# Build on the build-farm i386 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "i386"
-		mv "$initial_directory/buildfarm-debs/"* "$releasedir/"
+		mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/"
 	fi
 	
 	if [[ this_is_arm64_build -eq 1 ]]; then
 		# Build on the build-farm arm64 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "arm64"
-		mv "$initial_directory/buildfarm-debs/"* "$releasedir/"
+		mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/"
 	fi
 
 	if [[ this_is_local_build -eq 1 ]]; then
@@ -243,24 +250,24 @@ function build_package_universal() {
 		cp -r "$srcdir/"* "$builddir/"
 		
 		# Move to the build directory, don't mess with the source directory
-		cd "$builddir" || { echo "Could not cd into \"$builddir\""; exit 1; }
+		cd "$builddir" || { echo "Could not cd into \"$builddir\""; graceful_exit 1; }
 		
 		# Build package
 		debuild -us -uc
 	fi
 	
 	# Move packages to 'release' directory
-	mv "$initial_directory/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
-	mv "$initial_directory/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
-	mv "$initial_directory/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
-	mv "$initial_directory/$pkgs_build_base_directory/deb/"*.build "$releasedir/" 2>/dev/null
-	mv "$initial_directory/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/" 2>/dev/null
-	mv "$initial_directory/$pkgs_build_base_directory/deb/"*.changes "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.build "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.changes "$releasedir/" 2>/dev/null
 }
 
 function clean_up() {
 	# Keep only the 'release' and 'srconly' directories
-	rm -rf "$initial_directory/$pkgs_build_base_directory/deb"
+	rm -rf "$autobuild_temp_directory/$pkgs_build_base_directory/deb"
 	
 	# Clear VM snapshots
 	rm -f "$build_farm_directory/debian-stable-amd64/snapshot.qcow"
@@ -270,7 +277,7 @@ function clean_up() {
 
 function upgrade_vm() {
 	if [[ $# != 1 ]]; then
-		echo "bag args to upgrade_vm" && exit 2
+		echo "bag args to upgrade_vm" && graceful_exit 2
 	fi
 	local ARCH="$1"
 	echo "---"
@@ -286,7 +293,7 @@ function upgrade_vm() {
 function start_build_vm() {
 	# Turn on the VM
 	if [[ $# != 2 ]]; then
-		echo "bad args to start_build_vm" && exit 2
+		echo "bad args to start_build_vm" && graceful_exit 2
 	fi
 	
 	local ARCH="$1" STATELESS="$2"
@@ -384,7 +391,7 @@ function shutdown_build_vm() {
 
 function build_other_arch() {
 	if [[ $# != 3 ]]; then
-		echo "bag args to build_other_arch" && exit 3
+		echo "bag args to build_other_arch" && graceful_exit 3
 	fi
 	
 	local PKGNAME="$1" SOURCETARBALL="$2" ARCH="$3"
@@ -430,15 +437,15 @@ EOF
 	# Now we SCP download the packages to the host machine
 
 	# Create the tmp folder for this architecture
-	mkdir "$initial_directory/$ARCH"
+	mkdir "$autobuild_temp_directory/$ARCH"
 
-	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$initial_directory/$ARCH/packages.tar.gz" >/dev/null 2>&1
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$autobuild_temp_directory/$ARCH/packages.tar.gz" >/dev/null 2>&1
 	
-	cd "$initial_directory/$ARCH" || { echo "Could not cd into \"$initial_directory/$ARCH\""; exit 1; }
+	cd "$autobuild_temp_directory/$ARCH" || { echo "Could not cd into \"$autobuild_temp_directory/$ARCH\""; graceful_exit 1; }
 	tar -xzf packages.tar.gz
 	rm -f packages.tar.gz
-	mv "$initial_directory/$ARCH/"* "$initial_directory/buildfarm-debs/"
-	rm -f "$initial_directory/$ARCH/"*
+	mv "$autobuild_temp_directory/$ARCH/"* "$autobuild_temp_directory/buildfarm-debs/"
+	rm -f "$autobuild_temp_directory/$ARCH/"*
 }
 
 function build_all_pkgs_in_pkgarrays() {
@@ -497,7 +504,7 @@ function build_all_pkgs_in_pkgarrays() {
 
 function push_github_release_page() {
 	if [[ $# != 1 ]]; then
-		echo "bag args to push_github_release_page" && exit 4
+		echo "bag args to push_github_release_page" && graceful_exit 4
 	fi
 	
 	local PKGNAME="$1" CHANGELOG="" VERSION=""
@@ -510,11 +517,11 @@ function push_github_release_page() {
 	### (2) Replace newline chars with '\n' (literal)
 	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
 	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
+	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
 
 	## Get version number from package source using dpkg-parsechangelog
 	### Pipe into sed to remove the ending newline char
-	VERSION=$(dpkg-parsechangelog -l "$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
+	VERSION=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
 	
 	# Create GitHub Release
 	
@@ -551,7 +558,7 @@ function push_github_release_page() {
 
 function push_forgejo_release_page() {
 	if [[ $# != 1 ]]; then
-		echo "bag args to push_forgejo_release_page" && exit 4
+		echo "bag args to push_forgejo_release_page" && graceful_exit 4
 	fi
 	
 	local PKGNAME="$1" CHANGELOG="" VERSION=""
@@ -564,11 +571,11 @@ function push_forgejo_release_page() {
 	### (2) Replace newline chars with '\n' (literal)
 	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
 	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
+	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
 
 	## Get version number from package source using dpkg-parsechangelog
 	### Pipe into sed to remove the ending newline char
-	VERSION=$(dpkg-parsechangelog -l "$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
+	VERSION=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
 	
 	# Create Forgejo Release
 	
@@ -603,15 +610,15 @@ function push_forgejo_release_page() {
 
 function prepare_ghpages_debian_repo() {
 	# Clone the git repo into a local directory
-	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; exit 1; }
+	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; graceful_exit 1; }
 	git clone "$git_debianrepo" "repo" -q 2>/dev/null
-	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; exit 1; }
+	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; graceful_exit 1; }
 	git reset --hard
 	git pull -q
 }
 
 function close_ghpages_debian_repo() {
-	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; exit 1; }
+	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; graceful_exit 1; }
 	
 	# Push the changes we've made before calling this function
 	git push origin -q
@@ -623,13 +630,13 @@ function push_to_ghpages_debian_repo() {
 	# This should be called AFTER prepare_ghpages_debian_repo() and BEFORE close_ghpages_debian_repo()
 	
 	if [[ $# != 1 ]]; then
-		echo "bag args to push_to_ghpages_debian_repo" && exit 5
+		echo "bag args to push_to_ghpages_debian_repo" && graceful_exit 5
 	fi
 	
 	local PKGNAME="$1"
 	
 	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool")")
-	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; exit 1; }
+	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; graceful_exit 1; }
 
 	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
 	
@@ -639,7 +646,7 @@ function push_to_ghpages_debian_repo() {
 	done
 	
 	# Update indexes and commit changes
-	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; exit 1; }
+	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; graceful_exit 1; }
 	git add --all
 	git commit -m "Updated $PKGNAME"
 }
@@ -675,11 +682,29 @@ function maybe_make_release_pages() {
 }
 
 function save_debs() {
-		cp -r "$initial_directory/$pkgs_build_base_directory/release/"* "$output_directory/"
+		cp -r "$autobuild_temp_directory/$pkgs_build_base_directory/release/"* "$output_directory/"
 }
 
-function delete_temp_files() {
-	rm -rf "$tempdirectory/autobuild"*
+function graceful_exit() {
+	local exit_code="${1:0}" # This line is a little hard to read
+				# The meaning is:
+				# If this function was called with an argument ($1),
+				# Set "exit_code" to that argument (exit_code="$1")
+				# Otherwise, set "exit_code" to 0 (POSIX "successful execution")
+				# It's a bit like if we declared 'void graceful_exit(int exit_code = 0) {...}' in C/C++
+
+	# Shut down any currently running build farm VMs
+	shutdown_build_vm
+
+	# clean_up deletes any VM snapshots that may have been created this session
+	clean_up
+
+	# Delete this session's temporary files
+	rm -rf "${autobuild_temp_directory:?}"
+
+	# Finally exit
+	# shellcheck disable=SC2086
+	exit $exit_code
 }
 
 function display_help() {
@@ -760,7 +785,7 @@ function display_help() {
 TEMP=$(getopt -o 0123bcdfghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
-if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
 
 eval set -- "$TEMP"
 
@@ -904,10 +929,10 @@ save_debs
 maybe_publish_to_deb_repo
 maybe_make_release_pages
 
-delete_temp_files
-
 if [ $ring_bell == true ]; then
 	paplay /usr/share/autobuild/bell.ogg
 fi
 
 echo "" # End with newline
+
+graceful_exit
