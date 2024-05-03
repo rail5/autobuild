@@ -1,3 +1,9 @@
+autobuild (2.1.1) stable; urgency=medium
+
+  * Graceful exits and more helpful error messages
+
+ -- rail5 <andrew@rail5.org>  Fri, 03 May 2024 22:28:56 +0800
+
 autobuild (2.1.0) stable; urgency=medium
 
   * Added support for creating forgejo release pages with -f option
