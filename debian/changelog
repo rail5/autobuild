@@ -1,3 +1,9 @@
+autobuild (2.1.0) stable; urgency=medium
+
+  * Added support for creating forgejo release pages with -f option
+
+ -- rail5 <andrew@rail5.org>  Fri, 03 May 2024 21:04:24 +0800
+
 autobuild (2.0.1) stable; urgency=medium
 
   * Fixed tiny possibility that generated telnet and ssh ports for VMs
