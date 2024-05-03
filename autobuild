@@ -48,6 +48,8 @@ arm64_builds=()
 # These arrays will be populated etc etc
 packages_to_publish_to_repo=()
 release_pages_to_make=()
+make_github_release_pages=false
+make_forgejo_release_pages=false
 
 # Where are we saving the built package files?
 # Current working directory by default. User can change with -o
@@ -98,18 +100,35 @@ for ((i = 0; i < number_of_packages; i++)); do
 done
 
 ## Distribution settings
-OWNER=$(jq -r ".distribution.repo_owner" <<<"$config_json")
+
+### Github
+GITHUB_OWNER=$(jq -r ".github.repo_owner" <<<"$config_json")
 
 ### Check for Github access token
 ### If the user provided a path to a GPG-encrypted file, prefer that
-ACCESS_TOKEN=$(jq -r ".distribution.access_token" <<<"$config_json")
-ACCESS_TOKEN_FILE=$(jq -r ".distribution.access_token_gpg_encrypted_file" <<<"$config_json")
+GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")
+GITHUB_ACCESS_TOKEN_FILE=$(jq -r ".github.access_token_gpg_encrypted_file" <<<"$config_json")
 
-if [[ "$ACCESS_TOKEN_FILE" != "null" ]]; then
-	ACCESS_TOKEN=$(gpg -d "$ACCESS_TOKEN_FILE" 2>/dev/null)
+if [[ "$GITHUB_ACCESS_TOKEN_FILE" != "null" ]]; then
+	GITHUB_ACCESS_TOKEN=$(gpg -d "$GITHUB_ACCESS_TOKEN_FILE" 2>/dev/null)
 fi
 
-git_debianrepo=$(jq -r ".distribution.git_debian_repo" <<<"$config_json")
+git_debianrepo=$(jq -r ".github.git_debian_repo" <<<"$config_json")
+
+### Forgejo
+FORGEJO_INSTANCE_URL=$(jq -r ".forgejo.instance_url" <<<"$config_json")
+
+FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
+
+### Check for Forgejo access token
+### If the user provided a path to a GPG-encrypted file, prefer that
+FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
+FORGEJO_ACCESS_TOKEN_FILE=$(jq -r ".forgejo.access_token_gpg_encrypted_file" <<<"$config_json")
+
+if [[ "$FORGEJO_ACCESS_TOKEN_FILE" != "null" ]]; then
+	FORGEJO_ACCESS_TOKEN=$(gpg -d "$FORGEJO_ACCESS_TOKEN_FILE" 2>/dev/null)
+fi
+
 ##################################################
 
 
@@ -503,9 +522,9 @@ function push_github_release_page() {
 	curl -L \
 			-X POST \
 			-H "Accept: application/vnd.github+json" \
-			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "Authorization: Bearer $GITHUB_ACCESS_TOKEN" \
 			-H "X-GitHub-Api-Version: 2022-11-28" \
-			"https://api.github.com/repos/$OWNER/$PKGNAME/releases" \
+			"https://api.github.com/repos/$GITHUB_OWNER/$PKGNAME/releases" \
 			-d "{\"tag_name\": \"v$VERSION\",
 				\"target_commitish\": \"main\",
 				\"name\": \"v$VERSION\",
@@ -522,11 +541,63 @@ function push_github_release_page() {
 		curl -L \
 			-X POST \
 			-H "Accept: application/vnd.github+json" \
-			-H "Authorization: Bearer $ACCESS_TOKEN" \
+			-H "Authorization: Bearer $GITHUB_ACCESS_TOKEN" \
 			-H "X-Github-Api-Version: 2022-11-28" \
 			-H "Content-Type: application/octet-stream" \
-			"https://uploads.github.com/repos/$OWNER/$PKGNAME/releases/$RELEASEID/assets?name=$(basename "$file")" \
+			"https://uploads.github.com/repos/$GITHUB_OWNER/$PKGNAME/releases/$RELEASEID/assets?name=$(basename "$file")" \
 			--data-binary "@$file"
+	done
+}
+
+function push_forgejo_release_page() {
+	if [[ $# != 1 ]]; then
+		echo "bag args to push_forgejo_release_page" && exit 4
+	fi
+	
+	local PKGNAME="$1" CHANGELOG="" VERSION=""
+	
+	# Get package info: Latest changelog entry + latest version number
+	
+	## Get changelog from package source using dpkg-parsechangelog (dpkg-dev package)
+	### Pipe into sed to:
+	### (1) Escape backslashes (\ to \\)
+	### (2) Replace newline chars with '\n' (literal)
+	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
+	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
+
+	## Get version number from package source using dpkg-parsechangelog
+	### Pipe into sed to remove the ending newline char
+	VERSION=$(dpkg-parsechangelog -l "$initial_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
+	
+	# Create Forgejo Release
+	
+	## Send POST request to Forgejo API to create a release page
+	curl -L \
+			-X POST \
+			-H "accept: application/json" \
+			-H "Content-Type: application/json" \
+			-H "Authorization: Bearer $FORGEJO_ACCESS_TOKEN" \
+			"$FORGEJO_INSTANCE_URL/api/v1/repos/$FORGEJO_OWNER/$PKGNAME/releases" \
+			-d "{\"tag_name\": \"v$VERSION\",
+				\"target_commitish\": \"main\",
+				\"name\": \"v$VERSION\",
+				\"body\": \"$CHANGELOG\",
+				\"draft\": false,
+				\"prerelease\": false}" > "$base_release_directory/$PKGNAME/forgejo-release-info"
+	
+	## Get Forgejo Release ID
+	RELEASEID=$(jq -r '.id' "$base_release_directory/$PKGNAME/forgejo-release-info")
+
+	## Upload the attachments via POST request to the Forgejo API
+	for file in "$base_release_directory/$PKGNAME/"*.deb; do
+		curl -L \
+			-X POST \
+			-H "accept: application/json" \
+			-H "Content-Type: multipart/form-data" \
+			-H "Authorization: Bearer $FORGEJO_ACCESS_TOKEN" \
+			"$FORGEJO_INSTANCE_URL/api/v1/repos/$FORGEJO_OWNER/$PKGNAME/releases/$RELEASEID/assets?name=$(basename "$file")" \
+			-F "attachment=@$file"
 	done
 }
 
@@ -587,12 +658,18 @@ function maybe_publish_to_deb_repo() {
 	fi
 }
 
-function maybe_make_github_release_page() {
+function maybe_make_release_pages() {
 	if [[ ${#release_pages_to_make[@]} -gt 0 ]]; then
 		echo "Making release pages..."
 		
 		for pkg in "${release_pages_to_make[@]}"; do
-			push_github_release_page "$pkg"
+			if [[ $make_github_release_pages == true ]]; then
+				push_github_release_page "$pkg"
+			fi
+
+			if [[ $make_forgejo_release_pages == true ]]; then
+				push_forgejo_release_page "$pkg"
+			fi
 		done
 	fi
 }
@@ -646,7 +723,11 @@ function display_help() {
 	echo ""
 	echo "  -g"
 	echo "  --github-page"
-	echo "    Create a Release page on the built packages' Github repositories"
+	echo "    Create release pages for the built packages' Github repositories"
+	echo ""
+	echo "  -f"
+	echo "  --forgejo-page"
+	echo "    Create release pages for the built packages' Forgejo repositories"
 	echo ""
 	echo "  -b"
 	echo "  --bell"
@@ -676,7 +757,7 @@ function display_help() {
 
 # Check if the user has provided us arguments for non-interactive mode
 
-TEMP=$(getopt -o 0123bcdghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,github-page,help,list,output:,package:,setup \
+TEMP=$(getopt -o 0123bcdfghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -690,7 +771,6 @@ building_on_amd64=false
 building_on_i386=false
 building_on_arm64=false
 distribute_to_debian_repo=false
-distribute_to_github_page=false
 
 ring_bell=false
 
@@ -730,8 +810,10 @@ while true; do
 			xdg-open "$CONFIG_FILE"; exit 0 ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
+		-f | --forgejo-page )
+			make_forgejo_release_pages=true; shift ;;
 		-g | --github-page )
-			distribute_to_github_page=true; shift ;;
+			make_github_release_pages=true; shift ;;
 		-h | --help )
 			display_help; exit 0 ;;
 		-l | --list )
@@ -807,8 +889,8 @@ if [ $distribute_to_debian_repo == true ]; then
 	done
 fi
 
-if [ $distribute_to_github_page == true ]; then
-	echo "Publishing packages to Github release pages"
+if [[ $make_github_release_pages == true || $make_forgejo_release_pages == true ]]; then
+	echo "Publishing packages to release pages"
 	for pkgname in "${packages_to_build[@]}"; do
 		release_pages_to_make+=("$pkgname")
 	done
@@ -820,7 +902,7 @@ clean_up
 save_debs
 
 maybe_publish_to_deb_repo
-maybe_make_github_release_page
+maybe_make_release_pages
 
 delete_temp_files
 
