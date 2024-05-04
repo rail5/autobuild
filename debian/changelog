@@ -1,8 +1,6 @@
 autobuild (2.2.0) stable; urgency=medium
 
-  * Autobuild-setup now has a proper curses display, and this script
-    is called after package installation by a postinst script. It
-    can still be called any time by 'autobuild -s' as well.
+  * Autobuild-setup now has a proper curses display.
 
  -- rail5 <andrew@rail5.org>  Sat, 04 May 2024 15:53:06 +0800
 

@@ -1,9 +1,0 @@
-#!/bin/bash
-
-set -e
-
-if [[ ! -f "/usr/share/autobuild/.postinst_config_has_been_run" ]]; then
-	touch "/usr/share/autobuild/.postinst_config_has_been_run"
-	su "${SUDO_USER:?}" -c '/usr/bin/autobuild -s'
-fi
-#DEBHELPER#
