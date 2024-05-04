@@ -1,187 +1,230 @@
 #!/usr/bin/env bash
 
-storagedir="$HOME/.local/share/autobuild"
+# autobuild
+# Copyright (C) 2024 rail5
+# Free software (GNU Affero GPL v3)
 
-CONFIG_FILE="$storagedir/config.toml"
+system_tmp_directory=$(dirname "$(mktemp -u)")
+local_storage_directory="$HOME/.local/share/autobuild"
+window_title="Autobuild settings"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-	echo "Error: Run this script through 'autobuild -s'"
-	exit 1
-fi
+function clean_terminal_window() {
+	# Try not to screw up anybody's terminal window
+	local i=0 limit=
+	limit=$(tput lines)
+	while [[ $i -lt $limit ]]; do
+		echo ""
+		i=$((i + 1))
+	done
+}
 
-setupgithubhttps=0
-while true; do
-	read -p "Do you want to set up GitHub over HTTPS? (y/n) " yn
-	case $yn in
-		[Yy]* ) echo "Alright then"; setupgithubhttps=1; break;;
-		[Nn]* ) echo "Moving on"; break;;
-		* ) echo "Answer yes or no";;
+function clean_temporary_files() {
+	# Clean any temporary files we may have created
+	rm -f "$system_tmp_directory/autobuild.github_conf"
+	rm -f "$system_tmp_directory/autobuild.github_conf.gpg"
+	rm -f "$system_tmp_directory/autobuild.github_token"
+	rm -f "$system_tmp_directory/autobuild.github_token.gpg"
+	rm -f "$system_tmp_directory/autobuild.credential_helper"
+}
+
+function clean_exit() {
+	clean_temporary_files
+	clean_terminal_window
+	exit 0
+}
+
+function setup_config_file() {
+	autobuild -c 2>/dev/null # FIXME: Really shouldn't use xdg-open for this
+}
+
+function setup_single_vm() {
+	if [[ $# != 1 ]]; then
+		echo "bag args to setup_single_vm" && clean_exit
+	fi
+	local ARCH="$1"
+
+	cd "$local_storage_directory/build-farm/debian-stable-$ARCH" || (clean_terminal_window; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; clean_exit)
+
+	rm -f "./image.qcow"
+	rm -f "./preseed.cfg"
+
+	cp ../preseed.cfg ./preseed.cfg
+
+	make download 2>/dev/null | dialog --title "$window_title" \
+			--progressbox "Downloading $ARCH image... (Please wait)" 15 55
+	make image 2>/dev/null | dialog --title "$window_title" \
+			--progressbox "Preparing $ARCH image... (Please wait)" 15 55
+	make boot-install 2>/dev/null | dialog --title "$window_title" \
+			--progressbox "Installing $ARCH VM... (Please wait, this may take a while)" 15 55
+	make clean 2>/dev/null
+
+	rm -f "./"*.iso
+}
+
+function setup_build_farm() {
+	amd64_vm_is_configured=false
+	i386_vm_is_configured=false
+	arm64_vm_is_configured=false
+
+	if [[ -f "$local_storage_directory/build-farm/debian-stable-amd64/image.qcow" ]]; then
+		amd64_vm_is_configured=true
+	fi
+
+	if [[ -f "$local_storage_directory/build-farm/debian-stable-i386/image.qcow" ]]; then
+		i386_vm_is_configured=true
+	fi
+
+	if [[ -f "$local_storage_directory/build-farm/debian-stable-arm64/image.qcow" ]]; then
+		arm64_vm_is_configured=true
+	fi
+
+	amd64_info_string="Not installed"
+	i386_info_string="Not installed"
+	arm64_info_string="Not installed"
+
+	if [[ $amd64_vm_is_configured == true ]]; then
+		amd64_info_string="Installed"
+	fi
+
+	if [[ $i386_vm_is_configured == true ]]; then
+		i386_info_string="Installed"
+	fi
+
+	if [[ $arm64_vm_is_configured == true ]]; then
+		arm64_info_string="Installed"
+	fi
+
+	#	--checklist "prompt"  width  height  list_height \
+	#			"Option Tag" "Option comment" "Status"
+	#			"Second option name" "Second option comment" "Status"
+	#		The option is marked with '*' by default if status = "on"
+	{ user_choice="$(dialog --title "$window_title" \
+		--checklist "Which build farm VMs do you want to install?" 15 55 3 \
+		"amd64" "$amd64_info_string" off \
+		"i386" "$i386_info_string" off \
+		"arm64" "$arm64_info_string" off \
+		2>&1 1>&3 3>&- )"; } 3>&1 # Capture stderr output into user_choice variable
+
+	if [[ "$user_choice" != "" ]]; then
+		dialog --title "$window_title" \
+			--yesno "Are you sure you want to build VMs for $user_choice?\nThis will permanently erase & overwrite any currently-existing VMs if they are already installed" 15 55
+		
+		if [[ $? -eq 0 ]]; then
+			for choice in $user_choice; do
+				setup_single_vm "$choice"
+			done
+		else
+			dialog --title "$window_title" \
+				--infobox "Cancelled" 15 55; sleep 3
+		fi
+	fi
+
+}
+
+function setup_github_https() {
+	echo "machine github.com" > "$system_tmp_directory/autobuild.github_conf"
+	echo "" >> "$system_tmp_directory/autobuild.github_conf"
+
+	{ gpg_email="$(dialog --title "$window_title" \
+		--inputbox "Enter the email address associated with your GPG key:" 15 55 \
+		2>&1 1>&3 3>&- )"; } 3>&1
+
+	if [[ "$gpg_email" == "" ]]; then
+		clean_temporary_files
+		return
+	fi
+	
+	{ github_username="$(dialog --title "$window_title" \
+		--inputbox "Enter your GitHub username:" 15 55 \
+		2>&1 1>&3 3>&- )"; } 3>&1
+	
+	if [[ "$github_username" == "" ]]; then
+		clean_temporary_files
+		return
+	fi
+
+	echo "login $github_username" >> "$system_tmp_directory/autobuild.github_conf"
+	
+	echo "" >> "$system_tmp_directory/autobuild.github_conf"
+
+	{ github_access_token="$(dialog --title "$window_title" \
+		--inputbox "Enter your GitHub Access Token:" 15 55 \
+		2>&1 1>&3 3>&- )"; } 3>&1
+	
+	if [[ "$github_access_token" == "" ]]; then
+		clean_temporary_files
+		return
+	fi
+
+	echo "password $github_access_token" >> "$system_tmp_directory/autobuild.github_conf"
+	
+	echo "" >> "$system_tmp_directory/autobuild.github_conf"
+
+	echo "protocol https"  >> "$system_tmp_directory/autobuild.github_conf"
+
+	echo "$github_access_token" > "$system_tmp_directory/autobuild.github_token"
+
+	gpg --output "$system_tmp_directory/autobuild.github_conf.gpg" --recipient "$gpg_email" -e "$system_tmp_directory/autobuild.github_conf"
+
+	gpg --output "$system_tmp_directory/autobuild.github_token.gpg" --recipient "$gpg_email" -e "$system_tmp_directory/autobuild.github_token"
+
+	rm -f "$system_tmp_directory/autobuild.github_conf"
+	rm -f "$system_tmp_directory/autobuild.github_token"
+
+	echo "#!/usr/bin/env bash" > "$system_tmp_directory/autobuild.credential_helper"
+	echo "" >> "$system_tmp_directory/autobuild.credential_helper"
+	echo "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl -f /etc/git/github-credentials.gpg get" >> "$system_tmp_directory/autobuild.credential_helper"
+
+	clean_terminal_window
+
+	echo "!! Github over HTTPS configuration files will be placed in /etc/git/ !!"
+	echo "!! Moving them to /etc/git/ requires temporary root permissions !!"
+	echo ""
+
+	sudo mkdir -p /etc/git
+
+	sudo mv "$system_tmp_directory/autobuild.github_conf.gpg" "/etc/git/github-credentials.gpg"
+	sudo mv "$system_tmp_directory/autobuild.github_token.gpg" "/etc/git/github-token.gpg"
+	sudo mv "$system_tmp_directory/autobuild.credential_helper" "/etc/git/credential-helper"
+
+	sudo chmod +x "/etc/git/credential-helper"
+	sudo chmod +x "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl"
+
+	git config --global credential.helper /etc/git/credential-helper
+	git config --global user.name "$github_username"
+
+	dialog --title "$window_title" --infobox "GitHub over HTTPS is now set up!" 15 55; sleep 3
+}
+
+function setup_main_menu() {
+	{ next_page="$(dialog --title "$window_title" \
+		--menu "What would you like to do?\nThese settings can be reached anytime with 'autobuild -s'" 15 55 \
+		4 \
+		1 "Edit config file" \
+		2 "Install build farm" \
+		3 "Set up Github over HTTPS" \
+		4 "Exit" \
+		2>&1 1>&3 3>&- )"; } 3>&1 # Capture stderr output into user_choice variable
+					# 'dialog' writes user responses to stderr
+
+	case $next_page in
+		"" | 4) # User pressed "cancel" or "Exit"
+			clean_exit ;;
+		1)
+			setup_config_file
+			setup_main_menu
+			;;
+		2)
+			setup_build_farm
+			setup_main_menu
+			;;
+		3)
+			setup_github_https
+			setup_main_menu
+			;;
+
 	esac
-done
-
-if [[ setupgithubhttps -eq 1 ]]; then
-
-	cd "$storagedir" || (echo "Could not enter $storagedir. Run this script through 'autobuild -s'"; exit)
-	
-	read -p "Enter the email address associated with your GPG key: " gpgemail
-	read -p "Enter your GitHub username: " ghuser
-	read -p "Enter your GitHub Access Token: " ghtoken
-	
-	echo "machine github.com" > github-credentials
-	echo "" >> github-credentials
-	echo "login $ghuser" >> github-credentials
-	echo "" >> github-credentials
-	echo "password $ghtoken" >> github-credentials
-	echo "" >> github-credentials
-	echo "protocol https" >> github-credentials
-	
-	echo "$ghtoken" > github-token
-	
-	gpg --recipient $gpgemail -e ./github-credentials
-	gpg --recipient $gpgemail -e ./github-token
-	
-	rm ./github-credentials
-	rm ./github-token
-	
-	echo "#!/bin/bash" > credential-helper
-	echo "" >> credential-helper
-	echo "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl -f /etc/git/github-credentials.gpg get" >> credential-helper
-	
-	ghreadyok=0
-	echo "GitHub credential files will be moved to /etc/git/"
-	echo "And git config variables will be set"
-	while true; do
-		read -p "Sound good? (y/n) " yn
-		case $yn in
-			[Yy]* ) echo "Alright then"; ghreadyok=1; break;;
-			[Nn]* ) echo "Cancelling"; break;;
-			* ) echo "Answer yes or no";
-		esac
-	done
-	
-	if [[ ghreadyok -eq 1 ]]; then
-		sudo mkdir -p /etc/git
-		sudo mv ./github-credentials.gpg /etc/git/
-		sudo mv ./github-token.gpg /etc/git/
-		sudo mv ./credential-helper /etc/git/
-		sudo chmod +x /etc/git/credential-helper
-		sudo chmod +x /usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl
-		
-		git config --global credential.helper /etc/git/credential-helper
-		git config --global user.name $ghuser
-		
-		echo "All set up!"
-	fi
-fi
+}
 
 
-echo "--"
-echo "This script can also set up a virtual-machine Build Farm"
-echo "This can be used to build packages on other architectures or for other distributions"
-echo "Currently the build farm contains the following VMs:"
-echo "  - Debian Stable amd64"
-echo "  - Debian Stable i386"
-echo "  - Debian Stable arm64"
-echo "Setting up the VMs can take a while."
-echo "--"
-
-buildingvms=0
-
-while true; do
-	read -p "Do you want to automagically prepare the Build Farm? (y/n) " yn
-	case $yn in
-		[Yy]* ) echo "Alright then"; buildingvms=1; break;;
-		[Nn]* ) echo "Moving on"; break;;
-		* ) echo "Answer yes or no";;
-	esac
-done
-
-if [[ buildingvms -eq 1 ]]; then	
-	cd "$storagedir/build-farm" || (echo "Could not enter $storagedir/build-farm. Run this script through 'autobuild -s'"; exit)
-
-	building_amd64vm=0
-	building_i386vm=0
-	building_arm64vm=0
-
-	while true; do
-		read -p "BUILD FARM: Do you want to build packages for amd64? (y/n) " yn
-		case $yn in
-			[Yy]* ) building_amd64vm=1; break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
-		esac
-	done
-
-	while true; do
-		read -p "BUILD FARM: Do you want to build packages for i386? (y/n) " yn
-		case $yn in
-			[Yy]* ) building_i386vm=1; break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
-		esac
-	done
-
-	while true; do
-		read -p "BUILD FARM: Do you want to build packages for arm64? (y/n) " yn
-		case $yn in
-			[Yy]* ) building_arm64vm=1; break;;
-			[Nn]* ) break;;
-			* ) echo "Answer yes or no";;
-		esac
-	done
-
-	if [[ $building_amd64vm -eq 1 ]]; then
-		echo "  Creating amd64 VM..."
-		
-		cd debian-stable-amd64 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
-
-		cp ../preseed.cfg ./preseed.cfg
-		
-		make download
-		make image
-		make boot-install
-		make clean
-
-		rm -f "./"*.iso
-		
-		echo "  Created amd64 VM."
-		cd ..
-	fi
-
-	if [[ $building_i386vm -eq 1 ]]; then
-		echo "  Creating i386 VM..."
-		
-		cd debian-stable-i386 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
-
-		cp ../preseed.cfg ./preseed.cfg
-		
-		make download
-		make image
-		make boot-install
-		make clean
-
-		rm -f "./"*.iso
-		
-		echo "  Created i386 VM."
-		cd ..
-	fi
-
-	if [[ $building_arm64vm -eq 1 ]]; then
-		echo "  Creating arm64 VM..."
-		
-		cd debian-stable-arm64 || (echo "$storagedir is not properly configured. Run this script through 'autobuild -s'"; exit)
-
-		cp ../preseed.cfg ./preseed.cfg
-		
-		make download
-		make image
-		make boot-install
-		make clean
-
-		rm -f "./"*.iso
-		
-		echo "  Created arm64 VM."
-	fi
-fi
-
-exit 0
+setup_main_menu

@@ -87,19 +87,18 @@ iso: ${TMP}
 boot-install: image.qcow
 	# boot image in qemu (BIOS mode)
 	@echo
-	@echo "Once the installer has launched networking you can log in:\n"
-	@echo "    ssh installer@localhost -p22222\n"
-	@echo "It may take a few minutes for the installer to get to that point.\n"
-	@echo "Alternatively connect to the serial console:\n"
+	@echo "You can view installation progress\n"
+	@echo "via the serial console:\n"
 	@echo "    telnet localhost 33333\n"
-	@x-terminal-emulator -e /usr/share/autobuild/build-farm/view-progress.sh 33333 &
+	#@x-terminal-emulator -e /usr/share/autobuild/build-farm/view-progress.sh 33333 &
 	${QEMU} -m 2048 \
 		-accel kvm \
 		-net user,hostfwd=tcp::22222-:22 \
 		-net nic \
 		-hda image.qcow \
 		-serial telnet:localhost:33333,server,nowait \
-		-cdrom ${TARGET}
+		-cdrom ${TARGET} \
+		-nographic
 
 boot-run:
 	@x-terminal-emulator -e /usr/share/autobuild/build-farm/view-progress.sh 33333 &

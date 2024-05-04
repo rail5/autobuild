@@ -91,12 +91,10 @@ setupefi:
 boot-install: image.qcow
 	# boot image in qemu (UEFI mode)
 	@echo
-	@echo "Once the installer has launched networking you can log in:\n"
-	@echo "    ssh installer@localhost -p22222\n"
-	@echo "It may take a few minutes for the installer to get to that point.\n"
-	@echo "Alternatively connect to the serial console:\n"
+	@echo "You can view installation progress\n"
+	@echo "via the serial console:\n"
 	@echo "    telnet localhost 33333\n"
-	@x-terminal-emulator -e /usr/share/autobuild/build-farm/view-progress.sh 33333 &
+	#@x-terminal-emulator -e /usr/share/autobuild/build-farm/view-progress.sh 33333 &
 	${QEMU} -m 2048 \
 		-machine virt \
 		-cpu cortex-a53 \
@@ -110,7 +108,8 @@ boot-install: image.qcow
 		-net nic \
 		-drive if=virtio,file=image.qcow,format=qcow2,id=hd \
 		-drive file=./debian-stable-arm64-netinst-hl.iso,id=cdrom,if=none,media=cdrom -device virtio-scsi-device -device scsi-cd,drive=cdrom \
-		-serial telnet:localhost:33333,server,nowait
+		-serial telnet:localhost:33333,server,nowait \
+		-nographic
 
 boot-run:
 	@x-terminal-emulator -e /usr/share/autobuild/build-farm/view-progress.sh 33333 &
