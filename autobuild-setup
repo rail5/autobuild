@@ -107,7 +107,7 @@ function setup_build_farm() {
 
 	if [[ "$user_choice" != "" ]]; then
 		dialog --title "$window_title" \
-			--yesno "Are you sure you want to build VMs for $user_choice?\nThis will permanently erase & overwrite any currently-existing VMs if they are already installed" 15 55
+			--yesno "Are you sure you want to build VM(s) for $user_choice?\nThis will permanently erase & overwrite the currently-existing VMs for those architectures if they are already installed" 15 55
 		
 		if [[ $? -eq 0 ]]; then
 			for choice in $user_choice; do
