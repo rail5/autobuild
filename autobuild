@@ -68,105 +68,6 @@ SSHUSER="debian"
 SSHPORT="22222"
 
 
-# Load configuration
-
-CONFIG_FILE="$local_storage_directory/config.toml"
-
-BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
-
-if [ ! -d "$local_storage_directory" ]; then
-	mkdir "$local_storage_directory"
-	cp -r "/usr/share/autobuild/"* "$local_storage_directory/"
-fi
-
-# Copy the build-farm scripts to $local_storage_directory in case an upgrade took place
-cp -r "/usr/share/autobuild/build-farm/"* "$local_storage_directory/build-farm/"
-
-if [ ! -f "$CONFIG_FILE" ]; then
-	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
-fi
-
-mkdir -p "$package_directory"
-
-
-##################################################
-# Parse config file
-#
-config_json=$(toml2json "$CONFIG_FILE")
-
-## Package settings
-number_of_packages=$(jq -r ".packages.package_urls | length" <<<"$config_json")
-declare -A packages
-packages=()
-for ((i = 0; i < number_of_packages; i++)); do
-	package_url=$(jq -r ".packages.package_urls[$i]" <<<"$config_json")
-	package_name=$(basename "$package_url")
-	package_name="${package_name/.git/""}"
-
-	packages+=(["$package_name"]="$package_url")
-done
-
-## Distribution settings
-
-### Github
-GITHUB_OWNER=$(jq -r ".github.repo_owner" <<<"$config_json")
-
-### Check for Github access token
-### If the user provided a path to a GPG-encrypted file, prefer that
-GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")
-GITHUB_ACCESS_TOKEN_FILE=$(jq -r ".github.access_token_gpg_encrypted_file" <<<"$config_json")
-
-if [[ "$GITHUB_ACCESS_TOKEN_FILE" != "null" ]]; then
-	GITHUB_ACCESS_TOKEN=$(gpg -d "$GITHUB_ACCESS_TOKEN_FILE" 2>/dev/null)
-fi
-
-git_debianrepo=$(jq -r ".github.git_debian_repo" <<<"$config_json")
-
-### Forgejo
-FORGEJO_INSTANCE_URL=$(jq -r ".forgejo.instance_url" <<<"$config_json")
-
-FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
-
-### Check for Forgejo access token
-### If the user provided a path to a GPG-encrypted file, prefer that
-FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
-FORGEJO_ACCESS_TOKEN_FILE=$(jq -r ".forgejo.access_token_gpg_encrypted_file" <<<"$config_json")
-
-if [[ "$FORGEJO_ACCESS_TOKEN_FILE" != "null" ]]; then
-	FORGEJO_ACCESS_TOKEN=$(gpg -d "$FORGEJO_ACCESS_TOKEN_FILE" 2>/dev/null)
-fi
-
-##################################################
-
-
-# shellcheck source=./build-farm/scripts/scripts.sh
-. "$BUILDFARM_SCRIPTS_FILE"
-
-
-# BEFORE WE START:
-# Let's verify that ALL of the subdirectories under $package_directory correspond to key in the "packages" associative array
-## If we find a subdirectory under $package_directory which DOES NOT correspond to a key in "packages",
-## We should remove it.
-# This way, we avoid taking up unnecessary space on the user's machine
-## In the event that the user decides to remove a package from their autobuild config.
-OLDIFS="$IFS"
-IFS="
-"
-for subdir in "$package_directory/"*; do
-	subdir="$(basename "$subdir")"
-	if [[ "${packages[$subdir]+true}" ]]; then
-		# Package exists in our packages array
-		continue
-	else
-		# Package DOES NOT exist in our packages array
-		rm -rf "${package_directory:?}/${subdir:?}"
-	fi
-done
-IFS="$OLDIFS"
-
-# Now carry on
-
-
 function setup_build_environment() {
 	mkdir -p "$autobuild_temp_directory/$pkgs_build_base_directory"
 
@@ -832,7 +733,7 @@ while true; do
 		-b | --bell )
 			ring_bell=true; shift ;;
 		-c | --config )
-			xdg-open "$CONFIG_FILE"; exit 0 ;;
+			xdg-open "$CONFIG_FILE"; graceful_exit ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-f | --forgejo-page )
@@ -840,38 +741,144 @@ while true; do
 		-g | --github-page )
 			make_github_release_pages=true; shift ;;
 		-h | --help )
-			display_help; exit 0 ;;
+			display_help; graceful_exit ;;
 		-l | --list )
 			for pkgname in "${!packages[@]}"; do
 				echo "$pkgname"
 			done
-			exit 0 ;;
+			graceful_exit ;;
 		-o | --output )
 			output_directory=$(realpath "$2"); shift 2 ;;
 		-p | --package )
-			if [ ${packages[$2]+1} ]; then
-				packages_to_build+=("$2");
-				package_provided=true
-				echo "Building $2"
-			else
-				echo "ERROR: Package '$2' not in CONFIG!";
-			fi;
+			packages_to_build+=("$2")
+			package_provided=true
 			shift 2 ;;
 		-s | --setup )
 			autobuild-setup;
-			exit 0 ;;
+			graceful_exit ;;
 		-- ) shift; break ;;
 		* ) break ;;
 	esac
 done
 
-setup_build_environment
 
+# Load configuration
+
+CONFIG_FILE="$local_storage_directory/config.toml"
+
+BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
+
+if [ ! -d "$local_storage_directory" ]; then
+	mkdir "$local_storage_directory"
+	cp -r "/usr/share/autobuild/"* "$local_storage_directory/"
+fi
+
+# Copy the build-farm scripts to $local_storage_directory in case an upgrade took place
+cp -r "/usr/share/autobuild/build-farm/"* "$local_storage_directory/build-farm/"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
+fi
+
+mkdir -p "$package_directory"
+
+
+##################################################
+# Parse config file
+#
+config_json=$(toml2json "$CONFIG_FILE")
+
+## Package settings
+number_of_packages=$(jq -r ".packages.package_urls | length" <<<"$config_json")
+declare -A packages
+packages=()
+for ((i = 0; i < number_of_packages; i++)); do
+	package_url=$(jq -r ".packages.package_urls[$i]" <<<"$config_json")
+	package_name=$(basename "$package_url")
+	package_name="${package_name/.git/""}"
+
+	packages+=(["$package_name"]="$package_url")
+done
+
+## Distribution settings
+
+### Github
+GITHUB_OWNER=$(jq -r ".github.repo_owner" <<<"$config_json")
+
+### Check for Github access token
+### If the user provided a path to a GPG-encrypted file, prefer that
+GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")
+GITHUB_ACCESS_TOKEN_FILE=$(jq -r ".github.access_token_gpg_encrypted_file" <<<"$config_json")
+
+if [[ "$GITHUB_ACCESS_TOKEN_FILE" != "null" ]]; then
+	GITHUB_ACCESS_TOKEN=$(gpg -d "$GITHUB_ACCESS_TOKEN_FILE" 2>/dev/null)
+fi
+
+git_debianrepo=$(jq -r ".github.git_debian_repo" <<<"$config_json")
+
+### Forgejo
+FORGEJO_INSTANCE_URL=$(jq -r ".forgejo.instance_url" <<<"$config_json")
+
+FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
+
+### Check for Forgejo access token
+### If the user provided a path to a GPG-encrypted file, prefer that
+FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
+FORGEJO_ACCESS_TOKEN_FILE=$(jq -r ".forgejo.access_token_gpg_encrypted_file" <<<"$config_json")
+
+if [[ "$FORGEJO_ACCESS_TOKEN_FILE" != "null" ]]; then
+	FORGEJO_ACCESS_TOKEN=$(gpg -d "$FORGEJO_ACCESS_TOKEN_FILE" 2>/dev/null)
+fi
+
+##################################################
+
+
+# Verify that the packages the user wants to build are present in the config file
 if [ $package_provided == false ]; then
 	echo "Error: No package names provided."
 	echo "See 'autobuild -h' or 'man autobuild' for more information."
-	exit 1
+	graceful_exit 1
 fi
+
+for package in "${packages_to_build[@]}"; do
+	if [ ${packages[$package]+1} ]; then
+		echo "Building $package"
+	else
+		echo "Error: Package '$package' not in CONFIG!";
+		graceful_exit 1
+	fi;
+done
+
+
+# shellcheck source=./build-farm/scripts/scripts.sh
+. "$BUILDFARM_SCRIPTS_FILE"
+
+
+# BEFORE WE START:
+# Let's verify that ALL of the subdirectories under $package_directory correspond to key in the "packages" associative array
+## If we find a subdirectory under $package_directory which DOES NOT correspond to a key in "packages",
+## We should remove it.
+# This way, we avoid taking up unnecessary space on the user's machine
+## In the event that the user decides to remove a package from their autobuild config.
+OLDIFS="$IFS"
+IFS="
+"
+for subdir in "$package_directory/"*; do
+	subdir="$(basename "$subdir")"
+	if [[ "${packages[$subdir]+true}" ]]; then
+		# Package exists in our packages array
+		continue
+	else
+		# Package DOES NOT exist in our packages array
+		rm -rf "${package_directory:?}/${subdir:?}"
+	fi
+done
+IFS="$OLDIFS"
+
+# Now carry on
+
+
+setup_build_environment
 
 if [ $target_architecture_provided == false ]; then
 	echo "Warning: No target architecture provided."
