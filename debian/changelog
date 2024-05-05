@@ -1,3 +1,12 @@
+autobuild (2.2.1) stable; urgency=medium
+
+  * Signal trapping for graceful exits in autobuild-setup
+    Parse config only after parsing option arguments
+    A single echo is sufficient to clean the terminal window after
+    a curses display
+
+ -- rail5 <andrew@rail5.org>  Sun, 05 May 2024 12:11:56 +0800
+
 autobuild (2.2.0) stable; urgency=medium
 
   * Autobuild-setup now has a proper curses display.
