@@ -188,7 +188,7 @@ function setup_github_https() {
 
 function setup_main_menu() {
 	{ next_page="$(dialog --title "$window_title" \
-		--menu "What would you like to do?\nThese settings can be reached anytime with 'autobuild -s'" 15 55 \
+		--menu "These settings can be reached anytime with 'autobuild -s'" 15 55 \
 		4 \
 		1 "Edit config file" \
 		2 "Install build farm" \
