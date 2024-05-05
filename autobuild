@@ -860,9 +860,7 @@ done
 ## We should remove it.
 # This way, we avoid taking up unnecessary space on the user's machine
 ## In the event that the user decides to remove a package from their autobuild config.
-OLDIFS="$IFS"
-IFS="
-"
+
 for subdir in "$package_directory/"*; do
 	subdir="$(basename "$subdir")"
 	if [[ "${packages[$subdir]+true}" ]]; then
@@ -873,7 +871,6 @@ for subdir in "$package_directory/"*; do
 		rm -rf "${package_directory:?}/${subdir:?}"
 	fi
 done
-IFS="$OLDIFS"
 
 # Now carry on
 
