@@ -8,16 +8,6 @@ system_tmp_directory=$(dirname "$(mktemp -u)")
 local_storage_directory="$HOME/.local/share/autobuild"
 window_title="Autobuild settings"
 
-function clean_terminal_window() {
-	# Try not to screw up anybody's terminal window
-	local i=0 limit=
-	limit=$(tput lines)
-	while [[ $i -lt $limit ]]; do
-		echo ""
-		i=$((i + 1))
-	done
-}
-
 function clean_temporary_files() {
 	# Clean any temporary files we may have created
 	rm -f "$system_tmp_directory/autobuild.github_conf"
@@ -29,7 +19,7 @@ function clean_temporary_files() {
 
 function clean_exit() {
 	clean_temporary_files
-	clean_terminal_window
+	echo "" # Clean terminal window after curses display
 	exit 0
 }
 
@@ -43,7 +33,7 @@ function setup_single_vm() {
 	fi
 	local ARCH="$1"
 
-	cd "$local_storage_directory/build-farm/debian-stable-$ARCH" || (clean_terminal_window; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; clean_exit)
+	cd "$local_storage_directory/build-farm/debian-stable-$ARCH" || (echo ""; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; clean_exit)
 
 	rm -f "./image.qcow"
 	rm -f "./preseed.cfg"
@@ -175,7 +165,7 @@ function setup_github_https() {
 	echo "" >> "$system_tmp_directory/autobuild.credential_helper"
 	echo "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl -f /etc/git/github-credentials.gpg get" >> "$system_tmp_directory/autobuild.credential_helper"
 
-	clean_terminal_window
+	echo ""
 
 	echo "!! Github over HTTPS configuration files will be placed in /etc/git/ !!"
 	echo "!! Moving them to /etc/git/ requires temporary root permissions !!"
