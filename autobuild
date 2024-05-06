@@ -65,7 +65,7 @@ output_directory="$(pwd)"
 ## SSH connection into the build-farm VMs
 SSHPASSWORD="debianpassword"
 SSHUSER="debian"
-SSHPORT="22222"
+SSHPORT="-1"
 
 
 function setup_build_environment() {
@@ -286,8 +286,10 @@ function start_build_vm() {
 
 function shutdown_build_vm() {
 	# Connect to it on SSH and send the shutdown command
-	echo "Shutting down currently running VMs (if any)..."
-	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"sudo shutdown now >/dev/null 2>&1"
+	if [[ SSHPORT -ne -1 ]]; then
+		echo "Shutting down currently running VMs (if any)..."
+		sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"sudo shutdown now >/dev/null 2>&1"
+	fi
 }
 
 function build_other_arch() {
