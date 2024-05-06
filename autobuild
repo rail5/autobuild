@@ -286,7 +286,7 @@ function start_build_vm() {
 
 function shutdown_build_vm() {
 	# Connect to it on SSH and send the shutdown command
-	echo "Shutting down VM..."
+	echo "Shutting down currently running VMs (if any)..."
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"sudo shutdown now >/dev/null 2>&1"
 }
 
