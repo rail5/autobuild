@@ -688,7 +688,7 @@ function display_help() {
 # And now the program:
 
 
-# Check if the user has provided us arguments for non-interactive mode
+# Parse the user's provided arguments
 
 TEMP=$(getopt -o 0123bcdfghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
