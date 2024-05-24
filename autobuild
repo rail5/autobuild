@@ -313,7 +313,7 @@ function build_other_arch() {
 	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
 	# Here we connect and build the packages
 	echo "--------"
-	echo "BUILD LOG ($ARCH)"
+	echo "BUILD LOG ($PKGNAME on $ARCH)"
 	echo "--------"
 	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 << EOF
 mkdir -p /home/debian/build/src
@@ -338,7 +338,7 @@ echo "Installing build dependencies"
 mk-build-deps -i -s sudo -r -t "apt-get --no-install-recommends -y" && debuild -us -uc; cd .. && rm -rf "$PKGNAME/"; tar -czf /home/debian/build/pkg/packages.tar.gz ./; exit
 EOF
 	echo "--------"
-	echo "END BUILD LOG ($ARCH)"
+	echo "END BUILD LOG ($PKGNAME on $ARCH)"
 	echo "--------"
 	
 	# Now we SCP download the packages to the host machine
