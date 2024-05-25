@@ -20,6 +20,20 @@ CONFIG_FILE="$local_storage_directory/config.toml"
 
 BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 
+if [ ! -d "$local_storage_directory" ]; then
+	mkdir "$local_storage_directory"
+	cp -r "/usr/share/autobuild/"* "$local_storage_directory/"
+fi
+
+# Copy the build-farm scripts to $local_storage_directory in case an upgrade took place
+cp -r "/usr/share/autobuild/build-farm/"* "$local_storage_directory/build-farm/"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
+fi
+
+mkdir -p "$package_directory"
+
 
 # Signal trapping so we can exit gracefully
 # Reroute SIGINT, SIGTERM, and SIGEXIT to the graceful_exit function defined below
@@ -767,23 +781,6 @@ while true; do
 		* ) break ;;
 	esac
 done
-
-
-# Load configuration
-if [ ! -d "$local_storage_directory" ]; then
-	mkdir "$local_storage_directory"
-	cp -r "/usr/share/autobuild/"* "$local_storage_directory/"
-fi
-
-# Copy the build-farm scripts to $local_storage_directory in case an upgrade took place
-cp -r "/usr/share/autobuild/build-farm/"* "$local_storage_directory/build-farm/"
-
-if [ ! -f "$CONFIG_FILE" ]; then
-	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
-fi
-
-mkdir -p "$package_directory"
-
 
 ##################################################
 # Parse config file
