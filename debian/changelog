@@ -1,3 +1,12 @@
+autobuild (2.2.4) stable; urgency=medium
+
+  * Patched a bug with -l
+    -l was previously broken by the same update which broke -c. Clearly
+    that update wasn't thought through well enough
+    Check lsof to see when we can boot the VM again
+
+ -- rail5 <andrew@rail5.org>  Sat, 25 May 2024 19:46:37 +0800
+
 autobuild (2.2.3) stable; urgency=medium
 
   * Ensure that the user local directory is properly configured before
