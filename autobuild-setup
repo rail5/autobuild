@@ -6,7 +6,12 @@
 
 system_tmp_directory=$(dirname "$(mktemp -u)")
 local_storage_directory="$HOME/.local/share/autobuild"
+autobuild_directory="/usr/share/autobuild"
 window_title="Autobuild settings"
+
+BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
+# shellcheck source=./build-farm/scripts/scripts.sh
+. "$BUILDFARM_SCRIPTS_FILE"
 
 # Signal trapping so we can exit gracefully
 # Reroute SIGINT, SIGTERM, and SIGEXIT to the clean_exit function defined below
@@ -39,20 +44,20 @@ function setup_single_vm() {
 	fi
 	local ARCH="$1"
 
-	cd "$local_storage_directory/build-farm/debian-stable-$ARCH" || (echo ""; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; clean_exit)
+	ARCH_DIRECTORY="$local_storage_directory/build-farm/debian-stable-$ARCH"
+	cd "$ARCH_DIRECTORY" || (echo ""; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; clean_exit)
 
 	rm -f "./image.qcow"
 	rm -f "./preseed.cfg"
 
 	cp ../preseed.cfg ./preseed.cfg
 
-	make download 2>/dev/null | dialog --title "$window_title" \
+	download_vm_image "$ARCH" "$ARCH_DIRECTORY" 2>/dev/null | dialog --title "$window_title" \
 			--progressbox "Downloading $ARCH image... (Please wait)" 15 55
-	make image 2>/dev/null | dialog --title "$window_title" \
+	preseed_vm_image "$ARCH" "$ARCH_DIRECTORY" 2>/dev/null | dialog --title "$window_title" \
 			--progressbox "Preparing $ARCH image... (Please wait)" 15 55
-	make boot-install 2>/dev/null | dialog --title "$window_title" \
+	install_vm "$ARCH" "$ARCH_DIRECTORY" 2>/dev/null | dialog --title "$window_title" \
 			--progressbox "Installing $ARCH VM... (Please wait, this may take a while)" 15 55
-	make clean 2>/dev/null
 
 	rm -f "./"*.iso
 }
