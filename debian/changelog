@@ -1,3 +1,14 @@
+autobuild (2.2.3) stable; urgency=medium
+
+  * Ensure that the user local directory is properly configured before
+    continuing. This code was previously moved because we didn't want
+    autobuild to go through the trouble of parsing the config file until
+    AFTER we knew what the user wanted to do. That change made a lot of
+    things a lot faster, however, the portion of code that checks that
+    there IS a config file, etc, really should remain at the top.
+
+ -- rail5 <andrew@rail5.org>  Sat, 25 May 2024 10:26:12 +0800
+
 autobuild (2.2.2) stable; urgency=medium
 
   * Initialize the config file variable at the top of the file
