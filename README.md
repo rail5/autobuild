@@ -6,15 +6,15 @@ Automatically build & distribute Debian packages
 
 ## What does it do?
 
-This program can **automatically**:
+This program will **automatically**:
 
 - Download Debian package sources from a git repo
 
 - Launch a virtual QEMU build-farm & build those packages for various architectures
 
-- Create GitHub release pages for those packages
+- Create GitHub/Forgejo release pages for those packages
 
-- Push those packages to a Debian Repository hosted on GitHub Pages
+- Push those packages to a Debian Repository hosted on GitHub Pages (or similar service)
 
 Autobuild is also used to build & distribute itself.
 
@@ -33,9 +33,9 @@ sudo apt install autobuild
 
 ### Set-up
 
-After installing, run `autobuild -c` to edit your configuration, and `autobuild -s` to complete set-up.
+After installing, run `autobuild -s` to complete set-up.
 
-Your **CONFIG** file (edited with `autobuild -c`) is where you will tell autobuild where to find your packages, as well as other settings
+Your **CONFIG** file can be edited with `autobuild -c`, and is where you will tell autobuild where to find your packages, as well as other settings
 
 ### Usage
 

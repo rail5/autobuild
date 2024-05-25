@@ -4,7 +4,7 @@ Many thanks to [Philipp Pagel](https://github.com/philpagel/debian-headless) for
 
 The original script seemed to aim for an interactive installation on genuine hardware which did not have peripherals such as a keyboard/monitor etc
 
-His script has been modified to:
+Here, his script has been modified to:
 
   - Have a completely non-interactive, fully-automatic installation
   - Focus on building & running in QEMU, rather than on actual hardware
