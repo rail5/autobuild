@@ -256,14 +256,8 @@ function start_build_vm() {
 
 
 	# Wait for any VMs using our image to shut down
-	## We're ready to boot up again when our vm image file is not locked
-	## FIXME: This would mean that other VMs (unrelated to autobuild) cannot run at the same time as autobuild.
-	## I've tried checking when the lock is gone with lslocks as recommended here: https://www.qemu.org/docs/master/system/qemu-block-drivers.html
-	## But qemu's file locks being OFD make it impossible to tell when they're released from that output alone
-	## Recent updates (2024-04-23) to flock would make it possible to tell by trying to obtain an OFD lock from the shell
-	## https://lore.kernel.org/all/20240426075707.tmfn4jqdqwbu2xox@ws.net.home/T/
-	## But this is not currently available in Debian, and not likely to be for a long time.
-	until [[ $(pgrep -f "qemu-system-$ARCH_STRING") == "" ]]; do
+	## We're ready to boot up again when our vm image file is no longer in use
+	until [[ $(lsof "$build_farm_directory/$ARCHDIR/$VM_IMAGE") == "" ]]; do
 		sleep 1
 	done
 
