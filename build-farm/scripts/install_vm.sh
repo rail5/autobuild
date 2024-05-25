@@ -97,7 +97,8 @@ function install_vm() {
 		echo "bad args to preseed_vm_image" && exit
 	fi
 
-	local ARCH="$1" ARCH_DIRECTORY="$2" ARCH_STRING="" OPTIONAL_EXTRA_COMMAND="-cdrom debian-$ARCH-netinst-hl.iso"
+	local ARCH="$1" ARCH_DIRECTORY="$2" ARCH_STRING=""
+	local OPTIONAL_EXTRA_COMMAND="-cdrom debian-$ARCH-netinst-hl.iso"
 
 	if [[ "$ARCH" == "amd64" ]]; then
 		ARCH_STRING="x86_64"
