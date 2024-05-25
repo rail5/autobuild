@@ -705,6 +705,7 @@ if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
 
 eval set -- "$TEMP"
 
+just_list_packages=false
 package_provided=false
 target_architecture_provided=false
 building_locally=false
@@ -758,10 +759,7 @@ while true; do
 		-h | --help )
 			display_help; graceful_exit ;;
 		-l | --list )
-			for pkgname in "${!packages[@]}"; do
-				echo "$pkgname"
-			done
-			graceful_exit ;;
+			just_list_packages=true; shift ;;
 		-o | --output )
 			output_directory=$(realpath "$2"); shift 2 ;;
 		-p | --package )
@@ -792,6 +790,13 @@ for ((i = 0; i < number_of_packages; i++)); do
 
 	packages+=(["$package_name"]="$package_url")
 done
+
+if [ $just_list_packages == true ]; then
+	for pkgname in "${!packages[@]}"; do
+		echo "$pkgname"
+	done
+	graceful_exit 0
+fi
 
 ## Distribution settings
 
