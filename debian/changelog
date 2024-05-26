@@ -1,3 +1,14 @@
+autobuild (2.3.0) stable; urgency=medium
+
+  * Replaced build farm makefiles with proper shell scripts which can
+    be hosted outside of the user directory. This improves security,
+    in reducing attack surface by removing executed scripts from user
+    directories, and also improves stylistic consistency -- previously
+    autobuild could be described as 'two parts' separated from each
+    other.
+
+ -- rail5 <andrew@rail5.org>  Sun, 26 May 2024 14:38:34 +0800
+
 autobuild (2.2.4) stable; urgency=medium
 
   * Patched a bug with -l
