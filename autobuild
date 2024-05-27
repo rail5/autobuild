@@ -147,21 +147,18 @@ function build_package_universal() {
 		# Build on the build-farm amd64 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "amd64"
-		mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/"
 	fi
 	
 	if [[ this_is_i386_build -eq 1 ]]; then
 		# Build on the build-farm i386 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "i386"
-		mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/"
 	fi
 	
 	if [[ this_is_arm64_build -eq 1 ]]; then
 		# Build on the build-farm arm64 VM
 		# This should only run if the VM has been turned on already
 		build_other_arch "$PKGNAME" "$sourcetarball" "arm64"
-		mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/"
 	fi
 
 	if [[ this_is_local_build -eq 1 ]]; then
@@ -176,6 +173,7 @@ function build_package_universal() {
 	fi
 	
 	# Move packages to 'release' directory
+	mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
@@ -282,18 +280,16 @@ function start_build_vm() {
 		# Create snapshot
 		qemu-img create -f qcow2 -b "$build_farm_directory/$ARCHDIR/$VM_IMAGE" -F qcow2 "$build_farm_directory/$ARCHDIR/snapshot.qcow"
 		VM_IMAGE="snapshot.qcow"
-	fi
 
-	# Boot the VM
-	boot_vm_nodisplay "$ARCH_STRING" "$build_farm_directory/$ARCHDIR/$VM_IMAGE" "$SSHPORT" "$TELNETPORT" &
-
-	if [[ STATELESS -eq 1 ]]; then
 		echo "---"
-		echo "$ARCH VM started. You can connect to it (if you want) as follows:"
+		echo "Starting $ARCH VM. You can connect to it (if you want) as follows:"
 		echo "  SSH Port: $SSHPORT"
 		echo "  TELNET Port: $TELNETPORT"
 		echo "---"
 	fi
+
+	# Boot the VM
+	boot_vm_nodisplay "$ARCH_STRING" "$build_farm_directory/$ARCHDIR/$VM_IMAGE" "$SSHPORT" "$TELNETPORT" &
 }
 
 function shutdown_build_vm() {
