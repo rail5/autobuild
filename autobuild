@@ -499,7 +499,7 @@ function push_forgejo_release_page() {
 	done
 }
 
-function prepare_ghpages_debian_repo() {
+function prepare_git_debian_repo() {
 	# Clone the git repo into a local directory
 	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	git clone "$git_debianrepo" "repo" -q 2>/dev/null
@@ -508,20 +508,25 @@ function prepare_ghpages_debian_repo() {
 	git pull -q
 }
 
-function close_ghpages_debian_repo() {
+function close_git_debian_repo() {
 	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	
-	# Push the changes we've made before calling this function
+	# Push any changes that we made before we called this function
+	git add --all
+	git commit -m "Updated $PKGNAME"
 	git push origin -q
 }
 
-function push_to_ghpages_debian_repo() {
-	# Pushes a package to a Debian Repository hosted on GitHub Pages
-	# The repo must be managed via 'reprepro'
-	# This should be called AFTER prepare_ghpages_debian_repo() and BEFORE close_ghpages_debian_repo()
+function push_to_debian_repo() {
+	# Pushes a package to a Debian Repository managed via 'reprepro'
+
+	## If the Debian Repo in question is hosted as a Git Repository,
+	## Then this should be called AFTER prepare_git_debian_repo() and BEFORE close_git_debian_repo()
+
+	# FIXME: Allow for non-git-based Debian repos. Github pages debian repos are common but not universal
 	
 	if [[ $# != 1 ]]; then
-		echo "bag args to push_to_ghpages_debian_repo" && graceful_exit 5
+		echo "bag args to push_to_debian_repo" && graceful_exit 5
 	fi
 	
 	local PKGNAME="$1"
@@ -535,24 +540,19 @@ function push_to_ghpages_debian_repo() {
 	for changes_file in "$base_release_directory/$PKGNAME/"*.changes; do
 		reprepro -P optional include "$debian_distribution" "$changes_file"
 	done
-	
-	# Update indexes and commit changes
-	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
-	git add --all
-	git commit -m "Updated $PKGNAME"
 }
 
 function maybe_publish_to_deb_repo() {
 	if [[ ${#packages_to_publish_to_repo[@]} -gt 0 ]]; then
 		echo "Publishing to repo..."
 		
-		prepare_ghpages_debian_repo
+		prepare_git_debian_repo
 		
 		for pkg in "${packages_to_publish_to_repo[@]}"; do
-			push_to_ghpages_debian_repo "$pkg"
+			push_to_debian_repo "$pkg"
 		done
 		
-		close_ghpages_debian_repo
+		close_git_debian_repo
 	fi
 }
 
