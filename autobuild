@@ -277,9 +277,12 @@ function start_build_vm() {
 }
 
 function shutdown_build_vm() {
+	local quiet_mode="${1:0}"
 	# Connect to it on SSH and send the shutdown command
 	if [[ SSHPORT -ne -1 ]]; then
-		echo "Shutting down currently running VMs (if any)..."
+		if [[ $quiet_mode -ne 1 ]]; then
+			echo "Shutting down currently running VMs (if any)..."
+		fi
 		sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"sudo shutdown now >/dev/null 2>&1"
 	fi
 }
@@ -344,6 +347,10 @@ EOF
 }
 
 function upgrade_vm_and_build_pkg() {
+	if [[ $# != 2 ]]; then
+		echo "bag args to build_other_arch" && graceful_exit 6
+	fi
+
 	local ARCH="$1" PKGNAME="$2"
 
 	# Only upgrade the VM if we haven't already done so
@@ -577,8 +584,10 @@ function graceful_exit() {
 				# Otherwise, set "exit_code" to 0 (POSIX "successful execution")
 				# It's a bit like if we declared 'void graceful_exit(int exit_code = 0) {...}' in C/C++
 
+	local quiet_mode="${2:0}" # Again here
+
 	# Shut down any currently running build farm VMs
-	shutdown_build_vm
+	shutdown_build_vm "$quiet_mode"
 
 	# clean_up deletes any VM snapshots that may have been created this session
 	clean_up
@@ -906,4 +915,4 @@ fi
 
 echo "" # End with newline
 
-graceful_exit
+graceful_exit 0 1
