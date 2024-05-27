@@ -58,6 +58,8 @@ if [[ -f "$local_storage_directory/build-farm/debian-stable-arm64/image.qcow" ]]
 	arm64_vm_is_configured=true
 fi
 
+typeset -A upgraded_vms
+
 base_release_directory=""
 
 
@@ -100,11 +102,11 @@ function setup_build_environment() {
 	
 
 function build_package_universal() {
-	if [[ $# -lt 6 ]]; then
+	if [[ $# -lt 3 ]]; then
 		echo "bag args to build_package_universal" && graceful_exit 1
 	fi
 	
-	local PKGNAME="$1" GITURL="$2" this_is_amd64_build="$3" this_is_i386_build="$4" this_is_arm64_build="$5" this_is_local_build="$6"
+	local PKGNAME="$1" GITURL="$2" ARCH="$3"
 	
 	# Variables:
 	## PKGNAME, GITURL: Self-explanatory
@@ -142,26 +144,10 @@ function build_package_universal() {
 	# Tar it up so we can pass it to the build farm VMs later
 	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	tar -czf "$sourcetarball" .
-	
-	if [[ this_is_amd64_build -eq 1 ]]; then
-		# Build on the build-farm amd64 VM
-		# This should only run if the VM has been turned on already
-		build_other_arch "$PKGNAME" "$sourcetarball" "amd64"
-	fi
-	
-	if [[ this_is_i386_build -eq 1 ]]; then
-		# Build on the build-farm i386 VM
-		# This should only run if the VM has been turned on already
-		build_other_arch "$PKGNAME" "$sourcetarball" "i386"
-	fi
-	
-	if [[ this_is_arm64_build -eq 1 ]]; then
-		# Build on the build-farm arm64 VM
-		# This should only run if the VM has been turned on already
-		build_other_arch "$PKGNAME" "$sourcetarball" "arm64"
-	fi
 
-	if [[ this_is_local_build -eq 1 ]]; then
+	if [[ "$ARCH" != local ]]; then
+		build_other_arch "$PKGNAME" "$sourcetarball" "$ARCH"
+	else
 		# Build locally
 		cp -r "$srcdir/"* "$builddir/"
 		
@@ -359,56 +345,45 @@ EOF
 	rm -f "$autobuild_temp_directory/$ARCH/"*
 }
 
+function upgrade_vm_and_build_pkg() {
+	local ARCH="$1" PKGNAME="$2"
+
+	# Only upgrade the VM if we haven't already done so
+	if [[ ${upgraded_vms["$ARCH"]} != true ]]; then
+		upgrade_vm "$ARCH"
+		upgraded_vms["$ARCH"]=true
+	fi
+
+	start_build_vm "$ARCH" 1 # Start in stateless mode
+	build_package_universal "$pkgname" "${packages[$pkgname]}" "$ARCH"
+	shutdown_build_vm # Restore state
+}
+
 function build_all_pkgs_in_pkgarrays() {
 
-	local building_some_on_amd64=0 building_some_on_i386=0 building_some_on_arm64=0
+	local building_locally=true # Only building locally if we're NOT building on ANY of the VMs
 
-	if [[ ${#amd64_builds[@]} -gt 0 ]]; then
-		building_some_on_amd64=1
-	fi
+	# The loop for each architecture:
+	# Start a VM, build a package, shut it down
+	for pkgname in "${amd64_builds[@]}"; do
+		upgrade_vm_and_build_pkg "amd64" "$pkgname"
+		building_locally=false
+	done
 
-	if [[ ${#i386_builds[@]} -gt 0 ]]; then
-		building_some_on_i386=1
-	fi
+	for pkgname in "${i386_builds[@]}"; do
+		upgrade_vm_and_build_pkg "i386" "$pkgname"
+		building_locally=false
+	done
 	
-	if [[ ${#arm64_builds[@]} -gt 0 ]]; then
-		building_some_on_arm64=1
-	fi
+	for pkgname in "${arm64_builds[@]}"; do
+		upgrade_vm_and_build_pkg "arm64" "$pkgname"
+		building_locally=false
+	done
 
-	if [[ building_some_on_amd64 -eq 1 ]]; then
-		# Start the VM, build all the packages, and then shut it down
-		upgrade_vm "amd64" # Run upgrades on the VM first
-		for pkgname in "${packages_to_build[@]}"; do
-			start_build_vm "amd64" 1 # Start in stateless mode
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 1 0 0 0
-			shutdown_build_vm # Restore state
-		done
-	fi
-
-	if [[ building_some_on_i386 -eq 1 ]]; then
-		# Start the VM, build all the packages, and then shut it down
-		upgrade_vm "i386" # Run upgrades on the VM first
-		for pkgname in "${i386_builds[@]}"; do
-			start_build_vm "i386" 1 # Start in stateless mode
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 1 0 0
-			shutdown_build_vm # Restore state
-		done
-	fi
-	
-	if [[ building_some_on_arm64 -eq 1 ]]; then
-		# Start the VM, build all the packages, and then shut it down
-		upgrade_vm "arm64" # Run upgrades on the VM first
-		for pkgname in "${arm64_builds[@]}"; do
-			start_build_vm "arm64" 1 # Start in stateless mode
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 1 0
-			shutdown_build_vm # Restore state
-		done
-	fi
-
-	if [[ building_some_on_amd64 -eq 0 && building_some_on_i386 -eq 0 && building_some_on_i386 -eq 0 ]]; then
+	if [[ $building_locally == true ]]; then
 		# Building packages locally
 		for pkgname in "${packages_to_build[@]}"; do
-			build_package_universal "$pkgname" "${packages[$pkgname]}" 0 0 0 1
+			build_package_universal "$pkgname" "${packages[$pkgname]}" "local"
 		done
 	fi
 }
