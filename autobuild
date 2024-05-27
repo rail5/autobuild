@@ -145,7 +145,7 @@ function build_package_universal() {
 	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	tar -czf "$sourcetarball" .
 
-	if [[ "$ARCH" != local ]]; then
+	if [[ "$ARCH" != "local" ]]; then
 		build_other_arch "$PKGNAME" "$sourcetarball" "$ARCH"
 	else
 		# Build locally
