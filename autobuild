@@ -217,7 +217,8 @@ function start_build_vm() {
 	## If we are booting statelessly, this will be replaced with a snapshot image
 	## So that the VM's permanent state will not be altered.
 
-	local ARCHDIR="" ARCH_STRING="" VM_IMAGE="image.qcow"
+	local ARCH_STRING="" VM_IMAGE="image.qcow"
+	local ARCHDIR="debian-stable-$ARCH"
 
 	SSHPORT=$(get_random_free_port)
 	TELNETPORT=$(get_random_free_port)
@@ -228,13 +229,10 @@ function start_build_vm() {
 	done
 	
 	if [[ "$ARCH" == "amd64" ]]; then
-		ARCHDIR="debian-stable-amd64"
 		ARCH_STRING="x86_64"
 	elif [[ "$ARCH" == "i386" ]]; then
-		ARCHDIR="debian-stable-i386"
 		ARCH_STRING="i386"
 	elif [[ "$ARCH" == "arm64" ]]; then
-		ARCHDIR="debian-stable-arm64"
 		ARCH_STRING="aarch64"
 	fi
 
