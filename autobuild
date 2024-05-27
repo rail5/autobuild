@@ -839,10 +839,7 @@ done
 
 for subdir in "$package_directory/"*; do
 	subdir="$(basename "$subdir")"
-	if [[ "${packages[$subdir]+true}" ]]; then
-		# Package exists in our packages array
-		continue
-	else
+	if [[ ! "${packages[$subdir]+true}" ]]; then
 		# Package DOES NOT exist in our packages array
 		rm -rf "${package_directory:?}/${subdir:?}"
 	fi
