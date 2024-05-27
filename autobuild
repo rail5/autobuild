@@ -513,7 +513,7 @@ function close_git_debian_repo() {
 	
 	# Push any changes that we made before we called this function
 	git add --all
-	git commit -m "Updated $PKGNAME"
+	git commit -m "Updated packages"
 	git push origin -q
 }
 
