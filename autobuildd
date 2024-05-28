@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 
-# autobuild
+# autobuild daemon
 # Copyright (C) 2024 rail5
 # Free software (GNU Affero GPL v3)
+
+echo $$ # Echo the PID as the first line of output
+	# This is so other processes can terminate the autobuild daemon early if desired
 
 if [ "$(whoami)" == "root" ]; then
 	echo "Warning: autobuild should NOT be run as root."
 	sleep 1
+elif [ "$(whoami)" != "_autobuild" ]; then
+	echo "Warning: The autobuild daemon should not be run directly"
+	sleep 1
 fi
 
+system_tmp_directory=$(dirname "$(mktemp --tmpdir -u)")
 autobuild_temp_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
-local_storage_directory="$HOME/.local/share/autobuild"
+local_storage_directory="/var/autobuild"
 build_farm_directory="$local_storage_directory/build-farm"
 package_directory="$local_storage_directory/packages"
 autobuild_directory="/usr/share/autobuild"
@@ -36,10 +43,10 @@ mkdir -p "$package_directory"
 
 
 # Signal trapping so we can exit gracefully
-# Reroute SIGINT, SIGTERM, and SIGEXIT to the graceful_exit function defined below
-trap 'graceful_exit INT' "1"
-trap 'graceful_exit TERM' "1"
-trap 'graceful_exit EXIT' "1"
+# Reroute SIGINT, SIGTERM, and SIGHUP to the graceful_exit function defined below
+trap 'graceful_exit 1' INT
+trap 'graceful_exit 1' TERM
+trap 'graceful_exit 1' HUP
 
 
 amd64_vm_is_configured=false
@@ -79,8 +86,8 @@ make_github_release_pages=false
 make_forgejo_release_pages=false
 
 # Where are we saving the built package files?
-# Current working directory by default. User can change with -o
-output_directory="$(pwd)"
+# User can change with -o
+output_directory="$local_storage_directory/builds/"
 
 ## SSH connection into the build-farm VMs
 SSHPASSWORD="debianpassword"
@@ -96,6 +103,8 @@ function setup_build_environment() {
 	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/release"
 
 	mkdir "$autobuild_temp_directory/buildfarm-debs"
+
+	mkdir -p "$output_directory"
 
 	base_release_directory="$autobuild_temp_directory/$pkgs_build_base_directory/release/"
 }
@@ -600,6 +609,28 @@ function graceful_exit() {
 	exit $exit_code
 }
 
+function wait_for_kill() {
+	# This function will be spawned as a child process of the autobuild daemon
+	# The parent process PID should be passed as an argument so we know what to kill
+
+	if [[ $# -lt 1 ]]; then
+		echo "bad args to wait_for_kill"
+		graceful_exit 1
+	fi
+
+	local pid_to_kill="$1"
+
+	# Wait for the kill file to be created.
+	# If we spot the kill file, kill the parent process with SIGTERM
+	# (SIGTERM will be trapped by autobuild so it can go through its graceful_exit process)
+	while [[ ! -f "$system_tmp_directory/autobuild.kill.$pid_to_kill" ]]; do
+		sleep 1
+	done
+
+	rm -f "${system_tmp_directory:?}/autobuild.kill.$pid_to_kill"
+	kill -s TERM "$pid_to_kill"
+}
+
 function display_help() {
 	echo "autobuild"
 	echo "Copyright (C) 2024 rail5"
@@ -673,10 +704,15 @@ function display_help() {
 
 # And now the program:
 
+wait_for_kill $$ & # Background wait_for_kill so we can receive termination signals
 
 # Parse the user's provided arguments
 
-TEMP=$(getopt -o 0123bcdfghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
+arguments=$(cat <&0) # Receive arguments from STDIN
+
+eval set -- "$arguments"
+
+TEMP=$(getopt -o 0123dfghlo:p: --long local,amd64,i386,arm64,debian-repo,forgejo-page,github-page,help,list,output:,package: \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -691,8 +727,6 @@ building_on_amd64=false
 building_on_i386=false
 building_on_arm64=false
 distribute_to_debian_repo=false
-
-ring_bell=false
 
 while true; do
 	case "$1" in
@@ -724,10 +758,6 @@ while true; do
 				echo "The arm64 VM is not configured"
 			fi
 			shift ;;
-		-b | --bell )
-			ring_bell=true; shift ;;
-		-c | --config )
-			xdg-open "$CONFIG_FILE"; graceful_exit ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-f | --forgejo-page )
@@ -744,9 +774,6 @@ while true; do
 			packages_to_build+=("$2")
 			package_provided=true
 			shift 2 ;;
-		-s | --setup )
-			autobuild-setup;
-			graceful_exit ;;
 		-- ) shift; break ;;
 		* ) break ;;
 	esac
@@ -782,13 +809,7 @@ fi
 GITHUB_OWNER=$(jq -r ".github.repo_owner" <<<"$config_json")
 
 ### Check for Github access token
-### If the user provided a path to a GPG-encrypted file, prefer that
 GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")
-GITHUB_ACCESS_TOKEN_FILE=$(jq -r ".github.access_token_gpg_encrypted_file" <<<"$config_json")
-
-if [[ "$GITHUB_ACCESS_TOKEN_FILE" != "null" ]]; then
-	GITHUB_ACCESS_TOKEN=$(gpg -d "$GITHUB_ACCESS_TOKEN_FILE" 2>/dev/null)
-fi
 
 git_debianrepo=$(jq -r ".github.git_debian_repo" <<<"$config_json")
 
@@ -798,13 +819,7 @@ FORGEJO_INSTANCE_URL=$(jq -r ".forgejo.instance_url" <<<"$config_json")
 FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
 
 ### Check for Forgejo access token
-### If the user provided a path to a GPG-encrypted file, prefer that
 FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
-FORGEJO_ACCESS_TOKEN_FILE=$(jq -r ".forgejo.access_token_gpg_encrypted_file" <<<"$config_json")
-
-if [[ "$FORGEJO_ACCESS_TOKEN_FILE" != "null" ]]; then
-	FORGEJO_ACCESS_TOKEN=$(gpg -d "$FORGEJO_ACCESS_TOKEN_FILE" 2>/dev/null)
-fi
 
 ##################################################
 
@@ -905,10 +920,6 @@ save_debs
 
 maybe_publish_to_deb_repo
 maybe_make_release_pages
-
-if [ $ring_bell == true ]; then
-	paplay /usr/share/autobuild/bell.ogg
-fi
 
 echo "" # End with newline
 

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# autobuild client
+# Copyright (C) 2024 rail5
+# Free software (GNU Affero GPL v3)
+
+temporary_log_file=$(mktemp --tmpdir autobuild.log.XXXXXXXXXXXX)
+
+# shellcheck disable=SC2124
+passed_options="${@@Q}"
+
+trap 'graceful_exit' INT
+trap 'graceful_exit' TERM
+trap 'graceful_exit' HUP
+
+function graceful_exit() {
+	if [[ -f "$temporary_log_file" ]]; then
+		pid_to_kill=$(head -n 1 "$temporary_log_file")
+		touch "/tmp/autobuild.kill.$pid_to_kill"
+		tail --pid="$pid_to_kill" -f /dev/null
+		rm -f "$temporary_log_file"
+	fi
+        exit 0
+}
+
+# getopt
+TEMP=$(getopt -o bcs --long bell,config,setup \
+              -n 'autobuild' -- "$@")
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
+
+eval set -- "$TEMP"
+
+ring_bell=false
+
+while true; do
+	case "$1" in
+		-b | --bell )
+			ring_bell=true; shift ;;
+		-c | --config )
+			xdg-open "$CONFIG_FILE"; graceful_exit ;;
+		-s | --setup )
+			autobuild-setup;
+			graceful_exit ;;
+		-- ) shift; break ;;
+		* ) break ;;
+	esac
+done
+
+socat -t 86400 - UNIX-CONNECT:/var/run/autobuild.socket <<<"$passed_options" | tee "$temporary_log_file"
+
+if [[ $ring_bell == true ]]; then
+	paplay /usr/share/autobuild/bell.ogg
+fi
