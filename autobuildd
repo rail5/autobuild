@@ -712,7 +712,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123dfghlo:p: --long local,amd64,i386,arm64,debian-repo,forgejo-page,github-page,help,list,output:,package: \
+TEMP=$(getopt -o 0123bcdfghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -758,6 +758,12 @@ while true; do
 				echo "The arm64 VM is not configured"
 			fi
 			shift ;;
+		-b | --bell )
+			# Handled by the autobuild client
+			shift ;;
+		-c | --config )
+			# Handled by the autobuild client
+			shift ;;
 		-d | --debian-repo )
 			distribute_to_debian_repo=true; shift ;;
 		-f | --forgejo-page )
@@ -774,6 +780,11 @@ while true; do
 			packages_to_build+=("$2")
 			package_provided=true
 			shift 2 ;;
+		-s | --setup )
+			# Handled by the autobuild client
+			# Although I think it might have to move back here somehow or something
+			# Users can't modify things in /var/autobuild by themselves
+			shift ;;
 		-- ) shift; break ;;
 		* ) break ;;
 	esac

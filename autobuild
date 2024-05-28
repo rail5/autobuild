@@ -25,9 +25,7 @@ function graceful_exit() {
 
 # getopt
 TEMP=$(getopt -o bcs --long bell,config,setup \
-              -n 'autobuild' -- "$@")
-
-if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
+              -q -- "$@")
 
 eval set -- "$TEMP"
 
