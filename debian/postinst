@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+
+# Create the autobuild user
+if ! id -u _autobuild; then
+	adduser --system --no-create-home _autobuild
+fi
+
+# Create the /var/autobuild directory
+if [[ ! -d /var/autobuild ]]; then
+	mkdir -p /var/autobuild
+fi
+
+# Make sure the autobuild user owns the /var/autobuild directory
+chown _autobuild /var/autobuild
