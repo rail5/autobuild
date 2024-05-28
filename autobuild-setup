@@ -5,7 +5,7 @@
 # Free software (GNU Affero GPL v3)
 
 system_tmp_directory=$(dirname "$(mktemp -u)")
-local_storage_directory="$HOME/.local/share/autobuild"
+local_storage_directory="/var/autobuild"
 autobuild_directory="/usr/share/autobuild"
 window_title="Autobuild settings"
 
