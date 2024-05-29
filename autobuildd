@@ -30,7 +30,8 @@ if [ ! -d "$local_storage_directory" ]; then
 fi
 
 # Copy the build-farm scripts to $local_storage_directory in case an upgrade took place
-cp -r "/usr/share/autobuild/build-farm/"* "$local_storage_directory/build-farm/"
+mkdir "$build_farm_directory"
+cp -r "/usr/share/autobuild/build-farm/"* "$build_farm_directory/"
 
 if [ ! -f "$CONFIG_FILE" ]; then
 	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
