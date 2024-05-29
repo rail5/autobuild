@@ -14,3 +14,6 @@ fi
 
 # Make sure the autobuild user owns the /var/autobuild directory
 chown _autobuild /var/autobuild
+
+# Enable the autobuild service
+systemctl enable autobuild.socket
