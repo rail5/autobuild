@@ -4,8 +4,8 @@
 # Copyright (C) 2024 rail5
 # Free software (GNU Affero GPL v3)
 
-if [[ "$(whoami)" != root ]]; then
-	echo "Autobuild setup must be run as root"
+if [[ "$(whoami)" != _autobuild ]]; then
+	echo "Setup must be run via autobuild -s"
 	exit 1
 fi
 
@@ -37,10 +37,6 @@ function clean_exit() {
 	clean_temporary_files
 	echo "" # Clean terminal window after curses display
 	exit 0
-}
-
-function setup_config_file() {
-	autobuild -c 2>/dev/null # FIXME: Really shouldn't use xdg-open for this
 }
 
 function setup_single_vm() {
@@ -205,26 +201,21 @@ function setup_github_https() {
 function setup_main_menu() {
 	{ next_page="$(dialog --title "$window_title" \
 		--menu "These settings can be reached anytime with 'autobuild -s'" 15 55 \
-		4 \
-		1 "Edit config file" \
-		2 "Install build farm" \
-		3 "Set up Github over HTTPS" \
-		4 "Exit" \
+		3 \
+		1 "Install build farm" \
+		2 "Set up Github over HTTPS" \
+		3 "Exit" \
 		2>&1 1>&3 3>&- )"; } 3>&1 # Capture stderr output into next_page variable
 					# 'dialog' writes user responses to stderr
 
 	case $next_page in
-		"" | 4) # User pressed "cancel" or "Exit"
+		"" | 3) # User pressed "cancel" or "Exit"
 			clean_exit ;;
 		1)
-			setup_config_file
-			setup_main_menu
-			;;
-		2)
 			setup_build_farm
 			setup_main_menu
 			;;
-		3)
+		2)
 			setup_github_https
 			setup_main_menu
 			;;

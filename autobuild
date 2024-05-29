@@ -24,7 +24,7 @@ function graceful_exit() {
 }
 
 # getopt
-TEMP=$(getopt -o bcs --long bell,config,setup \
+TEMP=$(getopt -o bs --long bell,setup \
               -q -- "$@")
 
 eval set -- "$TEMP"
@@ -35,10 +35,13 @@ while true; do
 	case "$1" in
 		-b | --bell )
 			ring_bell=true; shift ;;
-		-c | --config )
-			xdg-open "$CONFIG_FILE"; graceful_exit ;;
 		-s | --setup )
-			autobuild-setup;
+			if [[ "$(whoami)" != root ]]; then
+				echo "-s must be run as root"
+				echo "Try again with 'sudo'"
+				graceful_exit
+			fi
+			sudo -u _autobuild autobuild-setup
 			graceful_exit ;;
 		-- ) shift; break ;;
 		* ) break ;;

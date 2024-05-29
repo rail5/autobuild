@@ -685,10 +685,6 @@ function display_help() {
 	echo "    Run the setup program"
 	echo "    The setup program can automatically install the virtual build farm"
 	echo ""
-	echo "  -c"
-	echo "  --config"
-	echo "    Open the CONFIG file for editing"
-	echo ""
 	echo "  -l"
 	echo "  --list"
 	echo "    List packages available to build (list can be modified via the CONFIG file)"
@@ -710,7 +706,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bcdfghlo:p:s --long local,amd64,i386,arm64,bell,config,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
+TEMP=$(getopt -o 0123bdfghlo:p:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -757,9 +753,6 @@ while true; do
 			fi
 			shift ;;
 		-b | --bell )
-			# Handled by the autobuild client
-			shift ;;
-		-c | --config )
 			# Handled by the autobuild client
 			shift ;;
 		-d | --debian-repo )
