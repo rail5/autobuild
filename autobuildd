@@ -7,10 +7,7 @@
 echo $$ # Echo the PID as the first line of output
 	# This is so other processes can terminate the autobuild daemon early if desired
 
-if [ "$(whoami)" == "root" ]; then
-	echo "Warning: autobuild should NOT be run as root."
-	sleep 1
-elif [ "$(whoami)" != "_autobuild" ]; then
+if [[ "$(whoami)" != "_autobuild" ]]; then
 	echo "Warning: The autobuild daemon should not be run directly"
 	sleep 1
 fi
@@ -782,8 +779,6 @@ while true; do
 			shift 2 ;;
 		-s | --setup )
 			# Handled by the autobuild client
-			# Although I think it might have to move back here somehow or something
-			# Users can't modify things in /var/autobuild by themselves
 			shift ;;
 		-- ) shift; break ;;
 		* ) break ;;

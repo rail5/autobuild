@@ -4,6 +4,11 @@
 # Copyright (C) 2024 rail5
 # Free software (GNU Affero GPL v3)
 
+if [[ "$(whoami)" != root ]]; then
+	echo "Autobuild setup must be run as root"
+	exit 1
+fi
+
 system_tmp_directory=$(dirname "$(mktemp -u)")
 local_storage_directory="/var/autobuild"
 autobuild_directory="/usr/share/autobuild"
