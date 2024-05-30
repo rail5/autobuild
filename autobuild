@@ -15,7 +15,7 @@ trap 'graceful_exit' HUP
 
 function graceful_exit() {
 	if [[ -f "$temporary_log_file" ]]; then
-		pid_to_kill=$(head -n 1 "$temporary_log_file")
+		pid_to_kill=$(head -n 1 "$temporary_log_file" | awk '{print $2}')
 		touch "/tmp/autobuild.kill.$pid_to_kill"
 		tail --pid="$pid_to_kill" -f /dev/null
 		rm -f "$temporary_log_file"

@@ -4,7 +4,7 @@
 # Copyright (C) 2024 rail5
 # Free software (GNU Affero GPL v3)
 
-echo $$ # Echo the PID as the first line of output
+echo "PID: $$" # Echo the PID as the first line of output
 	# This is so other processes can terminate the autobuild daemon early if desired
 
 if [[ "$(whoami)" != "_autobuild" ]]; then
