@@ -888,14 +888,12 @@ if [ $package_provided == false ]; then
 	graceful_exit 1
 fi
 
-regex_is_url='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
-
 for index in "${!packages_to_build[@]}"; do
 	package=${packages_to_build[$index]}
 	if [ ${packages[$package]+1} ]; then
 		echo "Building $package"
 	else
-		if [[ $package =~ $regex_is_url ]] && git ls-remote "$package" HEAD >/dev/null 2>&1; then
+		if git ls-remote "$package" HEAD >/dev/null 2>&1; then
 			# If it's a valid git url, add it to the list and keep going
 			package_name=$(basename "$package")
 			package_name="${package_name/.git/""}"
