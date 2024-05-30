@@ -39,6 +39,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
 	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
 fi
 
+chmod 700 "$CONFIG_FILE" # Keep it protected!
+
 mkdir -p "$package_directory"
 
 
@@ -682,7 +684,7 @@ function display_help() {
 	echo "  --package"
 	echo "    Add a package to the build list"
 	echo "    Argument can be:"
-	echo "      - The name of package in the config file"
+	echo "      - The name of a package in the config file"
 	echo "      - A valid Git URL"
 	echo "      - Or a local path to a .tar.gz archive"
 	echo ""
