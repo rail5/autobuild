@@ -4,7 +4,7 @@ set -e
 
 # Create the autobuild user
 if ! id -u _autobuild; then
-	adduser --system --no-create-home _autobuild
+	adduser --system --home /var/autobuild _autobuild
 	# Make sure the autobuild user has permission to run VMs with KVM acceleration
 	if [[ $(getent group kvm) ]]; then
 		usermod -aG kvm _autobuild
@@ -20,5 +20,7 @@ fi
 chown _autobuild /var/autobuild
 
 # Enable and start the autobuild service
-systemctl enable autobuild.socket
-systemctl start autobuild.socket
+deb-systemd-invoke enable autobuild.socket
+deb-systemd-invoke start autobuild.socket
+
+#DEBHELPER#
