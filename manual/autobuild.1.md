@@ -20,16 +20,14 @@ The configuration file can be found at /var/autobuild/config.toml. You may edit 
 -p, \--package
 
     Add a package to the build list. The argument can be:
-
     - The name of a package in the config file
-
     - A valid Git URL
-
     - A local path to a .tar.gz archive
 
 -o, \--output
 
-    Specify directory to save built package files (default: current working directory)
+    Specify directory to save built package files
+    (default: current working directory)
 
 -b, \--bell
 
@@ -42,14 +40,14 @@ The configuration file can be found at /var/autobuild/config.toml. You may edit 
 -r, \--remove-old-builds
 
     Remove a given subdirectory under /var/autobuild/builds, and quit
-
-    If the given argument is 'all', remove everything under /var/autobuild/builds
+    If the given argument is 'all', then remove everything under
+    /var/autobuild/builds
 
 -s, \--setup
 
     Run the setup program (must be run as root)
-
-    The setup program can automatically install (or reinstall) the build farm
+    The setup program can automatically install (or reinstall) the
+    build farm
 
 ## BUILD FARM OPTIONS
 -0, \--local
@@ -72,19 +70,18 @@ The configuration file can be found at /var/autobuild/config.toml. You may edit 
 -g, \--github-page
 
     Create release pages for the built packages' GitHub repositories
-
     Your GitHub credentials must be stored in the config file
 
 -f, \--forgejo-page
 
     Create release pages for the built packages' Forgejo repositories
-
-    Your Forgejo credentials (and instance URL) must be stored in the config file
+    Your Forgejo credentials (and instance URL) must be stored in the
+    config file
 
 -d, \--debian-repo
 
-    Distribute built packages to a Git-based Debian Repository via reprepro
-
+    Distribute built packages to a Git-based Debian Repository via
+    reprepro
     This repository must be configured via the config file
 
 # AUTHOR
