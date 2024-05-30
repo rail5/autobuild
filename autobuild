@@ -18,7 +18,8 @@ function graceful_exit() {
 		pid_to_kill=$(head -n 1 "$temporary_log_file" | awk '{print $2}')
 		touch "/tmp/autobuild.kill.$pid_to_kill"
 		tail --pid="$pid_to_kill" -f /dev/null 2>/dev/null
-		rm -f "$temporary_log_file"
+		rm -f "/tmp/autobuild.kill.$pid_to_kill" 2>/dev/null
+		rm -f "$temporary_log_file" 2>/dev/null
 	fi
         exit 0
 }
