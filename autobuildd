@@ -1,0 +1,1003 @@
+#!/usr/bin/env bash
+
+# autobuild daemon
+# Copyright (C) 2024 rail5
+# Free software (GNU Affero GPL v3)
+
+echo "PID: $$" # Echo the PID as the first line of output
+	# This is so other processes can terminate the autobuild daemon early if desired
+
+if [[ "$(whoami)" != "_autobuild" ]]; then
+	echo "Warning: The autobuild daemon should not be run directly"
+	sleep 1
+fi
+
+# Make sure all git requests are *completely* non-interactive
+export GIT_TERMINAL_PROMPT=0
+
+system_tmp_directory=$(dirname "$(mktemp --tmpdir -u)")
+autobuild_temp_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
+local_storage_directory="/var/autobuild"
+build_farm_directory="$local_storage_directory/build-farm"
+package_directory="$local_storage_directory/packages"
+autobuild_directory="/usr/share/autobuild"
+pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
+
+CONFIG_FILE="$local_storage_directory/config.toml"
+
+BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
+
+if [ ! -d "$local_storage_directory" ]; then
+	mkdir "$local_storage_directory"
+fi
+
+# Copy any updated files to $local_storage_directory/build-farm in case an upgrade took place
+mkdir -p "$local_storage_directory/build-farm" 2>/dev/null
+cp -ru --preserve=timestamps "${autobuild_directory:?}/build-farm/"* "${local_storage_directory:?}/build-farm/"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
+fi
+
+chmod 600 "$CONFIG_FILE" # Keep it protected!
+			# Make sure that only autobuild can read/write to this file
+
+mkdir -p "$package_directory"
+
+
+# Signal trapping so we can exit gracefully
+# Reroute SIGINT, SIGTERM, and SIGHUP to the graceful_exit function defined below
+trap 'graceful_exit 1' INT
+trap 'graceful_exit 1' TERM
+trap 'graceful_exit 1' HUP
+
+
+amd64_vm_is_configured=false
+i386_vm_is_configured=false
+arm64_vm_is_configured=false
+
+if [[ -f "$local_storage_directory/build-farm/debian-stable-amd64/image.qcow" ]]; then
+	amd64_vm_is_configured=true
+fi
+
+if [[ -f "$local_storage_directory/build-farm/debian-stable-i386/image.qcow" ]]; then
+	i386_vm_is_configured=true
+fi
+
+if [[ -f "$local_storage_directory/build-farm/debian-stable-arm64/image.qcow" ]]; then
+	arm64_vm_is_configured=true
+fi
+
+typeset -A upgraded_vms
+
+base_release_directory=""
+
+
+# Declare the lists of packages we'll be building
+# These arrays will be populated with the packages selected by the user
+packages_to_build=()
+amd64_builds=()
+i386_builds=()
+arm64_builds=()
+
+
+# How will we distribute the built packages?
+# These arrays will be populated etc etc
+packages_to_publish_to_repo=()
+release_pages_to_make=()
+make_github_release_pages=false
+make_forgejo_release_pages=false
+
+# Where is the daemon saving the built package files?
+output_directory="$local_storage_directory/builds/$$/"
+
+## SSH connection into the build-farm VMs
+SSHPASSWORD="debianpassword"
+SSHUSER="debian"
+SSHPORT="-1"
+
+
+function setup_build_environment() {
+	mkdir -p "$autobuild_temp_directory/$pkgs_build_base_directory"
+
+	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/srconly"
+	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/deb"
+	mkdir "$autobuild_temp_directory/$pkgs_build_base_directory/release"
+
+	mkdir "$autobuild_temp_directory/buildfarm-debs"
+
+	mkdir -p "$output_directory"
+
+	base_release_directory="$autobuild_temp_directory/$pkgs_build_base_directory/release/"
+}
+	
+
+function build_package_universal() {
+	if [[ $# -lt 3 ]]; then
+		echo "bag args to build_package_universal" && graceful_exit 1
+	fi
+	
+	local PKGNAME="$1" GITURL="$2" ARCH="$3"
+	
+	# Variables:
+	## PKGNAME, GITURL: Self-explanatory
+	## this_is_amd64_build:
+	### 1 or 0: are we connecting to the amd64 build-farm VM and building there?
+	## this_is_i386_build:
+	### 1 or 0: are we connecting to the i386 build-farm VM and building there?
+	## this_is_arm64_build:
+	### 1 or 0: are we connecting to the arm64 build-farm VM and building there?
+	
+	# Start by creating directories:
+	##	srcdir: Source-only directory, also Git root
+	##	builddir: Directory where we build the .deb package
+	##	releasedir: Directory where we move the .debs after they've been built
+	local srcdir="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME"
+	local sourcetarball="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME-src.tar.gz"
+	local builddir="$autobuild_temp_directory/$pkgs_build_base_directory/deb/$PKGNAME"
+	local releasedir="$base_release_directory/$PKGNAME"
+	
+	# Pull updates to the source code from GITURL into our local package directory
+	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
+
+	if [[ "$GITURL" != "nourl" ]]; then
+		git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
+	else
+		# If "nourl," that means we were given a .tar.gz archive to handle as $PKGNAME
+		local TARPATH="$PKGNAME"
+		PKGNAME="$(basename "$PKGNAME")"
+		PKGNAME="${PKGNAME/.tar.gz/""}"
+
+		# Update some variables for the rest of the function
+		srcdir="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME"
+		sourcetarball="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME-src.tar.gz"
+		builddir="$autobuild_temp_directory/$pkgs_build_base_directory/deb/$PKGNAME"
+		releasedir="$base_release_directory/$PKGNAME"
+
+		mkdir "$PKGNAME"
+		mkdir -p "$autobuild_temp_directory/tar/$PKGNAME"
+
+		tar -xzf "$TARPATH" -C "$autobuild_temp_directory/tar/$PKGNAME"
+
+		package_base_directory=$(dirname "$(find "$autobuild_temp_directory/tar/$PKGNAME" -name "debian" | head -n 1)")
+
+		if [[ "$package_base_directory" == "" ]]; then
+			echo "$TARPATH does not appear to contain a valid Debian package. Quitting"
+			graceful_exit 1
+		fi
+
+		mv "$package_base_directory/"* "$PKGNAME/"
+	fi
+
+	mkdir -p "$builddir"
+	mkdir -p "$releasedir"
+
+	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
+	git reset --hard
+	git pull -q # Pull changes in case we do already have it (an older version)
+
+	# Copy the updated source code into a temp directory named PKGNAME
+	cd "$autobuild_temp_directory/$pkgs_build_base_directory/srconly" || { echo "Could not cd into package source directory"; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
+	mkdir "$PKGNAME"
+	cp -r "$package_directory/$PKGNAME/"* "./$PKGNAME/"
+	
+	# Tar it up so we can pass it to the build farm VMs later
+	cd "$srcdir" || { echo "Could not cd into \"$srcdir\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
+	tar -czf "$sourcetarball" .
+
+	if [[ "$ARCH" != "local" ]]; then
+		build_other_arch "$PKGNAME" "$sourcetarball" "$ARCH"
+	else
+		# Build locally
+		cp -r "$srcdir/"* "$builddir/"
+		
+		# Move to the build directory, don't mess with the source directory
+		cd "$builddir" || { echo "Could not cd into \"$builddir\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
+		
+		# Build package
+		debuild -us -uc
+	fi
+	
+	# Move packages to 'release' directory
+	mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.build "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.changes "$releasedir/" 2>/dev/null
+}
+
+function clean_up() {
+	# Keep only the 'release' and 'srconly' directories
+	rm -rf "$autobuild_temp_directory/$pkgs_build_base_directory/deb"
+	
+	# Clear VM snapshots
+	rm -f "$build_farm_directory/debian-stable-amd64/snapshot.qcow"
+	rm -f "$build_farm_directory/debian-stable-i386/snapshot.qcow"
+	rm -f "$build_farm_directory/debian-stable-arm64/snapshot.qcow"
+}
+
+function upgrade_vm() {
+	if [[ $# != 1 ]]; then
+		echo "bag args to upgrade_vm" && graceful_exit 2
+	fi
+	local ARCH="$1"
+	echo "---"
+	echo "Upgrading $ARCH VM..."
+	echo "---"
+	start_build_vm "$ARCH" 0
+	until (sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"(sudo apt-get update -y >/dev/null 2>&1 && sudo apt-get upgrade -y >/dev/null 2>&1 && sudo apt-get autoremove -y >/dev/null 2>&1) && exit || exit; exit"); do
+		sleep 1
+	done
+	shutdown_build_vm
+}
+
+function start_build_vm() {
+	# Turn on the VM
+	if [[ $# != 2 ]]; then
+		echo "bad args to start_build_vm" && graceful_exit 2
+	fi
+	
+	local ARCH="$1" STATELESS="$2"
+	
+
+	# Set ARCHDIR, ARCH_STRING, and VM_IMAGE
+
+	## ARCHDIR is the subdirectory underneath 'build-farm/' containing the QEMU VM for the arch in question
+	## IE, if we want to build using the VM stored in ./build-farm/debian-stable-arm64
+	## Then we would set ARCHDIR="debian-stable-arm64"
+
+	## ARCH_STRING is the arch that must be passed to qemu to boot
+	## In the case of "amd64", for example, ARCH_STRING should be "x86_64" because we have to run the command
+	## qemu-system-x86_64
+
+	## VM_IMAGE is the image we will be booting.
+	## The system is stored in a file named image.qcow
+	## If we are booting statelessly, this will be replaced with a snapshot image
+	## So that the VM's permanent state will not be altered.
+
+	local ARCH_STRING="" VM_IMAGE="image.qcow"
+	local ARCHDIR="debian-stable-$ARCH"
+
+	SSHPORT=$(get_random_free_port)
+	TELNETPORT=$(get_random_free_port)
+
+	# Just in case we accidentally gave the same port to both protocols:
+	while [[ "$TELNETPORT" == "$SSHPORT" ]]; do
+		TELNETPORT=$(get_random_free_port)
+	done
+	
+	if [[ "$ARCH" == "amd64" ]]; then
+		ARCH_STRING="x86_64"
+	elif [[ "$ARCH" == "i386" ]]; then
+		ARCH_STRING="i386"
+	elif [[ "$ARCH" == "arm64" ]]; then
+		ARCH_STRING="aarch64"
+	fi
+
+
+	# Wait for any VMs using our image to shut down
+	## We're ready to boot up again when our vm image file is no longer in use
+	until [[ $(lsof "$build_farm_directory/$ARCHDIR/$VM_IMAGE") == "" ]]; do
+		sleep 1
+	done
+
+
+	# Statelessness
+
+	## If STATELESS=0,
+	### Then we load the VM's base image, and any changes we make will permanently alter the VM's state
+	### This is used for system upgrades, etc, before building packages
+
+	## If STATELESS=1
+	### Then we create a snapshot of the base image & boot that one instead
+	### And any changes we make will NOT be reflected in the base image
+	### And will disappear the moment the VM is shut down
+	### This is used to actually build packages, so that the build environment
+	### Is not permanently altered by the building of any package.
+
+	if [[ STATELESS -eq 1 ]]; then
+		# Clear any pre-existing snapshots, in case they're there
+		rm -f "$build_farm_directory/$ARCHDIR/snapshot.qcow"
+
+		# Create snapshot
+		qemu-img create -f qcow2 -b "$build_farm_directory/$ARCHDIR/$VM_IMAGE" -F qcow2 "$build_farm_directory/$ARCHDIR/snapshot.qcow"
+		VM_IMAGE="snapshot.qcow"
+
+		echo "---"
+		echo "Starting $ARCH VM. You can connect to it (if you want) as follows:"
+		echo "  SSH Port: $SSHPORT"
+		echo "  TELNET Port: $TELNETPORT"
+		echo "---"
+	fi
+
+	# Boot the VM
+	boot_vm_nodisplay "$ARCH_STRING" "$build_farm_directory/$ARCHDIR/$VM_IMAGE" "$SSHPORT" "$TELNETPORT" &
+}
+
+function shutdown_build_vm() {
+	local quiet_mode="${1:0}"
+	# Connect to it on SSH and send the shutdown command
+	if [[ SSHPORT -ne -1 ]]; then
+		if [[ $quiet_mode -ne 1 ]]; then
+			echo "Shutting down currently running VMs (if any)..."
+		fi
+		sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 >/dev/null 2>&1 <<<"sudo shutdown now >/dev/null 2>&1"
+	fi
+}
+
+function build_other_arch() {
+	if [[ $# != 3 ]]; then
+		echo "bag args to build_other_arch" && graceful_exit 3
+	fi
+	
+	local PKGNAME="$1" SOURCETARBALL="$2" ARCH="$3"
+	
+	# First, pass the source tarball into the VM
+	## Wrapping this in "until (cmd); do sleep 5; done" ensures that we wait until the VM *can* be SSH'd into
+	## The VM may take some time to come online
+	until (sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" "$SOURCETARBALL" "$SSHUSER@127.0.0.1:/tmp/$(basename "$SOURCETARBALL")" >/dev/null 2>&1); do
+		sleep 5
+	done
+	
+	# The following commands (After sshpass / ssh, until 'EOF') are passed directly to the VM
+	# Here we connect and build the packages
+	echo "--------"
+	echo "BUILD LOG ($PKGNAME on $ARCH)"
+	echo "--------"
+	sshpass -p $SSHPASSWORD ssh -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -tt -p "$SSHPORT" $SSHUSER@127.0.0.1 << EOF
+mkdir -p /home/debian/build/src
+mkdir -p /home/debian/build/pkg
+
+echo "Cleaning build environment"
+cd /home/debian/build/pkg
+rm -rf ./*
+cd /home/debian/build/src
+rm -rf ./*
+
+echo "Getting source"
+mkdir "$PKGNAME"
+
+cd "$PKGNAME"
+
+mv /tmp/$(basename "$SOURCETARBALL") .
+tar -xzf ./$(basename "$SOURCETARBALL")
+rm ./$(basename "$SOURCETARBALL")
+
+echo "Installing build dependencies"
+mk-build-deps -i -s sudo -r -t "apt-get --no-install-recommends -y" && debuild -us -uc; cd .. && rm -rf "$PKGNAME/"; tar -czf /home/debian/build/pkg/packages.tar.gz ./; exit
+EOF
+	echo "--------"
+	echo "END BUILD LOG ($PKGNAME on $ARCH)"
+	echo "--------"
+	
+	# Now we SCP download the packages to the host machine
+
+	# Create the tmp folder for this architecture
+	mkdir "$autobuild_temp_directory/$ARCH"
+
+	sshpass -p $SSHPASSWORD scp -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no" -P "$SSHPORT" -r $SSHUSER@127.0.0.1:/home/debian/build/pkg/packages.tar.gz "$autobuild_temp_directory/$ARCH/packages.tar.gz" >/dev/null 2>&1
+	
+	cd "$autobuild_temp_directory/$ARCH" || { echo "Could not cd into \"$autobuild_temp_directory/$ARCH\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
+	tar -xzf packages.tar.gz
+	rm -f packages.tar.gz
+	mv "$autobuild_temp_directory/$ARCH/"* "$autobuild_temp_directory/buildfarm-debs/"
+	rm -f "$autobuild_temp_directory/$ARCH/"*
+}
+
+function upgrade_vm_and_build_pkg() {
+	if [[ $# != 2 ]]; then
+		echo "bag args to build_other_arch" && graceful_exit 6
+	fi
+
+	local ARCH="$1" PKGNAME="$2"
+
+	# Only upgrade the VM if we haven't already done so
+	if [[ ${upgraded_vms["$ARCH"]} != true ]]; then
+		upgrade_vm "$ARCH"
+		upgraded_vms["$ARCH"]=true
+	fi
+
+	start_build_vm "$ARCH" 1 # Start in stateless mode
+	build_package_universal "$pkgname" "${packages[$pkgname]}" "$ARCH"
+	shutdown_build_vm # Restore state
+}
+
+function build_all_pkgs_in_pkgarrays() {
+
+	local building_locally=true # Only building locally if we're NOT building on ANY of the VMs
+
+	# The loop for each architecture:
+	# Start a VM, build a package, shut it down
+	for pkgname in "${amd64_builds[@]}"; do
+		upgrade_vm_and_build_pkg "amd64" "$pkgname"
+		building_locally=false
+	done
+
+	for pkgname in "${i386_builds[@]}"; do
+		upgrade_vm_and_build_pkg "i386" "$pkgname"
+		building_locally=false
+	done
+	
+	for pkgname in "${arm64_builds[@]}"; do
+		upgrade_vm_and_build_pkg "arm64" "$pkgname"
+		building_locally=false
+	done
+
+	if [[ $building_locally == true ]]; then
+		# Building packages locally
+		for pkgname in "${packages_to_build[@]}"; do
+			build_package_universal "$pkgname" "${packages[$pkgname]}" "local"
+		done
+	fi
+}
+
+function push_github_release_page() {
+	if [[ $# != 1 ]]; then
+		echo "bag args to push_github_release_page" && graceful_exit 4
+	fi
+	
+	local PKGNAME="$1" CHANGELOG="" VERSION=""
+
+	if [[ "${packages["$PKGNAME"]}" == "nourl" ]]; then
+		return # Can't publish a release without a url
+	fi
+	
+	# Get package info: Latest changelog entry + latest version number
+	
+	## Get changelog from package source using dpkg-parsechangelog (dpkg-dev package)
+	### Pipe into sed to:
+	### (1) Escape backslashes (\ to \\)
+	### (2) Replace newline chars with '\n' (literal)
+	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
+	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
+
+	## Get version number from package source using dpkg-parsechangelog
+	### Pipe into sed to remove the ending newline char
+	VERSION=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
+	
+	# Create GitHub Release
+	
+	## Send POST request to GitHub API to create a release page
+	curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $GITHUB_ACCESS_TOKEN" \
+			-H "X-GitHub-Api-Version: 2022-11-28" \
+			"https://api.github.com/repos/$GITHUB_OWNER/$PKGNAME/releases" \
+			-d "{\"tag_name\": \"v$VERSION\",
+				\"target_commitish\": \"main\",
+				\"name\": \"v$VERSION\",
+				\"body\": \"$CHANGELOG\",
+				\"draft\": false,
+				\"prerelease\": false,
+				\"generate_release_notes\": false}" > "$base_release_directory/$PKGNAME/release-info"
+	
+	## Get GitHub Release ID
+	RELEASEID=$(jq -r '.id' "$base_release_directory/$PKGNAME/release-info")
+
+	## Upload the attachments via POST request to the GitHub API
+	for file in "$base_release_directory/$PKGNAME/"*.deb; do
+		curl -L \
+			-X POST \
+			-H "Accept: application/vnd.github+json" \
+			-H "Authorization: Bearer $GITHUB_ACCESS_TOKEN" \
+			-H "X-Github-Api-Version: 2022-11-28" \
+			-H "Content-Type: application/octet-stream" \
+			"https://uploads.github.com/repos/$GITHUB_OWNER/$PKGNAME/releases/$RELEASEID/assets?name=$(basename "$file")" \
+			--data-binary "@$file"
+	done
+}
+
+function push_forgejo_release_page() {
+	if [[ $# != 1 ]]; then
+		echo "bag args to push_forgejo_release_page" && graceful_exit 4
+	fi
+	
+	local PKGNAME="$1" CHANGELOG="" VERSION=""
+
+	if [[ "${packages["$PKGNAME"]}" == "nourl" ]]; then
+		return # Can't publish a release without a url
+	fi
+	
+	# Get package info: Latest changelog entry + latest version number
+	
+	## Get changelog from package source using dpkg-parsechangelog (dpkg-dev package)
+	### Pipe into sed to:
+	### (1) Escape backslashes (\ to \\)
+	### (2) Replace newline chars with '\n' (literal)
+	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
+	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
+	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | sed -n 's/.*\* //p')
+
+	## Get version number from package source using dpkg-parsechangelog
+	### Pipe into sed to remove the ending newline char
+	VERSION=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
+	
+	# Create Forgejo Release
+	
+	## Send POST request to Forgejo API to create a release page
+	curl -L \
+			-X POST \
+			-H "accept: application/json" \
+			-H "Content-Type: application/json" \
+			-H "Authorization: Bearer $FORGEJO_ACCESS_TOKEN" \
+			"$FORGEJO_INSTANCE_URL/api/v1/repos/$FORGEJO_OWNER/$PKGNAME/releases" \
+			-d "{\"tag_name\": \"v$VERSION\",
+				\"target_commitish\": \"main\",
+				\"name\": \"v$VERSION\",
+				\"body\": \"$CHANGELOG\",
+				\"draft\": false,
+				\"prerelease\": false}" > "$base_release_directory/$PKGNAME/forgejo-release-info"
+	
+	## Get Forgejo Release ID
+	RELEASEID=$(jq -r '.id' "$base_release_directory/$PKGNAME/forgejo-release-info")
+
+	## Upload the attachments via POST request to the Forgejo API
+	for file in "$base_release_directory/$PKGNAME/"*.deb; do
+		curl -L \
+			-X POST \
+			-H "accept: application/json" \
+			-H "Content-Type: multipart/form-data" \
+			-H "Authorization: Bearer $FORGEJO_ACCESS_TOKEN" \
+			"$FORGEJO_INSTANCE_URL/api/v1/repos/$FORGEJO_OWNER/$PKGNAME/releases/$RELEASEID/assets?name=$(basename "$file")" \
+			-F "attachment=@$file"
+	done
+}
+
+function prepare_git_debian_repo() {
+	# Clone the git repo into a local directory
+	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+	git clone "$git_debianrepo" "repo" -q 2>/dev/null
+	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+	git reset --hard
+	git pull -q
+}
+
+function close_git_debian_repo() {
+	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+	
+	# Push any changes that we made before we called this function
+	git add --all
+	git commit -m "Updated packages"
+	git push origin -q
+}
+
+function push_to_debian_repo() {
+	# Pushes a package to a Debian Repository managed via 'reprepro'
+
+	## If the Debian Repo in question is hosted as a Git Repository,
+	## Then this should be called AFTER prepare_git_debian_repo() and BEFORE close_git_debian_repo()
+
+	# FIXME: Allow for non-git-based Debian repos. Github pages debian repos are common but not universal
+	
+	if [[ $# != 1 ]]; then
+		echo "bag args to push_to_debian_repo" && graceful_exit 5
+	fi
+	
+	local PKGNAME="$1"
+	
+	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool" | head -n 1)")
+	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+
+	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
+	
+	# Add .changes files to the repo
+	for changes_file in "$base_release_directory/$PKGNAME/"*.changes; do
+		reprepro -P optional include "$debian_distribution" "$changes_file"
+	done
+}
+
+function maybe_publish_to_deb_repo() {
+	if [[ ${#packages_to_publish_to_repo[@]} -gt 0 ]]; then
+		echo "Publishing to repo..."
+		
+		prepare_git_debian_repo
+		
+		for pkg in "${packages_to_publish_to_repo[@]}"; do
+			push_to_debian_repo "$pkg"
+		done
+		
+		close_git_debian_repo
+	fi
+}
+
+function maybe_make_release_pages() {
+	if [[ ${#release_pages_to_make[@]} -gt 0 ]]; then
+		echo "Making release pages..."
+		
+		for pkg in "${release_pages_to_make[@]}"; do
+			if [[ $make_github_release_pages == true ]]; then
+				push_github_release_page "$pkg"
+			fi
+
+			if [[ $make_forgejo_release_pages == true ]]; then
+				push_forgejo_release_page "$pkg"
+			fi
+		done
+	fi
+}
+
+function save_debs() {
+		cp -r "$autobuild_temp_directory/$pkgs_build_base_directory/release/"* "$output_directory/"
+}
+
+function graceful_exit() {
+	local exit_code="${1:0}" # This line is a little hard to read
+				# The meaning is:
+				# If this function was called with an argument ($1),
+				# Set "exit_code" to that argument (exit_code="$1")
+				# Otherwise, set "exit_code" to 0 (POSIX "successful execution")
+				# It's a bit like if we declared 'void graceful_exit(int exit_code = 0) {...}' in C/C++
+
+	local quiet_mode="${2:0}" # Again here
+
+	# Shut down any currently running build farm VMs
+	shutdown_build_vm "$quiet_mode"
+
+	# clean_up deletes any VM snapshots that may have been created this session
+	clean_up
+
+	# Delete this session's temporary files
+	rm -rf "${autobuild_temp_directory:?}"
+
+	# Finally exit
+	# shellcheck disable=SC2086
+	exit $exit_code
+}
+
+function wait_for_kill() {
+	# This function will be spawned as a child process of the autobuild daemon
+	# The parent process PID should be passed as an argument so we know what to kill
+
+	if [[ $# -lt 1 ]]; then
+		echo "bad args to wait_for_kill"
+		graceful_exit 1
+	fi
+
+	local pid_to_kill="$1"
+
+	# Wait for the kill file to be created.
+	# If we spot the kill file, kill the parent process with SIGTERM
+	# (SIGTERM will be trapped by autobuild so it can go through its graceful_exit process)
+	while [[ ! -f "$system_tmp_directory/autobuild.kill.$pid_to_kill" ]]; do
+		sleep 1
+	done
+
+	rm -f "${system_tmp_directory:?}/autobuild.kill.$pid_to_kill"
+	kill -s TERM "$pid_to_kill"
+}
+
+function display_help() {
+	echo "autobuild"
+	echo "Copyright (C) 2024 rail5"
+	echo ""
+	echo "This program comes with ABSOLUTELY NO WARRANTY."
+	echo "This is free software (GNU Affero GPL V3), and you are welcome to redistribute it under certain conditions."
+	echo ""
+	echo "You should edit CONFIG and run setup before using this program"
+	echo ""
+	echo "Options:"
+	echo ""
+	echo "  -p"
+	echo "  --package"
+	echo "    Add a package to the build list"
+	echo "    Argument can be:"
+	echo "      - The name of a package in the config file"
+	echo "      - A valid Git URL"
+	echo "      - Or a local path to a .tar.gz archive"
+	echo ""
+	echo "  -0"
+	echo "  --local"
+	echo "    Build packages locally (do not use the Build Farm)"
+	echo ""
+	echo "  -1"
+	echo "  --amd64"
+	echo "    Build packages on the amd64 Build Farm VM"
+	echo ""
+	echo "  -2"
+	echo "  --i386"
+	echo "    Build packages on the i386 Build Farm VM"
+	echo ""
+	echo "  -3"
+	echo "  --arm64"
+	echo "    Build packages on the arm64 Build Farm VM"
+	echo ""
+	echo "  -o"
+	echo "  --output"
+	echo "    Specify directory to save built package files (Default: current directory)"
+	echo ""
+	echo "  -d"
+	echo "  --debian-repo"
+	echo "    Distribute built packages to a Git-based Debian Repository managed with reprepro"
+	echo ""
+	echo "  -g"
+	echo "  --github-page"
+	echo "    Create release pages for the built packages' Github repositories"
+	echo ""
+	echo "  -f"
+	echo "  --forgejo-page"
+	echo "    Create release pages for the built packages' Forgejo repositories"
+	echo ""
+	echo "  -b"
+	echo "  --bell"
+	echo "    Ring a bell when finished"
+	echo ""
+	echo "  -r"
+	echo "  --remove-old-builds"
+	echo "    Remove a subdirectory under /var/autobuild/builds and exit"
+	echo "    If the argument is 'all', remove everything under /var/autobuild/builds"
+	echo ""
+	echo ""
+	echo "  -s"
+	echo "  --setup"
+	echo "    Run the setup program"
+	echo "    The setup program can automatically install the virtual build farm"
+	echo ""
+	echo "  -l"
+	echo "  --list"
+	echo "    List packages present in the config file and quit"
+	echo ""
+	echo "Example:"
+	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
+	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
+	echo "  autobuild -p liesel -o ~/Desktop/"
+}
+
+
+# And now the program:
+
+wait_for_kill $$ & # Background wait_for_kill so we can receive termination signals
+
+# Parse the user's provided arguments
+
+arguments=$(cat <&0) # Receive arguments from STDIN
+
+eval set -- "$arguments"
+
+TEMP=$(getopt -o 0123bdfghlo:p:r:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,output:,package:,remove-old-builds:,setup \
+              -n 'autobuild' -- "$@")
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
+
+eval set -- "$TEMP"
+
+just_list_packages=false
+package_provided=false
+target_architecture_provided=false
+building_locally=false
+building_on_amd64=false
+building_on_i386=false
+building_on_arm64=false
+distribute_to_debian_repo=false
+
+while true; do
+	case "$1" in
+		-0 | --local )
+			building_locally=true
+			target_architecture_provided=true
+			shift ;;
+		-1 | --amd64 )
+			if [[ $amd64_vm_is_configured == "true" ]]; then
+				building_on_amd64=true
+				target_architecture_provided=true
+			else
+				echo "The amd64 VM is not configured."
+			fi
+			shift ;;
+		-2 | --i386 )
+			if [[ $i386_vm_is_configured == "true" ]]; then
+				building_on_i386=true
+				target_architecture_provided=true
+			else
+				echo "The i386 VM is not configured."
+			fi
+			shift ;;
+		-3 | --arm64 )
+			if [[ $arm64_vm_is_configured == "true" ]]; then
+				building_on_arm64=true
+				target_architecture_provided=true
+			else
+				echo "The arm64 VM is not configured"
+			fi
+			shift ;;
+		-b | --bell )
+			# Handled by the autobuild client
+			shift ;;
+		-d | --debian-repo )
+			distribute_to_debian_repo=true; shift ;;
+		-f | --forgejo-page )
+			make_forgejo_release_pages=true; shift ;;
+		-g | --github-page )
+			make_github_release_pages=true; shift ;;
+		-h | --help )
+			display_help; graceful_exit ;;
+		-l | --list )
+			just_list_packages=true; shift ;;
+		-o | --output )
+			# Handled by the autobuild client
+			shift 2 ;;
+		-p | --package )
+			packages_to_build+=("$2")
+			package_provided=true
+			shift 2 ;;
+		-r | --remove-old-builds )
+			subdirectory_to_remove=$(basename "$(realpath "$2")")
+			if [[ "$subdirectory_to_remove" == "all" ]]; then
+				rm -rf "${local_storage_directory:?}/builds/"*
+			elif [[ -d "$local_storage_directory/builds/$subdirectory_to_remove" ]]; then
+				rm -rf "${local_storage_directory:?}/builds/${subdirectory_to_remove:?}"
+			fi
+			graceful_exit ;;
+		-s | --setup )
+			# Handled by the autobuild client
+			shift ;;
+		-- ) shift; break ;;
+		* ) break ;;
+	esac
+done
+
+##################################################
+# Parse config file
+#
+config_json=$(toml2json "$CONFIG_FILE")
+
+## Package settings
+number_of_packages=$(jq -r ".packages.package_urls | length" <<<"$config_json")
+declare -A packages
+packages=()
+for ((i = 0; i < number_of_packages; i++)); do
+	package_url=$(jq -r ".packages.package_urls[$i]" <<<"$config_json")
+	package_name=$(basename "$package_url")
+	package_name="${package_name/.git/""}"
+
+	packages+=(["$package_name"]="$package_url")
+done
+
+if [ $just_list_packages == true ]; then
+	for pkgname in "${!packages[@]}"; do
+		echo "$pkgname"
+	done
+	graceful_exit 0
+fi
+
+## Distribution settings
+
+### Github
+GITHUB_OWNER=$(jq -r ".github.repo_owner" <<<"$config_json")
+
+### Check for Github access token
+GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")
+
+git_debianrepo=$(jq -r ".github.git_debian_repo" <<<"$config_json")
+
+### Forgejo
+FORGEJO_INSTANCE_URL=$(jq -r ".forgejo.instance_url" <<<"$config_json")
+
+FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
+
+### Check for Forgejo access token
+FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
+
+##################################################
+
+
+# Verify that the packages the user wants to build are present in the config file
+if [ $package_provided == false ]; then
+	echo "Error: No package names provided."
+	echo "See 'autobuild -h' or 'man autobuild' for more information."
+	graceful_exit 1
+fi
+
+for index in "${!packages_to_build[@]}"; do
+	package=${packages_to_build[$index]}
+	if [ ${packages[$package]+1} ]; then
+		echo "Building $package"
+	else
+		if git ls-remote "$package" HEAD >/dev/null 2>&1; then
+			# If it's a valid git url, add it to the list and keep going
+			package_name=$(basename "$package")
+			package_name="${package_name/.git/""}"
+
+			packages+=(["$package_name"]="$package")
+
+			packages_to_build[index]="$package_name"
+
+			echo "Building $package_name ($package)"
+		elif [[ -f "$package" && "$package" == *".tar.gz" ]]; then
+			# If it's a locally-stored tar.gz archive, add it to the list with 'nourl'
+			packages+=(["$package"]="nourl")
+		else
+			# Finally, give up
+			echo "Error: Package '$package' not in CONFIG!";
+			graceful_exit 1
+		fi
+	fi;
+done
+
+
+# shellcheck source=./build-farm/scripts/scripts.sh
+. "$BUILDFARM_SCRIPTS_FILE"
+
+
+# BEFORE WE START:
+# Let's verify that ALL of the subdirectories under $package_directory correspond to key in the "packages" associative array
+## If we find a subdirectory under $package_directory which DOES NOT correspond to a key in "packages",
+## We should remove it.
+# This way, we avoid taking up unnecessary space on the user's machine
+## In the event that the user decides to remove a package from their autobuild config.
+
+for subdir in "$package_directory/"*; do
+	subdir="$(basename "$subdir")"
+	if [[ ! "${packages[$subdir]+true}" ]]; then
+		# Package DOES NOT exist in our packages array
+		rm -rf "${package_directory:?}/${subdir:?}"
+	fi
+done
+
+# Now carry on
+
+
+setup_build_environment
+
+if [ $target_architecture_provided == false ]; then
+	echo "Warning: No target architecture provided."
+	building_locally=true
+fi
+
+if [ $building_locally == true ]; then
+	echo "Building packages locally"
+	building_on_amd64=false
+	building_on_i386=false
+	building_on_arm64=false
+fi
+
+if [ $building_on_amd64 == true ]; then
+	echo "Building packages for amd64"
+	for pkgname in "${packages_to_build[@]}"; do
+		amd64_builds+=("$pkgname")
+	done
+fi
+
+if [ $building_on_i386 == true ]; then
+	echo "Building packages for i386"
+	for pkgname in "${packages_to_build[@]}"; do
+		i386_builds+=("$pkgname")
+	done
+fi
+
+if [ $building_on_arm64 == true ]; then
+	echo "Building packages for arm64"
+	for pkgname in "${packages_to_build[@]}"; do
+		arm64_builds+=("$pkgname")
+	done
+fi
+
+# Check if and how we're distributing the built packages
+if [ $distribute_to_debian_repo == true ]; then
+	echo "Publishing packages to Debian repo"
+	for pkgname in "${packages_to_build[@]}"; do
+		packages_to_publish_to_repo+=("$pkgname")
+	done
+fi
+
+if [[ $make_github_release_pages == true || $make_forgejo_release_pages == true ]]; then
+	echo "Publishing packages to release pages"
+	for pkgname in "${packages_to_build[@]}"; do
+		release_pages_to_make+=("$pkgname")
+	done
+fi
+
+build_all_pkgs_in_pkgarrays
+clean_up
+
+save_debs
+
+maybe_publish_to_deb_repo
+maybe_make_release_pages
+
+echo "" # End with newline
+
+graceful_exit 0 1

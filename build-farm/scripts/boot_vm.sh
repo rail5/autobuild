@@ -74,7 +74,8 @@ function boot_vm_nodisplay() {
 	
 	if [[ $? -ne 0 ]]; then
 		# Try without KVM acceleration
-		echo "Booting VM with KVM acceleration failed. Trying without KVM..."
+		echo "Booting VM with KVM acceleration failed."
+		echo "Trying without KVM..."
 		ACCEL_OPTION="-accel tcg"
 		boot_vm "$QEMU" "$IMAGE" "$MEMORY_TO_USE" "$ACCEL_OPTION" "$SSH_PORT" "$TELNET_PORT" "$OPTIONAL_EXTRA_COMMAND" &
 	fi

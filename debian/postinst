@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+# Create the autobuild user
+if ! id -u _autobuild; then
+	adduser --system --home /var/autobuild _autobuild
+	# Make sure the autobuild user has permission to run VMs with KVM acceleration
+	if [[ $(getent group kvm) ]]; then
+		usermod -aG kvm _autobuild
+	fi
+fi
+
+# Create the /var/autobuild directory
+if [[ ! -d /var/autobuild ]]; then
+	mkdir -p /var/autobuild
+fi
+
+# Make sure the autobuild user owns the /var/autobuild directory
+chown _autobuild /var/autobuild
+
+# Enable and start the autobuild service
+deb-systemd-invoke enable autobuild.socket
+deb-systemd-invoke start autobuild.socket
+
+#DEBHELPER#

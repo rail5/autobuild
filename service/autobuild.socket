@@ -1,0 +1,12 @@
+[Unit]
+Description=Autobuild Socket
+
+[Socket]
+ListenStream=/var/run/autobuild.socket
+Accept=true
+PassCredentials=true
+ReceiveBuffer=4096
+SendBuffer=4096
+
+[Install]
+WantedBy=multi-user.target

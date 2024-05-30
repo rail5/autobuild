@@ -1,0 +1,14 @@
+[Unit]
+Description=Autobuild Daemon
+Requires=autobuild.socket
+
+[Service]
+Type=simple
+User=_autobuild
+RemainAfterExit=no
+ExecStart=/usr/bin/autobuildd
+ExecReload=/bin/kill -HUP $MAINPID
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+MountFlags=slave

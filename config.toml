@@ -19,9 +19,7 @@ package_urls = [
 repo_owner = "rail5"
 
 # Access token
-#access_token = "github_access_token_here"
-access_token_gpg_encrypted_file = "/etc/git/github-token.gpg"
-
+access_token = "github_access_token_here"
 
 git_debian_repo = "https://github.com/rail5/ppa.git"
 
@@ -35,5 +33,4 @@ instance_url = "https://git.disroot.org"
 repo_owner = "rail5"
 
 # Access token
-#access_token = "forgejo_access_token_here"
-access_token_gpg_encrypted_file = "/etc/git/disroot-token.gpg"
+access_token = "forgejo_access_token_here"
