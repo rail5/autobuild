@@ -738,7 +738,7 @@ function display_help() {
 	echo ""
 	echo "  -l"
 	echo "  --list"
-	echo "    List packages available to build (list can be modified via the CONFIG file)"
+	echo "    List packages present in the config file and quit"
 	echo ""
 	echo "Example:"
 	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
