@@ -83,9 +83,8 @@ release_pages_to_make=()
 make_github_release_pages=false
 make_forgejo_release_pages=false
 
-# Where are we saving the built package files?
-# User can change with -o
-output_directory="$local_storage_directory/builds/"
+# Where is the daemon saving the built package files?
+output_directory="$local_storage_directory/builds/$$/"
 
 ## SSH connection into the build-farm VMs
 SSHPASSWORD="debianpassword"
@@ -680,6 +679,12 @@ function display_help() {
 	echo "  --bell"
 	echo "    Ring a bell when finished"
 	echo ""
+	echo "  -r"
+	echo "  --remove-old-builds"
+	echo "    Remove a subdirectory under /var/autobuild/builds and exit"
+	echo "    If the argument is 'all', remove everything under /var/autobuild/builds"
+	echo ""
+	echo ""
 	echo "  -s"
 	echo "  --setup"
 	echo "    Run the setup program"
@@ -706,7 +711,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bdfghlo:p:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,output:,package:,setup \
+TEMP=$(getopt -o 0123bdfghlo:p:r:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,output:,package:,remove-old-builds:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -766,11 +771,20 @@ while true; do
 		-l | --list )
 			just_list_packages=true; shift ;;
 		-o | --output )
-			output_directory=$(realpath "$2"); shift 2 ;;
+			# Handled by the autobuild client
+			shift 2 ;;
 		-p | --package )
 			packages_to_build+=("$2")
 			package_provided=true
 			shift 2 ;;
+		-r | --remove-old-builds )
+			subdirectory_to_remove=$(basename "$(realpath "$2")")
+			if [[ "$subdirectory_to_remove" == "all" ]]; then
+				rm -rf "${local_storage_directory:?}/builds/"*
+			elif [[ -d "$local_storage_directory/builds/$subdirectory_to_remove" ]]; then
+				rm -rf "${local_storage_directory:?}/builds/${subdirectory_to_remove:?}"
+			fi
+			graceful_exit ;;
 		-s | --setup )
 			# Handled by the autobuild client
 			shift ;;
