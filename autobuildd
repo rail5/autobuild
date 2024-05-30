@@ -26,12 +26,11 @@ BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 
 if [ ! -d "$local_storage_directory" ]; then
 	mkdir "$local_storage_directory"
-	cp -r "/usr/share/autobuild/"* "$local_storage_directory/"
 fi
 
-# Copy the build-farm scripts to $local_storage_directory in case an upgrade took place
-mkdir "$build_farm_directory"
-cp -r "/usr/share/autobuild/build-farm/"* "$build_farm_directory/"
+# Copy any updated files to $local_storage_directory/build-farm in case an upgrade took place
+mkdir -p "$local_storage_directory/build-farm" 2>/dev/null
+cp -ru --preserve=timestamps "${autobuild_directory:?}/build-farm/"* "${local_storage_directory:?}/build-farm/"
 
 if [ ! -f "$CONFIG_FILE" ]; then
 	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"

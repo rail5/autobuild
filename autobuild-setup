@@ -13,6 +13,10 @@ local_storage_directory="/var/autobuild"
 autobuild_directory="/usr/share/autobuild"
 window_title="Autobuild settings"
 
+# Copy any updated files to $local_storage_directory/build-farm in case an upgrade took place
+mkdir -p "$local_storage_directory/build-farm" 2>/dev/null
+cp -ru --preserve=timestamps "${autobuild_directory:?}/build-farm/"* "${local_storage_directory:?}/build-farm/"
+
 BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 # shellcheck source=./build-farm/scripts/scripts.sh
 . "$BUILDFARM_SCRIPTS_FILE"
@@ -24,7 +28,7 @@ function setup_single_vm() {
 	local ARCH="$1"
 
 	ARCH_DIRECTORY="$local_storage_directory/build-farm/debian-stable-$ARCH"
-	cd "$ARCH_DIRECTORY" || (echo ""; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; exit)
+	cd "$ARCH_DIRECTORY" || (echo ""; echo "Local storage directory is not properly configured"; exit)
 
 	rm -f "./image.qcow"
 	rm -f "./preseed.cfg"
