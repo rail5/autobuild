@@ -1,3 +1,24 @@
+autobuild (3.0.0) stable; urgency=medium
+
+  * Version 3 release
+    Autobuild is now separated into a daemon and a client. The daemon
+    runs as a systemd service which is opened upon contact with an
+    autobuild unix socket file. The client contacts the daemon via
+    this socket.
+    The build farm VMs are now stored in /var/autobuild and are
+    modifiable only by the _autobuild user. This is much more secure
+    The -c option has been removed.
+    A new -r option has been added to remove old builds in the
+    /var/autobuild/builds directory.
+    The -p option can now take arguments that are either: (1) the
+    names of packages in the config file, (2) valid git URLs, or (3)
+    file paths to locally-stored tar.gz archives.
+    The field in the config file for GPG-encrypted access tokens has
+    been removed, however the config file is now readable only by
+    the _autobuild user and root.
+
+ -- rail5 <andrew@rail5.org>  Thu, 30 May 2024 19:00:04 +0800
+
 autobuild (2.3.1) stable; urgency=medium
 
   * Removed redundant code, reorganized code, general code cleanup
