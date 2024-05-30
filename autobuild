@@ -4,6 +4,7 @@
 # Copyright (C) 2024 rail5
 # Free software (GNU Affero GPL v3)
 
+temporary_storage_directory="$(mktemp --tmpdir -d autobuild.file.XXXXXXXXXXXX)"
 temporary_log_file=$(mktemp --tmpdir autobuild.log.XXXXXXXXXXXX)
 autobuild_storage_directory="/var/autobuild"
 
@@ -26,11 +27,16 @@ function graceful_exit() {
 		rm -f "/tmp/autobuild.kill.$pid_to_kill" 2>/dev/null
 		rm -f "$temporary_log_file" 2>/dev/null
 	fi
+
+	if [[ -d "$temporary_storage_directory" ]]; then
+		rm -rf "${temporary_storage_directory:?}"
+	fi
+
         exit 0
 }
 
 # getopt
-TEMP=$(getopt -o bo:s --long bell,output:,setup \
+TEMP=$(getopt -o bo:p:s --long bell,output:,package:,setup \
               -q -- "$@")
 
 eval set -- "$TEMP"
@@ -44,6 +50,18 @@ while true; do
 			ring_bell=true; shift ;;
 		-o | --output )
 			output_directory=$(realpath "$2")
+			shift 2 ;;
+		-p | --package )
+			# Make sure the autobuild daemon can *read* any files we might give it for the package
+			if [[ -f "$2" && "$2" == *".tar.gz" ]]; then
+				file_basename="$(basename "$(realpath "$2")")"
+				temporary_file_path="$temporary_storage_directory/$file_basename"
+				
+				cp "$(realpath "$2")" "$temporary_file_path"
+				chmod -R 755 "$temporary_storage_directory/"
+
+				passed_options="${passed_options/$2/"$temporary_file_path"}" 
+			fi
 			shift 2 ;;
 		-s | --setup )
 			if [[ "$(whoami)" != root ]]; then

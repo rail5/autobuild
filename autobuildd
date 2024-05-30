@@ -12,6 +12,9 @@ if [[ "$(whoami)" != "_autobuild" ]]; then
 	sleep 1
 fi
 
+# Make sure all git requests are *completely* non-interactive
+export GIT_TERMINAL_PROMPT=0
+
 system_tmp_directory=$(dirname "$(mktemp --tmpdir -u)")
 autobuild_temp_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 local_storage_directory="/var/autobuild"
@@ -131,12 +134,41 @@ function build_package_universal() {
 	local builddir="$autobuild_temp_directory/$pkgs_build_base_directory/deb/$PKGNAME"
 	local releasedir="$base_release_directory/$PKGNAME"
 	
-	mkdir -p "$builddir"
-	mkdir -p "$releasedir"
-	
 	# Pull updates to the source code from GITURL into our local package directory
 	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
-	git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
+
+	if [[ "$GITURL" != "nourl" ]]; then
+		git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
+	else
+		# If "nourl," that means we were given a .tar.gz archive to handle as $PKGNAME
+		local TARPATH="$PKGNAME"
+		PKGNAME="$(basename "$PKGNAME")"
+		PKGNAME="${PKGNAME/.tar.gz/""}"
+
+		# Update some variables for the rest of the function
+		srcdir="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME"
+		sourcetarball="$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME-src.tar.gz"
+		builddir="$autobuild_temp_directory/$pkgs_build_base_directory/deb/$PKGNAME"
+		releasedir="$base_release_directory/$PKGNAME"
+
+		mkdir "$PKGNAME"
+		mkdir -p "$autobuild_temp_directory/tar/$PKGNAME"
+
+		tar -xzf "$TARPATH" -C "$autobuild_temp_directory/tar/$PKGNAME"
+
+		package_base_directory=$(dirname "$(find "$autobuild_temp_directory/tar/$PKGNAME" -name "debian" | head -n 1)")
+
+		if [[ "$package_base_directory" == "" ]]; then
+			echo "$TARPATH does not appear to contain a valid Debian package. Quitting"
+			graceful_exit 1
+		fi
+
+		mv "$package_base_directory/"* "$PKGNAME/"
+	fi
+
+	mkdir -p "$builddir"
+	mkdir -p "$releasedir"
+
 	cd "$PKGNAME" || { echo "Could not cd into \"$PKGNAME\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 	git reset --hard
 	git pull -q # Pull changes in case we do already have it (an older version)
@@ -404,6 +436,10 @@ function push_github_release_page() {
 	fi
 	
 	local PKGNAME="$1" CHANGELOG="" VERSION=""
+
+	if [[ "${packages["$PKGNAME"]}" == "nourl" ]]; then
+		return # Can't publish a release without a url
+	fi
 	
 	# Get package info: Latest changelog entry + latest version number
 	
@@ -458,6 +494,10 @@ function push_forgejo_release_page() {
 	fi
 	
 	local PKGNAME="$1" CHANGELOG="" VERSION=""
+
+	if [[ "${packages["$PKGNAME"]}" == "nourl" ]]; then
+		return # Can't publish a release without a url
+	fi
 	
 	# Get package info: Latest changelog entry + latest version number
 	
@@ -536,7 +576,7 @@ function push_to_debian_repo() {
 	
 	local PKGNAME="$1"
 	
-	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool")")
+	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool" | head -n 1)")
 	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 
 	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
@@ -641,6 +681,10 @@ function display_help() {
 	echo "  -p"
 	echo "  --package"
 	echo "    Add a package to the build list"
+	echo "    Argument can be:"
+	echo "      - The name of package in the config file"
+	echo "      - A valid Git URL"
+	echo "      - Or a local path to a .tar.gz archive"
 	echo ""
 	echo "  -0"
 	echo "  --local"
@@ -844,12 +888,31 @@ if [ $package_provided == false ]; then
 	graceful_exit 1
 fi
 
-for package in "${packages_to_build[@]}"; do
+regex_is_url='(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
+
+for index in "${!packages_to_build[@]}"; do
+	package=${packages_to_build[$index]}
 	if [ ${packages[$package]+1} ]; then
 		echo "Building $package"
 	else
-		echo "Error: Package '$package' not in CONFIG!";
-		graceful_exit 1
+		if [[ $package =~ $regex_is_url ]] && git ls-remote "$package" HEAD >/dev/null 2>&1; then
+			# If it's a valid git url, add it to the list and keep going
+			package_name=$(basename "$package")
+			package_name="${package_name/.git/""}"
+
+			packages+=(["$package_name"]="$package")
+
+			packages_to_build[index]="$package_name"
+
+			echo "Building $package_name ($package)"
+		elif [[ -f "$package" && "$package" == *".tar.gz" ]]; then
+			# If it's a locally-stored tar.gz archive, add it to the list with 'nourl'
+			packages+=(["$package"]="nourl")
+		else
+			# Finally, give up
+			echo "Error: Package '$package' not in CONFIG!";
+			graceful_exit 1
+		fi
 	fi;
 done
 
