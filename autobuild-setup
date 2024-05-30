@@ -9,7 +9,6 @@ if [[ "$(whoami)" != _autobuild ]]; then
 	exit 1
 fi
 
-system_tmp_directory=$(dirname "$(mktemp -u)")
 local_storage_directory="/var/autobuild"
 autobuild_directory="/usr/share/autobuild"
 window_title="Autobuild settings"
@@ -18,35 +17,14 @@ BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 # shellcheck source=./build-farm/scripts/scripts.sh
 . "$BUILDFARM_SCRIPTS_FILE"
 
-# Signal trapping so we can exit gracefully
-# Reroute SIGINT, SIGTERM, and SIGEXIT to the clean_exit function defined below
-trap 'clean_exit INT' "1"
-trap 'clean_exit TERM' "1"
-trap 'clean_exit EXIT' "1"
-
-function clean_temporary_files() {
-	# Clean any temporary files we may have created
-	rm -f "$system_tmp_directory/autobuild.github_conf"
-	rm -f "$system_tmp_directory/autobuild.github_conf.gpg"
-	rm -f "$system_tmp_directory/autobuild.github_token"
-	rm -f "$system_tmp_directory/autobuild.github_token.gpg"
-	rm -f "$system_tmp_directory/autobuild.credential_helper"
-}
-
-function clean_exit() {
-	clean_temporary_files
-	echo "" # Clean terminal window after curses display
-	exit 0
-}
-
 function setup_single_vm() {
 	if [[ $# != 1 ]]; then
-		echo "bag args to setup_single_vm" && clean_exit
+		echo "bag args to setup_single_vm" && exit
 	fi
 	local ARCH="$1"
 
 	ARCH_DIRECTORY="$local_storage_directory/build-farm/debian-stable-$ARCH"
-	cd "$ARCH_DIRECTORY" || (echo ""; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; clean_exit)
+	cd "$ARCH_DIRECTORY" || (echo ""; echo "Local storage directory is not properly configured"; echo "Run this script through 'autobuild -s'"; sleep 3; exit)
 
 	rm -f "./image.qcow"
 	rm -f "./preseed.cfg"
@@ -64,21 +42,9 @@ function setup_single_vm() {
 }
 
 function setup_build_farm() {
-	amd64_vm_is_configured=false
-	i386_vm_is_configured=false
-	arm64_vm_is_configured=false
-
-	if [[ -f "$local_storage_directory/build-farm/debian-stable-amd64/image.qcow" ]]; then
-		amd64_vm_is_configured=true
-	fi
-
-	if [[ -f "$local_storage_directory/build-farm/debian-stable-i386/image.qcow" ]]; then
-		i386_vm_is_configured=true
-	fi
-
-	if [[ -f "$local_storage_directory/build-farm/debian-stable-arm64/image.qcow" ]]; then
-		arm64_vm_is_configured=true
-	fi
+	amd64_vm_is_configured=$(test -f "$local_storage_directory/build-farm/debian-stable-amd64/image.qcow" && echo "true" || echo "false")
+	i386_vm_is_configured=$(test -f "$local_storage_directory/build-farm/debian-stable-i386/image.qcow" && echo "true" || echo "false")
+	arm64_vm_is_configured=$(test -f "$local_storage_directory/build-farm/debian-stable-arm64/image.qcow" && echo "true" || echo "false")
 
 	amd64_info_string="Not installed"
 	i386_info_string="Not installed"
@@ -123,79 +89,10 @@ function setup_build_farm() {
 
 }
 
-function setup_github_https() {
-	echo "machine github.com" > "$system_tmp_directory/autobuild.github_conf"
-	echo "" >> "$system_tmp_directory/autobuild.github_conf"
-
-	{ gpg_email="$(dialog --title "$window_title" \
-		--inputbox "Enter the email address associated with your GPG key:" 15 55 \
-		2>&1 1>&3 3>&- )"; } 3>&1
-
-	if [[ "$gpg_email" == "" ]]; then
-		clean_temporary_files
-		return
-	fi
-	
-	{ github_username="$(dialog --title "$window_title" \
-		--inputbox "Enter your GitHub username:" 15 55 \
-		2>&1 1>&3 3>&- )"; } 3>&1
-	
-	if [[ "$github_username" == "" ]]; then
-		clean_temporary_files
-		return
-	fi
-
-	echo "login $github_username" >> "$system_tmp_directory/autobuild.github_conf"
-	
-	echo "" >> "$system_tmp_directory/autobuild.github_conf"
-
-	{ github_access_token="$(dialog --title "$window_title" \
-		--inputbox "Enter your GitHub Access Token:" 15 55 \
-		2>&1 1>&3 3>&- )"; } 3>&1
-	
-	if [[ "$github_access_token" == "" ]]; then
-		clean_temporary_files
-		return
-	fi
-
-	echo "password $github_access_token" >> "$system_tmp_directory/autobuild.github_conf"
-	
-	echo "" >> "$system_tmp_directory/autobuild.github_conf"
-
-	echo "protocol https"  >> "$system_tmp_directory/autobuild.github_conf"
-
-	echo "$github_access_token" > "$system_tmp_directory/autobuild.github_token"
-
-	gpg --output "$system_tmp_directory/autobuild.github_conf.gpg" --recipient "$gpg_email" -e "$system_tmp_directory/autobuild.github_conf"
-
-	gpg --output "$system_tmp_directory/autobuild.github_token.gpg" --recipient "$gpg_email" -e "$system_tmp_directory/autobuild.github_token"
-
-	rm -f "$system_tmp_directory/autobuild.github_conf"
-	rm -f "$system_tmp_directory/autobuild.github_token"
-
-	echo "#!/usr/bin/env bash" > "$system_tmp_directory/autobuild.credential_helper"
-	echo "" >> "$system_tmp_directory/autobuild.credential_helper"
-	echo "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl -f /etc/git/github-credentials.gpg get" >> "$system_tmp_directory/autobuild.credential_helper"
-
-	echo ""
-
-	echo "!! Github over HTTPS configuration files will be placed in /etc/git/ !!"
-	echo "!! Moving them to /etc/git/ requires temporary root permissions !!"
-	echo ""
-
-	sudo mkdir -p /etc/git
-
-	sudo mv "$system_tmp_directory/autobuild.github_conf.gpg" "/etc/git/github-credentials.gpg"
-	sudo mv "$system_tmp_directory/autobuild.github_token.gpg" "/etc/git/github-token.gpg"
-	sudo mv "$system_tmp_directory/autobuild.credential_helper" "/etc/git/credential-helper"
-
-	sudo chmod +x "/etc/git/credential-helper"
-	sudo chmod +x "/usr/share/doc/git/contrib/credential/netrc/git-credential-netrc.perl"
-
-	git config --global credential.helper /etc/git/credential-helper
-	git config --global user.name "$github_username"
-
-	dialog --title "$window_title" --infobox "GitHub over HTTPS is now set up!" 15 55; sleep 3
+function clear_builds_directory() {
+	rm -rf "${local_storage_directory:?}/builds/"*
+	dialog --title "$window_title" \
+		--infobox "Cleared $local_storage_directory/builds" 15 55; sleep 3
 }
 
 function setup_main_menu() {
@@ -203,20 +100,20 @@ function setup_main_menu() {
 		--menu "These settings can be reached anytime with 'autobuild -s'" 15 55 \
 		3 \
 		1 "Install build farm" \
-		2 "Set up Github over HTTPS" \
+		2 "Clear 'builds' directory" \
 		3 "Exit" \
 		2>&1 1>&3 3>&- )"; } 3>&1 # Capture stderr output into next_page variable
 					# 'dialog' writes user responses to stderr
 
 	case $next_page in
 		"" | 3) # User pressed "cancel" or "Exit"
-			clean_exit ;;
+			exit ;;
 		1)
 			setup_build_farm
 			setup_main_menu
 			;;
 		2)
-			setup_github_https
+			clear_builds_directory
 			setup_main_menu
 			;;
 
