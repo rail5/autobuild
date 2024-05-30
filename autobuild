@@ -54,3 +54,5 @@ socat -t 86400 - UNIX-CONNECT:/var/run/autobuild.socket <<<"$passed_options" | t
 if [[ $ring_bell == true ]]; then
 	paplay /usr/share/autobuild/bell.ogg
 fi
+
+graceful_exit
