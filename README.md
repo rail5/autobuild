@@ -8,7 +8,7 @@ Automatically build & distribute Debian packages
 
 This program will **automatically**:
 
-- Download Debian package sources from a git repo
+- Retrieve Debian package sources from a git repo or .tar.gz archive
 
 - Launch a virtual QEMU build-farm & build those packages for various architectures
 
@@ -35,7 +35,7 @@ sudo apt install autobuild
 
 After installing, run `autobuild -s` to complete set-up.
 
-Your **CONFIG** file can be edited with `autobuild -c`, and is where you will tell autobuild where to find your packages, as well as other settings
+Your **CONFIG** file can be found at `/var/autobuild/config.toml`, and is where you can tell autobuild where to find your packages, as well as other settings
 
 ### Usage
 
