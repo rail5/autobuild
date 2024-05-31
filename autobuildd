@@ -201,7 +201,7 @@ function build_package_universal() {
 	# Move packages to 'release' directory
 	mv "$autobuild_temp_directory/buildfarm-debs/"* "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.deb "$releasedir/" 2>/dev/null
-	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.tar.gz "$releasedir/" 2>/dev/null
+	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.tar* "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.dsc "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.build "$releasedir/" 2>/dev/null
 	mv "$autobuild_temp_directory/$pkgs_build_base_directory/deb/"*.buildinfo "$releasedir/" 2>/dev/null
@@ -551,18 +551,26 @@ function prepare_git_debian_repo() {
 	# Clone the git repo into a local directory
 	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
 	git clone "$git_debianrepo" "repo" -q 2>/dev/null
+
 	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+
+	git config user.email "$GITHUB_EMAIL"
+        git config user.name "$GITHUB_OWNER"
+
 	git reset --hard
 	git pull -q
 }
 
 function close_git_debian_repo() {
 	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+
+	# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
+        local push_url="${git_debianrepo/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
 	
 	# Push any changes that we made before we called this function
 	git add --all
 	git commit -m "Updated packages"
-	git push origin -q
+	git push "$push_url" --all -q
 }
 
 function push_to_debian_repo() {
@@ -867,6 +875,8 @@ fi
 
 ### Github
 GITHUB_OWNER=$(jq -r ".github.repo_owner" <<<"$config_json")
+
+GITHUB_EMAIL=$(jq -r ".github.email" <<<"$config_json")
 
 ### Check for Github access token
 GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")

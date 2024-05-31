@@ -18,6 +18,9 @@ package_urls = [
 # Owner username
 repo_owner = "rail5"
 
+# Github Email
+email = "andrew@rail5.org"
+
 # Access token
 access_token = "github_access_token_here"
 
