@@ -1,3 +1,23 @@
+autobuild (3.0.2) stable; urgency=medium
+
+  * Patched some bugs with v3 debian repo pushing. Github email now must
+    be stored in config file, unfortunately. This, the username, and the
+    access token are necessary to push changes -- previously, this
+    wasn't a problem, when autobuild was run as the user (rather than as
+    the _autobuild system user), because we could assume that the user
+    had their git configured properly. But now that we're operating out
+    of /var/autobuild with a system user distinct from the normal user,
+    we need to handle this ourselves. In the meantime, reprepro was
+    complaining about being unable to find .tar.xz files which were
+    necessary to publish changes. I'm not sure if reprepro changed, in
+    that it didn't require these before, or if debuild changed, in that
+    it used to produce .tar.gz files instead of .tar.xz files, or
+    neither changed but something else happened. In either case,
+    autobuild now saves tar archives of ANY kind, where before it used
+    to only save .tar.gz files, from debuild.
+
+ -- rail5 <andrew@rail5.org>  Fri, 31 May 2024 17:14:04 +0800
+
 autobuild (3.0.1) stable; urgency=medium
 
   * Removed (now unneeded) dependency and updated manual
