@@ -1,3 +1,9 @@
+autobuild (3.0.1) stable; urgency=medium
+
+  * Removed (now unneeded) dependency and updated manual
+
+ -- rail5 <andrew@rail5.org>  Fri, 31 May 2024 16:14:28 +0800
+
 autobuild (3.0.0) stable; urgency=medium
 
   * Version 3 release
