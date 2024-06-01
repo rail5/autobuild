@@ -556,8 +556,11 @@ function prepare_git_debian_repo() {
 		git config user.email "$GITHUB_EMAIL"
 		git config user.name "$GITHUB_OWNER"
 
+		# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
+		local pull_url="${REPO_GHPAGES_URL/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
+
 		git reset --hard
-		git pull -q
+		git pull "$pull_url" -q
 	fi
 }
 
