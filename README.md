@@ -6,7 +6,7 @@ Automatically build & distribute Debian packages
 
 ## What does it do?
 
-This program will **automatically**:
+This program can **automatically**:
 
 - Retrieve Debian package sources from a git repo or .tar.gz archive
 
@@ -14,7 +14,9 @@ This program will **automatically**:
 
 - Create GitHub/Forgejo release pages for those packages
 
-- Push those packages to a Debian Repository hosted on GitHub Pages (or similar service)
+- Create a Debian Repository to distribute packages (which can be hosted either via GitHub Pages or local web server)
+
+- Push those packages to said Debian Repository
 
 Autobuild is also used to build & distribute itself.
 
@@ -25,7 +27,7 @@ Autobuild is also used to build & distribute itself.
 Autobuild can be easily installed via the [deb.rail5.org](https://deb.rail5.org) repository:
 
 ```
-sudo curl -s -o /etc/apt/trusted.gpg.d/rail5.gpg "https://deb.rail5.org/rail5.gpg"
+sudo curl -s -o /etc/apt/trusted.gpg.d/rail5-signing-key.gpg "https://deb.rail5.org/rail5-signing-key.gpg"
 sudo curl -s -o /etc/apt/sources.list.d/rail5.list "https://deb.rail5.org/rail5.list"
 sudo apt update
 sudo apt install autobuild
