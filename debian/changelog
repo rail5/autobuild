@@ -1,3 +1,13 @@
+autobuild (3.1.0) stable; urgency=medium
+
+  * Autobuild now creates a new Debian repo for the user, rather than
+    relying on the user already owning one.
+    This repo can be shipped either as a GitHub Pages
+    site, or via some web server on the host machine, etc. We just
+    create the files.
+
+ -- rail5 <andrew@rail5.org>  Sat, 01 Jun 2024 16:36:02 +0800
+
 autobuild (3.0.2) stable; urgency=medium
 
   * Patched some bugs with v3 debian repo pushing. Github email now must
