@@ -25,6 +25,8 @@ pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
 CONFIG_FILE="$local_storage_directory/config.toml"
 
+REPO_CONFIG_FILE="$local_storage_directory/repo/autobuild_repo.conf"
+
 BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 
 if [ ! -d "$local_storage_directory" ]; then
@@ -548,29 +550,29 @@ function push_forgejo_release_page() {
 }
 
 function prepare_git_debian_repo() {
-	# Clone the git repo into a local directory
-	cd "$local_storage_directory" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
-	git clone "$git_debianrepo" "repo" -q 2>/dev/null
+	if [[ $REPO_IS_GHPAGES == "true" ]]; then
+		cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; graceful_exit 1; }
 
-	cd "repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+		git config user.email "$GITHUB_EMAIL"
+		git config user.name "$GITHUB_OWNER"
 
-	git config user.email "$GITHUB_EMAIL"
-        git config user.name "$GITHUB_OWNER"
-
-	git reset --hard
-	git pull -q
+		git reset --hard
+		git pull -q
+	fi
 }
 
 function close_git_debian_repo() {
-	cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; echo "Try editing your CONFIG file with 'autobuild -c'"; graceful_exit 1; }
+	if [[ $REPO_IS_GHPAGES == "true" ]]; then
+		cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; graceful_exit 1; }
 
-	# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
-        local push_url="${git_debianrepo/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
-	
-	# Push any changes that we made before we called this function
-	git add --all
-	git commit -m "Updated packages"
-	git push "$push_url" --all -q
+		# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
+		local push_url="${REPO_GHPAGES_URL/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
+		
+		# Push any changes that we made before we called this function
+		git add --all
+		git commit -m "Updated packages"
+		git push "$push_url" --all -q
+	fi
 }
 
 function push_to_debian_repo() {
@@ -594,7 +596,7 @@ function push_to_debian_repo() {
 	
 	# Add .changes files to the repo
 	for changes_file in "$base_release_directory/$PKGNAME/"*.changes; do
-		reprepro -P optional include "$debian_distribution" "$changes_file"
+		reprepro --ignore=wrongdistribution -P optional include "$debian_distribution" "$changes_file"
 	done
 }
 
@@ -779,6 +781,7 @@ building_locally=false
 building_on_amd64=false
 building_on_i386=false
 building_on_arm64=false
+debian_repo_is_configured=false
 distribute_to_debian_repo=false
 
 while true; do
@@ -815,7 +818,15 @@ while true; do
 			# Handled by the autobuild client
 			shift ;;
 		-d | --debian-repo )
-			distribute_to_debian_repo=true; shift ;;
+			if [[ -f "$REPO_CONFIG_FILE" ]]; then
+				debian_repo_is_configured=true
+			fi
+			if [[ $debian_repo_is_configured == "true" ]]; then
+				distribute_to_debian_repo=true
+			else
+				echo "Debian Repository is not configured"
+			fi
+			shift ;;
 		-f | --forgejo-page )
 			make_forgejo_release_pages=true; shift ;;
 		-g | --github-page )
@@ -881,8 +892,6 @@ GITHUB_EMAIL=$(jq -r ".github.email" <<<"$config_json")
 ### Check for Github access token
 GITHUB_ACCESS_TOKEN=$(jq -r ".github.access_token" <<<"$config_json")
 
-git_debianrepo=$(jq -r ".github.git_debian_repo" <<<"$config_json")
-
 ### Forgejo
 FORGEJO_INSTANCE_URL=$(jq -r ".forgejo.instance_url" <<<"$config_json")
 
@@ -890,6 +899,16 @@ FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
 
 ### Check for Forgejo access token
 FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
+
+
+# If the Debian Repo has been configured, parse that config file
+if [[ $debian_repo_is_configured == "true" ]]; then
+	repo_config_json=$(toml2json "$REPO_CONFIG_FILE")
+
+	REPO_IS_GHPAGES=$(jq -r ".repo.ghpages" <<<"$repo_config_json")
+
+	REPO_GHPAGES_URL=$(jq -r ".repo.ghpages_url" <<<"$repo_config_json")
+fi
 
 ##################################################
 

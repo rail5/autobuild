@@ -16,24 +16,22 @@ package_urls = [
 
 [github]
 # Owner username
-repo_owner = "rail5"
+#repo_owner = "rail5"
 
 # Github Email
-email = "andrew@rail5.org"
+#email = "andrew@rail5.org"
 
 # Access token
-access_token = "github_access_token_here"
-
-git_debian_repo = "https://github.com/rail5/ppa.git"
+#access_token = "github_access_token_here"
 
 [forgejo]
 # The distribution settings assume that the repository names are the same across github/forgejo/etc
 
 # Location of your forgejo instance
-instance_url = "https://git.disroot.org"
+#instance_url = "https://git.disroot.org"
 
 # Owner username
-repo_owner = "rail5"
+#repo_owner = "rail5"
 
 # Access token
-access_token = "forgejo_access_token_here"
+#access_token = "forgejo_access_token_here"

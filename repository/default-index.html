@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Autobuild</title>
+	<style>
+	.container {
+		display: inline-block;
+		border: 1px solid black;
+		background-color: #212121;
+		color: #ffffff;
+	}
+	</style>
+</head>
+<body>
+	<h1>Welcome to Autobuild!</h1>
+	If you see this page, Autobuild is configured to serve a Debian Repository. This default page can be replaced.
+	<br>
+	<br>
+	Users can configure Debian to use this repository as follows:
+	<br>
+	<div class="container">
+		<pre>
+sudo curl -s -o /etc/apt/trusted.gpg.d/%REPO_FRIENDLYNAME%-signing-key.gpg "%REPO_URL%/%REPO_FRIENDLYNAME%-signing-key.gpg"
+
+sudo curl -s -o /etc/apt/sources.list.d/%REPO_FRIENDLYNAME%.list "%REPO_URL%/%REPO_FRIENDLYNAME%.list"
+
+sudo apt update
+		</pre>
+	</div>
+</body>
+</html>

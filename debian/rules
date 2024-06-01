@@ -5,9 +5,11 @@
 override_dh_auto_install:
 	pandoc --standalone --to man "$$(pwd)/manual/autobuild.1.md" -o "$$(pwd)/debian/autobuild.1"
 	mkdir -p "$$(pwd)/debian/autobuild/usr/share/autobuild"
+	mkdir -p "$$(pwd)/debian/autobuild/usr/share/autobuild/repository"
 	cp config.toml "$$(pwd)/debian/autobuild/usr/share/autobuild/config.toml"
 	cp -r build-farm "$$(pwd)/debian/autobuild/usr/share/autobuild/build-farm"
 	cp bell.ogg "$$(pwd)/debian/autobuild/usr/share/autobuild/bell.ogg"
+	cp repository/default-index.html "$$(pwd)/debian/autobuild/usr/share/autobuild/repository/default-index.html"
 	install -D -m 0755 autobuildd "$$(pwd)/debian/autobuild/usr/bin/autobuildd"
 	install -D -m 0755 autobuild "$$(pwd)/debian/autobuild/usr/bin/autobuild"
 	install -D -m 0755 autobuild-setup "$$(pwd)/debian/autobuild/usr/bin/autobuild-setup"
