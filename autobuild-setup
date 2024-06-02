@@ -198,7 +198,6 @@ EOF
 	default_index_html_code="${default_index_html_code//\%REPO_URL\%/"$repo_url"}"
 
 	cat > "${local_storage_directory:?}/repo/index.html" <<<"$default_index_html_code"
-	cp "${autobuild_directory:?}/repository/run_prettify.js" "${local_storage_directory:?}/repo/run_prettify.js"
 
 	# Will this be some web server, or GitHub Pages?
 	# If it's GitHub Pages, we'll have to push changes etc rather than just change files
