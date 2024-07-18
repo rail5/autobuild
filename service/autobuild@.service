@@ -10,5 +10,6 @@ ExecStart=/usr/bin/autobuildd
 ExecReload=/bin/kill -HUP $MAINPID
 StandardInput=socket
 StandardOutput=socket
-StandardError=journal
+# StandardError=journal
+StandardError=socket
 MountFlags=slave
