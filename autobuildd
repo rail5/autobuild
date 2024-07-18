@@ -591,6 +591,9 @@ function push_to_debian_repo() {
 	fi
 	
 	local PKGNAME="$1"
+
+	PKGNAME="$(basename "$PKGNAME")" # In case $PKGNAME is a file path to a .tar.gz archive
+        PKGNAME="${PKGNAME/.tar.gz/""}"
 	
 	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool" | head -n 1)")
 
