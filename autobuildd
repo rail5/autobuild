@@ -593,6 +593,11 @@ function push_to_debian_repo() {
 	local PKGNAME="$1"
 	
 	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool" | head -n 1)")
+
+	if [[ "$repo_base_directory" == "." ]]; then
+                repo_base_directory="$local_storage_directory/repo" # Handle if 'pool' not found
+        fi
+
 	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; graceful_exit 1; }
 
 	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
