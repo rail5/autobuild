@@ -1,3 +1,10 @@
+autobuild (3.1.2) stable; urgency=medium
+
+  * Forcefully set 755 on /var/autobuild. This should fix autobuild on
+    Ubuntu
+
+ -- rail5 <andrew@rail5.org>  Fri, 23 Aug 2024 11:34:41 +0800
+
 autobuild (3.1.1) stable; urgency=medium
 
   * Output daemon errors to the socket until we're more production-ready
