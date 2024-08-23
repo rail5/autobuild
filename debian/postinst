@@ -19,6 +19,9 @@ fi
 # Make sure the autobuild user owns the /var/autobuild directory
 chown _autobuild /var/autobuild
 
+# Set permissions on /var/autobuild
+chmod 755 /var/autobuild
+
 # Enable and start the autobuild service
 deb-systemd-invoke enable autobuild.socket
 deb-systemd-invoke start autobuild.socket
