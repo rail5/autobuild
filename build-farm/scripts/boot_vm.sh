@@ -27,7 +27,7 @@ function boot_vm() {
 			$ACCEL \
 			-net user,hostfwd=tcp::$SSHPORT-:22 \
 			-net nic \
-			-drive if=virtio,file=$IMAGE_DIRECTORY/image.qcow,format=qcow2,id=hd \
+			-drive if=virtio,file=$IMAGE,format=qcow2,id=hd \
 			$OPTIONAL_EXTRA_COMMAND \
 			-serial telnet:localhost:$TELNET_PORT,server,nowait \
 			-nographic"
