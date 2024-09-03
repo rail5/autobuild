@@ -106,7 +106,7 @@ function install_vm() {
 		ARCH_STRING="i386"
 	elif [[ "$ARCH" == "arm64" ]]; then
 		ARCH_STRING="aarch64"
-		OPTIONAL_EXTRA_COMMAND="-drive file=./debian-$ARCH-netinst-hl.iso,id=cdrom,if=none,media=cdrom -device virtio-scsi-device -device scsi-cd,drive=cdrom"
+		OPTIONAL_EXTRA_COMMAND="-drive file=./debian-$ARCH-netinst-hl.iso,id=cdrom,if=none,media=cdrom -device virtio-scsi-device -device scsi-cd,drive=cdrom,bootindex=1"
 	fi
 
 	IMAGE="$ARCH_DIRECTORY/image.qcow"
