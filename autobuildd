@@ -454,7 +454,7 @@ function push_github_release_page() {
 	### (2) Replace newline chars with '\n' (literal)
 	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
 	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | awk -F* '{ s = ""; for (i = 2; i <= NF; i++) s = s $i " "; print s }')
+	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | awk -F"  * " '{ s = ""; for (i = 2; i <= NF; i++) s = s $i " "; print s }' | sed '/^[[:space:]]*$/d' | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g')
 
 	## Get version number from package source using dpkg-parsechangelog
 	### Pipe into sed to remove the ending newline char
@@ -512,7 +512,7 @@ function push_forgejo_release_page() {
 	### (2) Replace newline chars with '\n' (literal)
 	### (3) Escape quotes (" to \\\") [See 'curl' statement below to see why a triple-backslash is needed]
 	### (4) Strip down to JUST the latest changelog message (Not any other metadata, just the message the author wrote) (Everything after the first '* ')
-	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g' | awk -F* '{ s = ""; for (i = 2; i <= NF; i++) s = s $i " "; print s }')
+	CHANGELOG=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field changes | awk -F"  * " '{ s = ""; for (i = 2; i <= NF; i++) s = s $i " "; print s }' | sed '/^[[:space:]]*$/d' | sed -z 's/\\/\\\\/g' | sed -z 's/\n  /\\n/g' | sed -z 's/\n/\\n/g' | sed -z 's/\"/\\\\\\\"/g')
 
 	## Get version number from package source using dpkg-parsechangelog
 	### Pipe into sed to remove the ending newline char
