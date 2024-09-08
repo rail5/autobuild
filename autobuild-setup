@@ -170,6 +170,7 @@ Architectures: source amd64 i386 arm64
 Components: main
 Description: Apt repository for $user_name
 SignWith: $signing_key_fingerprint
+Contents: .gz
 EOF
 
 	# Ask the user for the repo URL
