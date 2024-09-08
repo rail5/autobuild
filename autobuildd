@@ -143,6 +143,27 @@ function build_package_universal() {
 	cd "$package_directory" || { echo "Could not cd into \"$package_directory\""; echo "Build environment appears to have become corrupted in the time since autobuild started running"; graceful_exit 1; }
 
 	if [[ "$GITURL" != "nourl" ]]; then
+		local owner_string="" token_string="" git_domain="" forgejo_instance_domain=""
+		
+		git_domain="$(awk -F[/:] '{print tolower($4)}' <<<"$GITURL")"
+		forgejo_instance_domain="$(awk -F[/:] '{print tolower($4)}' <<<"$FORGEJO_INSTANCE_URL")"
+
+		# If we're pulling from Github, set owner/token to Github owner & Github access token
+		# (So that we can pull from private repos if we want)
+		if [[ "$git_domain" == "github.com" ]]; then
+			owner_string="$GITHUB_OWNER"
+			token_string="$GITHUB_ACCESS_TOKEN"
+		# Otherwise, check if we're pulling from the user's specified Forgejo instance etc etc
+		elif [[ "$git_domain" == "$forgejo_instance_domain" ]]; then
+			owner_string="$FORGEJO_OWNER"
+			token_string="$FORGEJO_ACCESS_TOKEN"
+		fi
+
+		# Only set the credentials if the user has supplied them in their config file
+		if [[ "$owner_string" != "" ]] && [[ "$token_string" != "" ]]; then
+			GITURL="${GITURL/:\/\//:\/\/$owner_string:$token_string@}"
+		fi
+
 		git clone "$GITURL" "$PKGNAME" -q 2>/dev/null # Clone in case we don't already have it
 	else
 		# If "nourl," that means we were given a .tar.gz archive to handle as $PKGNAME
