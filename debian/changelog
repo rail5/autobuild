@@ -1,3 +1,9 @@
+autobuild (3.1.6) stable; urgency=medium
+
+  * Added config file editor to autobuild -s
+
+ -- rail5 <andrew@rail5.org>  Sun, 22 Sep 2024 14:49:08 +0800
+
 autobuild (3.1.5) stable; urgency=medium
 
   * Enable contents listing by default to work with apt-file
