@@ -24,6 +24,9 @@ package_urls = [
 # Access token
 #access_token = "github_access_token_here"
 
+# Github Debian Repo URL
+#git_debian_repo = "github_debian_repo_url_here" # This will be set by autobuild -s if you configure your debian repo
+
 [forgejo]
 # The distribution settings assume that the repository names are the same across github/forgejo/etc
 
