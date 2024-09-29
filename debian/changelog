@@ -1,3 +1,9 @@
+autobuild (3.1.7) stable; urgency=medium
+
+  * Copy config file to /var/autobuild on new installs in -s
+
+ -- rail5 <andrew@rail5.org>  Sun, 29 Sep 2024 08:27:23 +0800
+
 autobuild (3.1.6) stable; urgency=medium
 
   * Added config file editor to autobuild -s
