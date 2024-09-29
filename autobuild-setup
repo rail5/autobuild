@@ -18,6 +18,10 @@ window_title="Autobuild setup"
 mkdir -p "$local_storage_directory/build-farm" 2>/dev/null
 cp -ru --preserve=timestamps "${autobuild_directory:?}/build-farm/"* "${local_storage_directory:?}/build-farm/"
 
+if [ ! -f "$CONFIG_FILE" ]; then
+	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
+fi
+
 BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 # shellcheck source=./build-farm/scripts/scripts.sh
 . "$BUILDFARM_SCRIPTS_FILE"
