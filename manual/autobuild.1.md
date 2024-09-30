@@ -37,6 +37,10 @@ The configuration file can be found at /var/autobuild/config.toml. You may edit 
 
     List packages present in the config file and quit
 
+-L, \--log
+
+    Write output to a specified log file instead of to the terminal
+
 -r, \--remove-old-builds
 
     Remove a given subdirectory under /var/autobuild/builds, and quit

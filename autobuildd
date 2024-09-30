@@ -782,6 +782,10 @@ function display_help() {
 	echo "  --list"
 	echo "    List packages present in the config file and quit"
 	echo ""
+	echo "  -L"
+	echo "  --log"
+	echo "    Write output to a provided file instead of standard output"
+	echo "    e.g.: -L /tmp/some.log"
 	echo "Example:"
 	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
@@ -799,7 +803,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bdfghlo:p:r:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,output:,package:,remove-old-builds:,setup \
+TEMP=$(getopt -o 0123bdfghlL:o:p:r:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,log:,output:,package:,remove-old-builds:,setup \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -867,6 +871,16 @@ while true; do
 			display_help; graceful_exit ;;
 		-l | --list )
 			just_list_packages=true; shift ;;
+		-L | --log )
+			# Open the provided log file and redirect all of our output to it
+			## First make sure we can actually write to the file
+			if [[ -w "$(dirname "$2")" ]]; then
+				exec >>"$2"
+				echo "PID: $$";
+			else
+				echo "Error: $(whoami) user does not have write permissions to '$2'"
+			fi
+			shift ;;
 		-o | --output )
 			# Handled by the autobuild client
 			shift 2 ;;
