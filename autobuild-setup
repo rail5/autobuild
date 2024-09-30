@@ -105,9 +105,10 @@ function create_new_debian_repository() {
 		--inputbox "Input the EMAIL to be associated with the package GPG signing key" 15 55 \
 		2>&1 1>&3 3>&- )"; } 3>&1
 	
-	echo ""
-	echo ""
-	echo "$user_email"
+	if [[ $? -eq 1 ]]; then
+		# User pressed cancel
+		return
+	fi
 
 	# Check if we've already made a key with that email
 	if gpg --list-secret-keys "$user_email"; then
@@ -136,6 +137,11 @@ function create_new_debian_repository() {
 		{ user_name="$(dialog --title "$window_title" \
 			--inputbox "Input the NAME to be associated with the package GPG signing key" 15 55 \
 			2>&1 1>&3 3>&- )"; } 3>&1
+
+		if [[ $? -eq 1 ]]; then
+			# User pressed cancel
+			return
+		fi
 		
 		if [[ $key_exists_already == true ]]; then
 			# Delete the old key before creating the new key
@@ -181,6 +187,11 @@ EOF
 	{ repo_url="$(dialog --title "$window_title" \
 			--inputbox "Input the FULL URL of the Debian Repository\nFor example: https://my.site.com/path/to/repo" 15 55 \
 			2>&1 1>&3 3>&- )"; } 3>&1
+
+	if [[ $? -eq 1 ]]; then
+		# User pressed cancel
+		return
+	fi
 
 	# Get the repo "friendly name":
 	## Remove non-alphanumeric characters from the user's name
@@ -243,6 +254,11 @@ EOF
 		{ ghpages_url="$(dialog --title "$window_title" \
 				--inputbox "Input the FULL URL of the GitHub Repository that will be used\nFor example: https://github.com/user/repository.git" 15 55 \
 				2>&1 1>&3 3>&- )"; } 3>&1
+
+		if [[ $? -eq 1 ]]; then
+			# User pressed cancel
+			return
+		fi
 
 		echo "ghpages_url = \"$ghpages_url\"" >> "${repo_conf_file:?}"
 
