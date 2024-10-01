@@ -37,7 +37,7 @@ sudo apt install autobuild
 
 After installing, run `sudo autobuild -s` to complete set-up.
 
-Your **CONFIG** file can be found at `/var/autobuild/config.toml`, and is where you can tell autobuild where to find your packages, as well as other settings
+Your **CONFIG** file can be found at `/var/autobuild/config.toml`
 
 ### Usage
 
