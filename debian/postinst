@@ -5,10 +5,16 @@ set -e
 # Create the autobuild user
 if ! id -u _autobuild; then
 	adduser --system --home /var/autobuild _autobuild
-	# Make sure the autobuild user has permission to run VMs with KVM acceleration
-	if [[ $(getent group kvm) ]]; then
-		usermod -aG kvm _autobuild
-	fi
+fi
+
+# Make sure the autobuild user has permission to run VMs with KVM acceleration
+if [[ $(getent group kvm) ]]; then
+	usermod -aG kvm _autobuild
+fi
+
+# Make sure the autobuild user has permission to talk to the web frontend
+if [[ $(getent group www-data) ]]; then
+	usermod -aG www-data _autobuild
 fi
 
 # Create the /var/autobuild directory
