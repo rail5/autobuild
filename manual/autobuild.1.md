@@ -12,7 +12,7 @@ autobuild \- Automatically build and distribute Debian packages
 # DESCRIPTION
 Autobuild automatically retrieves Debian source packages (via Git or local tar.gz archive), builds them on a virtual machine build-farm for multiple architectures, and distributes them. It can save the built package locally, distribute them to a GitHub/Forgejo Release Page, and distribute them to a Git-based Debian Repository with reprepro.
 
-The configuration file can be found at /var/autobuild/config.toml. You may edit this file to change various settings.
+The configuration file can be found at /var/autobuild/config.toml. This file may be more conveniently edited via the autobuild -s command.
 
 # OPTIONS
 

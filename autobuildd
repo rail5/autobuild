@@ -733,8 +733,6 @@ function display_help() {
 	echo "This program comes with ABSOLUTELY NO WARRANTY."
 	echo "This is free software (GNU Affero GPL V3), and you are welcome to redistribute it under certain conditions."
 	echo ""
-	echo "You should edit CONFIG and run setup before using this program"
-	echo ""
 	echo "Options:"
 	echo ""
 	echo "  -p"
