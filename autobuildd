@@ -4,9 +4,6 @@
 # Copyright (C) 2024 rail5
 # Free software (GNU Affero GPL v3)
 
-echo "PID: $$" # Echo the PID as the first line of output
-	# This is so other processes can terminate the autobuild daemon early if desired
-
 if [[ "$(whoami)" != "_autobuild" ]]; then
 	echo "Warning: The autobuild daemon should not be run directly"
 	sleep 1
@@ -91,7 +88,16 @@ make_github_release_pages=false
 make_forgejo_release_pages=false
 
 # Where is the daemon saving the built package files?
-output_directory="$local_storage_directory/builds/$$/"
+this_job_id="$(date +%Y-%h-%d.%H:%M:%S).$$"
+output_directory="$local_storage_directory/builds/$this_job_id/"
+
+
+echo "PID: $$" # Echo the PID as the first line of output
+	# This is so other processes can terminate the autobuild daemon early if desired
+echo "JOBID: $this_job_id" # Echo the job ID
+	# This is so a client can find the output directory for the builds
+	# In /var/autobuild/builds/job-id/
+
 
 ## SSH connection into the build-farm VMs
 SSHPASSWORD="debianpassword"
@@ -876,7 +882,8 @@ while true; do
 			## First make sure we can actually write to the file
 			if [[ -w "$(dirname "$2")" ]]; then
 				exec >>"$2"
-				echo "PID: $$";
+				echo "PID: $$"
+				echo "JOBID: $this_job_id"
 			else
 				echo "Error: $(whoami) user does not have write permissions to '$2'"
 			fi
