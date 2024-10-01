@@ -105,6 +105,10 @@ SSHUSER="debian"
 SSHPORT="-1"
 
 
+# shellcheck source=./build-farm/scripts/scripts.sh
+. "$BUILDFARM_SCRIPTS_FILE"
+
+
 function setup_build_environment() {
 	mkdir -p "$autobuild_temp_directory/$pkgs_build_base_directory"
 
@@ -252,6 +256,10 @@ function upgrade_vm() {
 		echo "bag args to upgrade_vm" && graceful_exit 2
 	fi
 	local ARCH="$1"
+	if [[ $upgrading_vms == false ]]; then
+		echo "Skipping upgrade of $ARCH VM..."
+		return
+	fi
 	echo "---"
 	echo "Upgrading $ARCH VM..."
 	echo "---"
@@ -753,6 +761,14 @@ function display_help() {
 	echo "  --arm64"
 	echo "    Build packages on the arm64 Build Farm VM"
 	echo ""
+	echo "  -u"
+	echo "  --upgrade"
+	echo "    Upgrade Build Farm VMs and exit"
+	echo ""
+	echo "  -n"
+	echo "  --no-upgrade"
+	echo "    Do not upgrade Build Farm VMs before building packages"
+	echo ""
 	echo "  -o"
 	echo "  --output"
 	echo "    Specify directory to save built package files (Default: current directory)"
@@ -809,7 +825,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bdfghlL:o:p:r:s --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,log:,output:,package:,remove-old-builds:,setup \
+TEMP=$(getopt -o 0123bdfghlL:no:p:r:su --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,log:,no-upgrade,output:,package:,remove-old-builds:,setup,upgrade \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -825,6 +841,8 @@ building_on_i386=false
 building_on_arm64=false
 debian_repo_is_configured=false
 distribute_to_debian_repo=false
+upgrading_vms=true
+just_upgrading_vms=false
 
 while true; do
 	case "$1" in
@@ -887,6 +905,9 @@ while true; do
 			else
 				echo "Error: $(whoami) user does not have write permissions to '$2'"
 			fi
+			shift 2 ;;
+		-n | --no-upgrade )
+			upgrading_vms=false
 			shift ;;
 		-o | --output )
 			# Handled by the autobuild client
@@ -906,10 +927,43 @@ while true; do
 		-s | --setup )
 			# Handled by the autobuild client
 			shift ;;
+		-u | --upgrade )
+			# Just upgrade the specified VMs and exit
+			just_upgrading_vms=true
+			shift ;;
 		-- ) shift; break ;;
 		* ) break ;;
 	esac
 done
+
+if [[ $just_upgrading_vms == true ]]; then
+	vms_to_upgrade=()
+
+	upgrade_all_vms=false
+
+	if [[ $building_on_amd64 == false ]] && [[ $building_on_i386 == false ]] && [[ $building_on_arm64 == false ]]; then
+		# No particular VMs specified, upgrade everything we have
+		upgrade_all_vms=true
+	fi
+
+	if [[ $amd64_vm_is_configured == true ]] && { [[ $building_on_amd64 == true ]] || [[ $upgrade_all_vms == true ]]; }; then
+		vms_to_upgrade+=("amd64")
+	fi
+
+	if [[ $i386_vm_is_configured == true ]] && { [[ $building_on_i386 == true ]] || [[ $upgrade_all_vms == true ]]; }; then
+		vms_to_upgrade+=("i386")
+	fi
+
+	if [[ $arm64_vm_is_configured == true ]] && { [[ $building_on_arm64 == true ]] || [[ $upgrade_all_vms == true ]]; }; then
+		vms_to_upgrade+=("arm64")
+	fi
+
+	for arch in "${vms_to_upgrade[@]}"; do
+		upgrade_vm "$arch"
+	done
+
+	graceful_exit 0
+fi
 
 ##################################################
 # Parse config file
@@ -998,10 +1052,6 @@ for index in "${!packages_to_build[@]}"; do
 		fi
 	fi;
 done
-
-
-# shellcheck source=./build-farm/scripts/scripts.sh
-. "$BUILDFARM_SCRIPTS_FILE"
 
 
 # BEFORE WE START:

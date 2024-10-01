@@ -70,6 +70,15 @@ The configuration file can be found at /var/autobuild/config.toml. You may edit 
 
     Build packages on the arm64 build farm VM
 
+-u, \--upgrade
+
+    Upgrade Build Farm VMs and exit
+    If \--amd64, \--i386, and/or \--arm64 are specified, upgrade only those VMs which were specified
+
+-n, \--no-upgrade
+
+    Do not upgrade Build Farm VMs before building packages
+
 ## DISTRIBUTION OPTIONS
 -g, \--github-page
 
