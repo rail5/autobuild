@@ -73,7 +73,7 @@ The configuration file can be found at /var/autobuild/config.toml. You may edit 
 -u, \--upgrade
 
     Upgrade Build Farm VMs and exit
-    If \--amd64, \--i386, and/or \--arm64 are specified, upgrade only those VMs which were specified
+    If --amd64, --i386, and/or --arm64 are specified, upgrade only those VMs which were specified
 
 -n, \--no-upgrade
 
