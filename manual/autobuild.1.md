@@ -7,7 +7,7 @@ autobuild \- Automatically build and distribute Debian packages
 
 `autobuild --amd64 --github-page -p https://github.com/user/package.git`
 
-`autobuild --i386 --debian-repo --forgejo-page -p /path/to/package.tar.gz`
+`autobuild --i386 --debian-repo default --forgejo-page -p /path/to/package.tar.gz`
 
 # DESCRIPTION
 Autobuild automatically retrieves Debian source packages (via Git or local tar.gz archive), builds them on a virtual machine build-farm for multiple architectures, and distributes them. It can save the built package locally, distribute them to a GitHub/Forgejo Release Page, and distribute them to a Git-based Debian Repository with reprepro.
@@ -96,6 +96,7 @@ The configuration file can be found at /var/autobuild/config.toml. This file may
     Distribute built packages to a Git-based Debian Repository via
     reprepro
     This repository must be configured via the config file
+    The argument should be the name of a Debian repo to push to
 
 # AUTHOR
 rail5 (andrew@rail5.org)

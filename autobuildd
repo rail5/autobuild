@@ -22,8 +22,6 @@ pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
 CONFIG_FILE="$local_storage_directory/config.toml"
 
-REPO_CONFIG_FILE="$local_storage_directory/repo/autobuild_repo.conf"
-
 BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 
 if [ ! -d "$local_storage_directory" ]; then
@@ -86,6 +84,7 @@ packages_to_publish_to_repo=()
 release_pages_to_make=()
 make_github_release_pages=false
 make_forgejo_release_pages=false
+debian_repos_to_push_to=()
 
 # Where is the daemon saving the built package files?
 this_job_id="$(date +%Y-%h-%d.%H:%M:%S).$$"
@@ -584,15 +583,40 @@ function push_forgejo_release_page() {
 	done
 }
 
+function parse_debian_repo_config() {
+	if [[ $# != 2 ]]; then
+		echo "bad args to prepare_git_debian_repo" && graceful_exit 1
+	fi
+	local repo_name="$1" requested_option="$2" repo_config_json="" repo_is_ghpages="" repo_ghpages_url="" output=""
+
+	repo_config_json="$(toml2json "$local_storage_directory/repo/${repo_name:?}/autobuild_repo.conf")"
+
+	case "$requested_option" in
+		"repo_is_ghpages")
+			output="$(jq -r ".repo.ghpages" <<<"$repo_config_json")"
+			;;
+		"repo_ghpages_url")
+			output="$(jq -r ".repo.ghpages_url" <<<"$repo_config_json")"
+			;;
+	esac
+	echo "$output"
+}
+
 function prepare_git_debian_repo() {
-	if [[ $REPO_IS_GHPAGES == "true" ]]; then
-		cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; graceful_exit 1; }
+	if [[ $# != 1 ]]; then
+		echo "bad args to prepare_git_debian_repo" && graceful_exit 1
+	fi
+	local repo_name="$1" repo_is_ghpages="" repo_ghpages_url=""
+	repo_is_ghpages="$(parse_debian_repo_config "$repo_name" "repo_is_ghpages")"
+	repo_ghpages_url="$(parse_debian_repo_config "$repo_name" "repo_ghpages_url")"
+	if [[ $repo_is_ghpages == true ]]; then
+		cd "$local_storage_directory/repo/${repo_name:?}" || { echo "Could not cd into \"$local_storage_directory/repo/$repo_name\""; echo "Have you configured your Debian repo properly?"; graceful_exit 1; }
 
 		git config user.email "$GITHUB_EMAIL"
 		git config user.name "$GITHUB_OWNER"
 
 		# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
-		local pull_url="${REPO_GHPAGES_URL/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
+		local pull_url="${repo_ghpages_url/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
 
 		git reset --hard
 		git pull "$pull_url" -q
@@ -600,11 +624,17 @@ function prepare_git_debian_repo() {
 }
 
 function close_git_debian_repo() {
-	if [[ $REPO_IS_GHPAGES == "true" ]]; then
-		cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; graceful_exit 1; }
+	if [[ $# != 1 ]]; then
+		echo "bad args to close_git_debian_repo" && graceful_exit 1
+	fi
+	local repo_name="$1" repo_is_ghpages="" repo_ghpages_url=""
+	repo_is_ghpages="$(parse_debian_repo_config "$repo_name" "repo_is_ghpages")"
+	repo_ghpages_url="$(parse_debian_repo_config "$repo_name" "repo_ghpages_url")"
+	if [[ $repo_is_ghpages == "true" ]]; then
+		cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo/$repo_name\""; echo "Have you configured your Debian repo properly?"; graceful_exit 1; }
 
 		# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
-		local push_url="${REPO_GHPAGES_URL/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
+		local push_url="${repo_ghpages_url/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
 		
 		# Push any changes that we made before we called this function
 		git add --all
@@ -618,25 +648,23 @@ function push_to_debian_repo() {
 
 	## If the Debian Repo in question is hosted as a Git Repository,
 	## Then this should be called AFTER prepare_git_debian_repo() and BEFORE close_git_debian_repo()
-
-	# FIXME: Allow for non-git-based Debian repos. Github pages debian repos are common but not universal
 	
-	if [[ $# != 1 ]]; then
+	if [[ $# != 2 ]]; then
 		echo "bag args to push_to_debian_repo" && graceful_exit 5
 	fi
 	
-	local PKGNAME="$1"
+	local PKGNAME="$1" repo_name="$2"
 
 	PKGNAME="$(basename "$PKGNAME")" # In case $PKGNAME is a file path to a .tar.gz archive
         PKGNAME="${PKGNAME/.tar.gz/""}"
 	
-	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo" -name "pool" | head -n 1)")
+	repo_base_directory=$(dirname "$(find "$local_storage_directory/repo/${repo_name:?}" -name "pool" | head -n 1)")
 
 	if [[ "$repo_base_directory" == "." ]]; then
-                repo_base_directory="$local_storage_directory/repo" # Handle if 'pool' not found
+                repo_base_directory="$local_storage_directory/repo/${repo_name:?}" # Handle if 'pool' not found
         fi
 
-	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; echo "Have you configured your Debian repo properly in the CONFIG file?"; graceful_exit 1; }
+	cd "$repo_base_directory" || { echo "Could not cd into \"$repo_base_directory\""; echo "Have you configured your Debian repo properly?"; graceful_exit 1; }
 
 	debian_distribution=$(grep Codename: <"$repo_base_directory/conf/distributions" | awk '{print $2}' | head -n 1)
 	
@@ -650,13 +678,15 @@ function maybe_publish_to_deb_repo() {
 	if [[ ${#packages_to_publish_to_repo[@]} -gt 0 ]]; then
 		echo "Publishing to repo..."
 		
-		prepare_git_debian_repo
-		
-		for pkg in "${packages_to_publish_to_repo[@]}"; do
-			push_to_debian_repo "$pkg"
+		for repository in "${debian_repos_to_push_to[@]}"; do
+			prepare_git_debian_repo "$repository"
+			
+			for pkg in "${packages_to_publish_to_repo[@]}"; do
+				push_to_debian_repo "$pkg" "$repository"
+			done
+			
+			close_git_debian_repo "$repository"
 		done
-		
-		close_git_debian_repo
 	fi
 }
 
@@ -774,6 +804,7 @@ function display_help() {
 	echo "  -d"
 	echo "  --debian-repo"
 	echo "    Distribute built packages to a Git-based Debian Repository managed with reprepro"
+	echo "    Argument should be the name of a configured repo"
 	echo ""
 	echo "  -g"
 	echo "  --github-page"
@@ -807,8 +838,8 @@ function display_help() {
 	echo "    Write output to a provided file instead of standard output"
 	echo "    e.g.: -L /tmp/some.log"
 	echo "Example:"
-	echo "  autobuild -12dg -p liesel -p bookthief -p polonius"
-	echo "  autobuild --i386 --arm64 --debian-repo --github-page --package liesel --package bookthief --package polonius"
+	echo "  autobuild -12g -d default -p liesel -p bookthief -p polonius"
+	echo "  autobuild --i386 --arm64 --debian-repo default --github-page --package liesel --package bookthief --package polonius"
 	echo "  autobuild -p liesel -o ~/Desktop/"
 }
 
@@ -823,7 +854,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bdfghlL:no:p:r:su --long local,amd64,i386,arm64,bell,debian-repo,forgejo-page,github-page,help,list,log:,no-upgrade,output:,package:,remove-old-builds:,setup,upgrade \
+TEMP=$(getopt -o 0123bd:fghlL:no:p:r:su --long local,amd64,i386,arm64,bell,debian-repo:,forgejo-page,github-page,help,list,log:,no-upgrade,output:,package:,remove-old-builds:,setup,upgrade \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -837,7 +868,6 @@ building_locally=false
 building_on_amd64=false
 building_on_i386=false
 building_on_arm64=false
-debian_repo_is_configured=false
 distribute_to_debian_repo=false
 upgrading_vms=true
 just_upgrading_vms=false
@@ -876,15 +906,31 @@ while true; do
 			# Handled by the autobuild client
 			shift ;;
 		-d | --debian-repo )
-			if [[ -f "$REPO_CONFIG_FILE" ]]; then
-				debian_repo_is_configured=true
-			fi
-			if [[ $debian_repo_is_configured == "true" ]]; then
+			case "$2" in
+				("")
+					# None specified -- use default repo
+					this_debian_repo="default"
+					;;
+				(*[!a-zA-Z0-9\-\_]*)
+					# Invalid characters. Fail closed
+					# Allowed characters: a-z, A-Z, 0-9, -, and _
+					echo "Invalid Debian repository specified: $2"
+					graceful_exit 1
+					;;
+				(*)
+					# No problem. Move on
+					this_debian_repo="$2"
+					;;
+			esac
+
+			if [[ -f "$local_storage_directory/repo/$this_debian_repo/autobuild_repo.conf" ]]; then
 				distribute_to_debian_repo=true
+				debian_repos_to_push_to+=("$this_debian_repo")
 			else
-				echo "Debian Repository is not configured"
+				echo "Debian repository is not configured: $this_debian_repo"
+				graceful_exit 1
 			fi
-			shift ;;
+			shift 2 ;;
 		-f | --forgejo-page )
 			make_forgejo_release_pages=true; shift ;;
 		-g | --github-page )
@@ -1005,16 +1051,6 @@ FORGEJO_OWNER=$(jq -r ".forgejo.repo_owner" <<<"$config_json")
 ### Check for Forgejo access token
 FORGEJO_ACCESS_TOKEN=$(jq -r ".forgejo.access_token" <<<"$config_json")
 
-
-# If the Debian Repo has been configured, parse that config file
-if [[ $debian_repo_is_configured == "true" ]]; then
-	repo_config_json=$(toml2json "$REPO_CONFIG_FILE")
-
-	REPO_IS_GHPAGES=$(jq -r ".repo.ghpages" <<<"$repo_config_json")
-
-	REPO_GHPAGES_URL=$(jq -r ".repo.ghpages_url" <<<"$repo_config_json")
-fi
-
 ##################################################
 
 
@@ -1107,7 +1143,11 @@ fi
 
 # Check if and how we're distributing the built packages
 if [ $distribute_to_debian_repo == true ]; then
-	echo "Publishing packages to Debian repo"
+	echo -n "Publishing packages to Debian repo(s): "
+	for repository in "${debian_repos_to_push_to[@]}"; do
+		echo -n "$repository "
+	done
+	echo ""
 	for pkgname in "${packages_to_build[@]}"; do
 		packages_to_publish_to_repo+=("$pkgname")
 	done
