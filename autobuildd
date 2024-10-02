@@ -631,7 +631,7 @@ function close_git_debian_repo() {
 	repo_is_ghpages="$(parse_debian_repo_config "$repo_name" "repo_is_ghpages")"
 	repo_ghpages_url="$(parse_debian_repo_config "$repo_name" "repo_ghpages_url")"
 	if [[ $repo_is_ghpages == "true" ]]; then
-		cd "$local_storage_directory/repo" || { echo "Could not cd into \"$local_storage_directory/repo/$repo_name\""; echo "Have you configured your Debian repo properly?"; graceful_exit 1; }
+		cd "$local_storage_directory/repo/${repo_name:?}" || { echo "Could not cd into \"$local_storage_directory/repo/$repo_name\""; echo "Have you configured your Debian repo properly?"; graceful_exit 1; }
 
 		# Add our necessary credentials to the URL to push (https://user:pass@github.com/etc)
 		local push_url="${repo_ghpages_url/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
