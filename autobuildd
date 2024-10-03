@@ -36,7 +36,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 	cp "$autobuild_directory/config.toml" "$CONFIG_FILE"
 fi
 
-chmod 600 "$CONFIG_FILE" # Keep it protected!
+chmod 660 "$CONFIG_FILE" # Keep it protected!
 			# Make sure that only autobuild can read/write to this file
 
 mkdir -p "$package_directory"
