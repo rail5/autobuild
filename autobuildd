@@ -835,8 +835,10 @@ function display_help() {
 	echo ""
 	echo "  -L"
 	echo "  --log"
-	echo "    Write output to a provided file instead of standard output"
+	echo "    Write output to a provided file/directory instead of standard output"
+	echo "    If the argument is a directory, create a new file with the name of the Job ID"
 	echo "    e.g.: -L /tmp/some.log"
+	echo "    or: -L /tmp"
 	echo "Example:"
 	echo "  autobuild -12g -d default -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo default --github-page --package liesel --package bookthief --package polonius"
@@ -942,12 +944,18 @@ while true; do
 		-L | --log )
 			# Open the provided log file and redirect all of our output to it
 			## First make sure we can actually write to the file
-			if [[ -w "$(dirname "$2")" ]]; then
-				exec >>"$2"
+			provided_log_file="$2"
+
+			if [[ -d "$provided_log_file" ]]; then
+				provided_log_file="$provided_log_file/$this_job_id.log"
+			fi
+
+			if [[ -w "$(dirname "$provided_log_file")" ]]; then
+				exec >>"$provided_log_file"
 				echo "PID: $$"
 				echo "JOBID: $this_job_id"
 			else
-				echo "Error: $(whoami) user does not have write permissions to '$2'"
+				echo "Error: $(whoami) user does not have write permissions to '$(dirname "$provided_log_file")'"
 			fi
 			shift 2 ;;
 		-n | --no-upgrade )
