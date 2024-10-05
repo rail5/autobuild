@@ -14,3 +14,14 @@ Architecture: all
 Depends: sudo, pulseaudio-utils, build-essential, make, git, wget, curl, devscripts, xz-utils, jq, reserialize, reprepro, sshpass, libarchive-tools, syslinux, syslinux-utils, cpio, genisoimage, qemu-system, qemu-utils, net-tools, dialog, socat, adduser, ${misc:Depends}
 Description: Automatically build & distribute multi-arch Debian packages from source
  Autobuild builds Debian packages from Git sources and distributes them
+
+Package: autobuild-web
+Version: 1.0
+License: AGPL-3.0
+Vendor: rail5 <andrew@rail5.org>
+Priority: optional
+Architecture: all
+Depends: autobuild, php, php-sqlite3, apache2, libapache2-mod-php, ${misc:Depends}
+Recommends: httpd
+Description: Web-based front-end for autobuild
+ Web-based UI to configure and run autobuild

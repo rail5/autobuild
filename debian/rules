@@ -13,3 +13,7 @@ override_dh_auto_install:
 	install -D -m 0755 autobuildd "$$(pwd)/debian/autobuild/usr/bin/autobuildd"
 	install -D -m 0755 autobuild "$$(pwd)/debian/autobuild/usr/bin/autobuild"
 	install -D -m 0755 autobuild-setup "$$(pwd)/debian/autobuild/usr/bin/autobuild-setup"
+	mkdir -p "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web"
+	cp -r web/* "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/"
+	mkdir -p "$$(pwd)/debian/autobuild-web/etc/apache2/conf-available"
+	cp "webconf/autobuild-web.conf" "$$(pwd)/debian/autobuild-web/etc/apache2/conf-available/autobuild-web.conf"

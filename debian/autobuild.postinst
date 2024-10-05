@@ -28,6 +28,18 @@ chown _autobuild /var/autobuild
 # Set permissions on /var/autobuild
 chmod 755 /var/autobuild
 
+# Copy config file
+cp /usr/share/autobuild/config.toml /var/autobuild/config.toml
+
+chown _autobuild /var/autobuild/config.toml
+
+if [[ $(getent group www-data) ]]; then
+	chown _autobuild:www-data /var/autobuild/config.toml
+fi
+
+# Set permissions on config file
+chmod 660 /var/autobuild/config.toml
+
 # Enable and start the autobuild service
 deb-systemd-invoke enable autobuild.socket
 deb-systemd-invoke start autobuild.socket
