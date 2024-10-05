@@ -711,7 +711,7 @@ function save_debs() {
 }
 
 function graceful_interrupt() {
-	echo "Cancelling"
+	echo "Canceled"
 	graceful_exit 1
 }
  
