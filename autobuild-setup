@@ -451,7 +451,7 @@ function save_change_to_config_file() {
 	if [[ $# != 2 ]]; then
 		echo "bag args to save_change_to_config_file" && exit 1
 	fi
-	local package_urls="" github_owner="" github_email="" github_access_token="" github_debian_repo="" forgejo_instance="" forgejo_owner="" forgejo_access_token="" final_config_file="" field_to_edit="$1" new_value="$2"
+	local package_urls="" github_owner="" github_email="" github_access_token="" forgejo_instance="" forgejo_owner="" forgejo_access_token="" final_config_file="" field_to_edit="$1" new_value="$2"
 
 	# First, parse the current contents of the config file
 
