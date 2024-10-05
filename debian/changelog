@@ -1,3 +1,31 @@
+autobuild (3.2.0) unstable; urgency=medium
+
+  * Created first version of autobuild-web package
+    This package provides a web frontend for autobuild accessible at
+    localhost/autobuild
+    A few todo items:
+    (1) At the moment it only works with apache. It should work with any
+    package providing 'httpd'
+    (2) The 'repositories' page hasn't been set up yet
+  * Interrupts now kill the daemon in a much more sensible way
+  * Added support for managing multiple debian repositories
+    Option -d now requires an argument specifying which repo to publish to
+  * Added -u and -n options for upgrading build farm vms
+    -u/--upgrade simply upgrades the build farm vms and then exits
+    -n/--no-upgrade tells autobuild to skip upgrading build farm vms
+    before building your packages
+  * Added locale generation to initrd preseed in build farm VMs
+    This removes the possibility for dubious locale warnings in the build
+    farm VMs which would otherwise pollute our build logs
+  * Generate job id for builds before starting
+    Previously, the builds were saved in /var/autobuild/builds/PID
+    Generating a job ID based on the current timestamp + the PID reduces
+    the chance for collisions in the event that the builds directory
+    hasn't been cleaned
+  * Added -L option to redirect output to a specified log file or folder
+
+ -- rail5 <andrew@rail5.org>  Sun, 06 Oct 2024 00:22:52 +0800
+
 autobuild (3.1.7) stable; urgency=medium
 
   * Copy config file to /var/autobuild on new installs in -s
