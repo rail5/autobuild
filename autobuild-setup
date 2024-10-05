@@ -433,9 +433,6 @@ function get_field_from_config_file() {
 		"github-access-token")
 			result="$(jq -r ".github.access_token" <<<"$config_json")"
 			;;
-		"github-debian-repo")
-			result="$(jq -r ".github.git_debian_repo" <<<"$config_json")"
-			;;
 		"forgejo-instance")
 			result="$(jq -r ".forgejo.instance_url" <<<"$config_json")"
 			;;
@@ -465,7 +462,6 @@ function save_change_to_config_file() {
 	github_owner="$(get_field_from_config_file "github-owner")"
 	github_email="$(get_field_from_config_file "github-email")"
 	github_access_token="$(get_field_from_config_file "github-access-token")"
-	github_debian_repo="$(get_field_from_config_file "github-debian-repo")"
 
 	## Get Forgejo info
 	forgejo_instance="$(get_field_from_config_file "forgejo-instance")"
@@ -486,9 +482,6 @@ function save_change_to_config_file() {
 			;;
 		"github-access-token")
 			github_access_token="$new_value"
-			;;
-		"github-debian-repo")
-			github_debian_repo="$new_value"
 			;;
 		"forgejo-instance")
 			forgejo_instance="$new_value"
@@ -528,9 +521,6 @@ email = \"$github_email\"
 
 # Access token
 access_token = \"$github_access_token\"
-
-# Github Debian Repo URL
-git_debian_repo = \"$github_debian_repo\" # This will be set by autobuild -s if you configure your debian repo
 
 [forgejo]
 # The distribution settings assume that the repository names are the same across github/forgejo/etc
