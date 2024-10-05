@@ -714,9 +714,14 @@ function save_debs() {
 		cp -r "$autobuild_temp_directory/$pkgs_build_base_directory/release/"* "$output_directory/"
 }
 
+# shellcheck disable=SC2317
+## SC2317 says this function is unreachable, because it can't detect that it's called by 'trap' at the top
+## (We're trapping some interrupt signals and rerouting them to this function)
 function graceful_interrupt() {
+	echo ""
+	echo ""
 	echo "Canceled"
-	graceful_exit 1
+	graceful_exit 1 1
 }
  
 function graceful_exit() {
