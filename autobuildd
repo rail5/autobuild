@@ -735,28 +735,6 @@ function graceful_exit() {
 	exit $exit_code
 }
 
-function wait_for_kill() {
-	# This function will be spawned as a child process of the autobuild daemon
-	# The parent process PID should be passed as an argument so we know what to kill
-
-	if [[ $# -lt 1 ]]; then
-		echo "bad args to wait_for_kill"
-		graceful_exit 1
-	fi
-
-	local pid_to_kill="$1"
-
-	# Wait for the kill file to be created.
-	# If we spot the kill file, kill the parent process with SIGTERM
-	# (SIGTERM will be trapped by autobuild so it can go through its graceful_exit process)
-	while [[ ! -f "$system_tmp_directory/autobuild.kill.$pid_to_kill" ]]; do
-		sleep 1
-	done
-
-	rm -f "${system_tmp_directory:?}/autobuild.kill.$pid_to_kill"
-	kill -s TERM "$pid_to_kill"
-}
-
 function display_help() {
 	echo "autobuild"
 	echo "Copyright (C) 2024 rail5"
@@ -847,17 +825,13 @@ function display_help() {
 }
 
 
-# And now the program:
-
-wait_for_kill $$ & # Background wait_for_kill so we can receive termination signals
-
 # Parse the user's provided arguments
 
 arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bd:fghlL:no:p:r:su --long local,amd64,i386,arm64,bell,debian-repo:,forgejo-page,github-page,help,list,log:,no-upgrade,output:,package:,remove-old-builds:,setup,upgrade \
+TEMP=$(getopt -o 0123bd:fghk:lL:no:p:r:su --long local,amd64,i386,arm64,bell,debian-repo:,forgejo-page,github-page,help,kill:,list,log:,no-upgrade,output:,package:,remove-old-builds:,setup,upgrade \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -940,6 +914,8 @@ while true; do
 			make_github_release_pages=true; shift ;;
 		-h | --help )
 			display_help; graceful_exit ;;
+		-k | --kill )
+			kill "$2"; graceful_exit ;;
 		-l | --list )
 			just_list_packages=true; shift ;;
 		-L | --log )

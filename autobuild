@@ -26,7 +26,7 @@ function get_job_id() {
 function graceful_exit() {
 	if [[ -f "$temporary_log_file" ]]; then
 		pid_to_kill=$(get_daemon_pid)
-		touch "/tmp/autobuild.kill.$pid_to_kill"
+		socat -t 86400 - UNIX-CONNECT:/var/run/autobuild.socket >/dev/null 2>&1 <<<"-k $pid_to_kill" # Send kill command to daemon
 		tail --pid="$pid_to_kill" -f /dev/null 2>/dev/null
 		rm -f "/tmp/autobuild.kill.$pid_to_kill" 2>/dev/null
 		rm -f "$temporary_log_file" 2>/dev/null
@@ -36,7 +36,7 @@ function graceful_exit() {
 		rm -rf "${temporary_storage_directory:?}"
 	fi
 
-        exit 0
+	exit 0
 }
 
 # getopt
