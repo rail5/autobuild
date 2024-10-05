@@ -12,7 +12,6 @@ fi
 # Make sure all git requests are *completely* non-interactive
 export GIT_TERMINAL_PROMPT=0
 
-system_tmp_directory=$(dirname "$(mktemp --tmpdir -u)")
 autobuild_temp_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 local_storage_directory="/var/autobuild"
 build_farm_directory="$local_storage_directory/build-farm"
