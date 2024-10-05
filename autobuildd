@@ -315,7 +315,8 @@ function start_build_vm() {
 
 	# Wait for any VMs using our image to shut down
 	## We're ready to boot up again when our vm image file is no longer in use
-	until [[ $(lsof "$build_farm_directory/$ARCHDIR/$VM_IMAGE") == "" ]]; do
+	until [[ $(lsof "$build_farm_directory/$ARCHDIR/$VM_IMAGE" 2>/dev/null) == "" ]]; do
+		echo "Queued"
 		sleep 1
 	done
 
