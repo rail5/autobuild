@@ -1,3 +1,14 @@
+autobuild (3.2.1) unstable; urgency=medium
+
+  * Only remove /var/autobuild/web if apt remove --purge
+  * Removed 1,000 lines of PHP
+    autobuild-web now uses 'toml2json' (provided by 'reserialize')
+    to parse the config file, instead of bundling a 1,000-line toml parser
+  * Patched bug in postinst/postrm maintainer scripts introduced in 3.2.0
+    which would reset your config.toml
+
+ -- rail5 <andrew@rail5.org>  Sun, 06 Oct 2024 11:05:04 +0800
+
 autobuild (3.2.0) unstable; urgency=medium
 
   * Created first version of autobuild-web package
