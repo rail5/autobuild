@@ -11,7 +11,7 @@ fi
 # Reload Apache
 deb-systemd-invoke reload apache2
 
-if [[ -d /var/autobuild/web ]]; then
+if [[ -d /var/autobuild/web ]] && [[ "$1" == purge ]]; then
 	rm -rf /var/autobuild/web
 fi
 
