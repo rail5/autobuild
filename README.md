@@ -39,7 +39,27 @@ After installing, run `sudo autobuild -s` to complete set-up.
 
 Your **CONFIG** file can be found at `/var/autobuild/config.toml`
 
-### Autobuild-web
+### Command-line usage
+
+```
+autobuild --amd64 --i386 --arm64 --package my-debian-package --package my-other-debian-package --github-page
+```
+
+```
+autobuild -123 -p https://github.com/user/my-debian-package -p /path/to/my-other-debian-package.tar.gz -g
+```
+
+The above examples will build your packages *"my-debian-package"* and *"my-other-debian-package"* and then publish them to GitHub Release pages.
+
+```
+autobuild --local -p my-debian-package -o /home/user/
+```
+
+The above example will build your package *locally* (without using the virtual build farm) and save the resulting build in /home/user
+
+See `autobuild --help`, `autobuild -h`, or `man autobuild` for a list of options and how to use them.
+
+## Autobuild-web
 
 A web interface is provided by the **autobuild-web** package:
 
@@ -54,22 +74,3 @@ After installing, it will be available on your web-server at **http://your-domai
 | <img title="" src="https://rail5.org/autobuild/autobuild-web-build-menu.png" alt="build-menu" width="800">         | <img src="https://rail5.org/autobuild/autobuild-web-log-build-in-progress.png" title="" alt="log-progress" width="800">         | <img src="https://rail5.org/autobuild/autobuild-web-log-build-successful.png" title="" alt="log-success" width="800">         |
 | <img title="" src="https://rail5.org/autobuild/autobuild-web-mobile-build-menu.jpeg" alt="build-menu" width="200"> | <img title="" src="https://rail5.org/autobuild/autobuild-web-mobile-log-build-in-progress.jpeg" alt="log-progress" width="200"> | <img src="https://rail5.org/autobuild/autobuild-web-mobile-log-build-successful.jpeg" title="" alt="log-success" width="200"> |
 
-### Command-line usage
-
-```
-autobuild --amd64 --i386 --arm64 --package my-debian-package --package my-other-debian-package --github-page
-```
-
-```
-autobuild -123 -p https://github.com/user/my-debian-package -p /path/to/my-other-debian-package.tar.gz -g
-```
-
-The above examples will build your packages *"my-debian-package"* and *"my-other-debian-package"* (as you've set them up in the CONFIG file) and then publish them to GitHub Release pages.
-
-```
-autobuild --local -p my-debian-package -o /home/user/
-```
-
-The above example will build your package *locally* (without using the virtual build farm) and save the resulting build in /home/user
-
-See `autobuild --help`, `autobuild -h`, or `man autobuild` for a list of options and how to use them.
