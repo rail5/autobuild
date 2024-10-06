@@ -24,7 +24,7 @@ chmod 770 /var/autobuild/web/log
 if [[ -e /usr/share/apache2/apache2-maintscript-helper ]]; then
 	. /usr/share/apache2/apache2-maintscript-helper
 	cp /usr/share/autobuild-web/apache/autobuild-web.conf /etc/apache2/conf-available/autobuild-web.conf
-	apache2_invoke enconf autobuild-web
+	apache2_invoke enconf autobuild-web || true
 	deb-systemd-invoke reload apache2 || true
 fi
 
@@ -38,6 +38,7 @@ if [[ -d /etc/nginx ]]; then
 			fi
 		fi
 	done
+	deb-systemd-invoke reload nginx || true
 fi
 
 #DEBHELPER#

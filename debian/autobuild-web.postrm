@@ -6,7 +6,7 @@ set -e
 if [[ -e /usr/share/apache2/apache2-maintscript-helper ]]; then
 	. /usr/share/apache2/apache2-maintscript-helper
 	apache2_invoke disconf autobuild-web
-	deb-systemd-invoke reload apache2
+	deb-systemd-invoke reload apache2 || true
 fi
 
 if [[ -f /etc/nginx/autobuild-web.conf ]]; then
@@ -17,6 +17,7 @@ if [[ -f /etc/nginx/autobuild-web.conf ]]; then
 			fi
 		fi
 	done
+	deb-systemd-invoke reload nginx || true
 fi
 
 if [[ -d /var/autobuild/web ]] && [[ "$1" == purge ]]; then
