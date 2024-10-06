@@ -9,6 +9,16 @@ if [[ -e /usr/share/apache2/apache2-maintscript-helper ]]; then
 	deb-systemd-invoke reload apache2
 fi
 
+if [[ -f /etc/nginx/autobuild-web.conf ]]; then
+	for site in /etc/nginx/sites-enabled/*; do
+		if [[ -f "$site" ]]; then
+			if grep -q "include /etc/nginx/autobuild-web.conf;" "$site"; then
+				sed -i '/include /etc/nginx/autobuild-web.conf;/d' "$site"
+			fi
+		fi
+	done
+fi
+
 if [[ -d /var/autobuild/web ]] && [[ "$1" == purge ]]; then
 	rm -rf /var/autobuild/web
 fi
