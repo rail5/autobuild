@@ -11,6 +11,10 @@ for ($i = 0; $i < count($debian_repos); $i++) {
 $github_configured = github_is_configured($settings);
 $forgejo_configured = forgejo_is_configured($settings);
 
+$amd64_configured = vm_is_configured("amd64");
+$i386_configured = vm_is_configured("i386");
+$arm64_configured = vm_is_configured("arm64");
+
 if (isset($_GET['submitted']) && !isset($_GET['error'])) {
 	/* Form submitted */
 
@@ -51,13 +55,13 @@ if (isset($_GET['submitted']) && !isset($_GET['error'])) {
 		$valid_arch = false;
 		switch ($architecture) {
 			case "amd64":
-				$valid_arch = true;
+				$valid_arch = $amd64_configured;
 				break;
 			case "i386":
-				$valid_arch = true;
+				$valid_arch = $i386_configured;
 				break;
 			case "arm64":
-				$valid_arch = true;
+				$valid_arch = $arm64_configured;
 				break;
 		}
 
@@ -154,8 +158,12 @@ if (isset($_GET['submitted']) && !isset($_GET['error'])) {
 	die();
 }
 
-$github_checkbox_onoff = $github_configured ? "" : " disabled";
-$forgejo_checkbox_onoff = $forgejo_configured ? "" : " disabled";
+$github_checkbox_enabled	= $github_configured	? "" : " disabled";
+$forgejo_checkbox_enabled	= $forgejo_configured	? "" : " disabled";
+
+$amd64_checkbox_enabled	= $amd64_configured	? "" : " disabled";
+$i386_checkbox_enabled	= $i386_configured	? "" : " disabled";
+$arm64_checkbox_enabled	= $arm64_configured	? "" : " disabled";
 
 display_header();
 
@@ -193,15 +201,15 @@ $arm64_checkbox_onoff = isset($_GET["arch"]) && in_array("arm64", $_GET["arch"])
 							<h3><u>Target Architectures</u></h3>
 							<div class="checkbox-list">
 								<li>
-									<input type="checkbox" id="amd64" name="arch[]" value="amd64"<?php echo $amd64_checkbox_onoff; ?>>
+									<input type="checkbox" id="amd64" name="arch[]" value="amd64"<?php echo $amd64_checkbox_onoff.$amd64_checkbox_enabled; ?>>
 									<label for="amd64">amd64</label>
 								</li>
 								<li>
-									<input type="checkbox" id="i386" name="arch[]" value="i386"<?php echo $i386_checkbox_onoff; ?>>
+									<input type="checkbox" id="i386" name="arch[]" value="i386"<?php echo $i386_checkbox_onoff.$i386_checkbox_enabled; ?>>
 									<label for="i386">i386</label>
 								</li>
 								<li>
-									<input type="checkbox" id="arm64" name="arch[]" value="arm64"<?php echo $arm64_checkbox_onoff; ?>>
+									<input type="checkbox" id="arm64" name="arch[]" value="arm64"<?php echo $arm64_checkbox_onoff.$arm64_checkbox_enabled; ?>>
 									<label for="arm64">arm64</label>
 								</li>
 							</div>
@@ -222,11 +230,11 @@ $arm64_checkbox_onoff = isset($_GET["arch"]) && in_array("arm64", $_GET["arch"])
 										</div>
 									</div>
 								<li>
-									<input type="checkbox" id="github" name="dist[]" value="github"<?php echo $github_checkbox_onoff ?>>
+									<input type="checkbox" id="github" name="dist[]" value="github"<?php echo $github_checkbox_enabled ?>>
 									<label for="github">GitHub Release Pages</label>
 								</li>
 								<li>
-									<input type="checkbox" id="forgejo" name="dist[]" value="forgejo"<?php echo $forgejo_checkbox_onoff ?>>
+									<input type="checkbox" id="forgejo" name="dist[]" value="forgejo"<?php echo $forgejo_checkbox_enabled ?>>
 									<label for="forgejo">Forgejo Release Pages</label>
 								</li>
 							

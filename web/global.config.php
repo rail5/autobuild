@@ -1,6 +1,7 @@
 <?php
 /* Config access functions */
 $config_file = "/var/autobuild/config.toml";
+$build_farm_directory = "/var/autobuild/build-farm";
 
 function parse_config() {
 	global $config_file;
@@ -78,4 +79,23 @@ function forgejo_is_configured($config_data = 0) {
 	return isset($config_data["forgejo"]["instance_url"])
 		&& isset($config_data["forgejo"]["repo_owner"])
 		&& isset($config_data["forgejo"]["access_token"]);
+}
+
+function vm_is_configured($arch) {
+	global $build_farm_directory;
+	$file_to_check = "$build_farm_directory/";
+	switch ($arch) {
+		case "amd64":
+			$file_to_check .= "debian-stable-amd64/";
+			break;
+		case "i386":
+			$file_to_check .= "debian-stable-i386/";
+			break;
+		case "arm64":
+			$file_to_check .= "debian-stable-arm64/";
+			break;
+	}
+	$file_to_check .= "image.qcow";
+
+	return file_exists($file_to_check);
 }
