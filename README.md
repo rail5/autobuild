@@ -71,6 +71,6 @@ After installing, it will be available on your web-server at **http://your-domai
 
 | Desktop                                                                                                               | Mobile                                                                                                                        |
 | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| <img title="" src="https://rail5.org/autobuild/autobuild-web-build-menu.png" alt="build-menu" width="800">            | <img title="" src="https://rail5.org/autobuild/autobuild-web-mobile-build-menu.jpeg" alt="build-menu" width="200">            |
-| <img src="https://rail5.org/autobuild/autobuild-web-log-build-successful.png" title="" alt="log-success" width="800"> | <img src="https://rail5.org/autobuild/autobuild-web-mobile-log-build-successful.jpeg" title="" alt="log-success" width="200"> |
+| <img title="" src="https://rail5.org/autobuild/autobuild-web-build-menu.png" alt="build-menu" width="800">            | <img title="" src="https://rail5.org/autobuild/autobuild-web-mobile-build-menu.jpeg" alt="build-menu" width="400">            |
+| <img src="https://rail5.org/autobuild/autobuild-web-log-build-successful.png" title="" alt="log-success" width="800"> | <img src="https://rail5.org/autobuild/autobuild-web-mobile-log-build-successful.jpeg" title="" alt="log-success" width="400"> |
 
