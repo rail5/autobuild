@@ -13,7 +13,7 @@ if [[ -f /etc/nginx/autobuild-web.conf ]]; then
 	for site in /etc/nginx/sites-enabled/*; do
 		if [[ -f "$site" ]]; then
 			if grep -q "include /etc/nginx/autobuild-web.conf;" "$site"; then
-				sed -i '/include /etc/nginx/autobuild-web.conf;/d' "$site"
+				sed -i '/include \/etc\/nginx\/autobuild-web.conf;/d' "$site"
 			fi
 		fi
 	done
