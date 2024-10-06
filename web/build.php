@@ -145,7 +145,7 @@ if (isset($_GET['submitted']) && !isset($_GET['error'])) {
 
 	$timestamp = str_replace(".$autobuild_pid", "", $autobuild_jobid);
 	$timestamp = str_replace(".", " ", $timestamp);
-	$timestamp = preg_replace('/[^0-9\-\ :]/', "", $timestamp);
+	$timestamp = preg_replace('/[^0-9\-\ :(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)]/', "", $timestamp);
 
 	add_build($timestamp);
 
