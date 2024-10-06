@@ -26,7 +26,7 @@ Autobuild is also used to build & distribute itself.
 
 Autobuild can be easily installed via the [deb.rail5.org](https://deb.rail5.org) repository:
 
-```
+```sh
 sudo curl -s -o /etc/apt/trusted.gpg.d/rail5-signing-key.gpg "https://deb.rail5.org/rail5-signing-key.gpg"
 sudo curl -s -o /etc/apt/sources.list.d/rail5.list "https://deb.rail5.org/rail5.list"
 sudo apt update
@@ -39,7 +39,22 @@ After installing, run `sudo autobuild -s` to complete set-up.
 
 Your **CONFIG** file can be found at `/var/autobuild/config.toml`
 
-### Usage
+### Autobuild-web
+
+A web interface is provided by the **autobuild-web** package:
+
+```sh
+sudo apt install autobuild-web
+```
+
+After installing, it will be available on your web-server at **http://your-domain-or.ip/autobuild**
+
+| Build Menu                                                                                                            | Build Log                                                                                                                    | Build Completed                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| <img title="" src="https://rail5.org/autobuild/autobuild-web-build-menu.png" alt="build-menu" width="600">         | <img src="https://rail5.org/autobuild/autobuild-web-log-build-in-progress.png" title="" alt="log-progress" width="600">         | <img src="https://rail5.org/autobuild/autobuild-web-log-build-successful.png" title="" alt="log-success" width="600">         |
+| <img title="" src="https://rail5.org/autobuild/autobuild-web-mobile-build-menu.jpeg" alt="build-menu" width="154"> | <img title="" src="https://rail5.org/autobuild/autobuild-web-mobile-log-build-in-progress.jpeg" alt="log-progress" width="154"> | <img src="https://rail5.org/autobuild/autobuild-web-mobile-log-build-successful.jpeg" title="" alt="log-success" width="154"> |
+
+### Command-line usage
 
 ```
 autobuild --amd64 --i386 --arm64 --package my-debian-package --package my-other-debian-package --github-page
