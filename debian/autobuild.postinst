@@ -29,7 +29,9 @@ chown _autobuild /var/autobuild
 chmod 755 /var/autobuild
 
 # Copy config file
-cp /usr/share/autobuild/config.toml /var/autobuild/config.toml
+if [[ ! -f /var/autobuild/config.toml ]]; then
+	cp /usr/share/autobuild/config.toml /var/autobuild/config.toml
+fi
 
 chown _autobuild /var/autobuild/config.toml
 

@@ -1,11 +1,12 @@
 <?php
 /* Config access functions */
 $config_file = "/var/autobuild/config.toml";
-require_once "includes/toml.php";
 
 function parse_config() {
 	global $config_file;
-	return json_decode(json_encode(Toml::parseFile($config_file)), true);
+	$shell_escaped_config_file = escapeshellarg($config_file);
+	$parsed = json_decode(`toml2json $shell_escaped_config_file`, true);
+	return $parsed;
 }
 
 function update_config($new_config) {
