@@ -23,10 +23,21 @@ chmod 770 /var/autobuild/web/log
 # Enable Apache autobuild conf
 if [[ -e /usr/share/apache2/apache2-maintscript-helper ]]; then
 	. /usr/share/apache2/apache2-maintscript-helper
+	cp /usr/share/autobuild-web/apache/autobuild-web.conf /etc/apache2/conf-available/autobuild-web.conf
 	apache2_invoke enconf autobuild-web
+	deb-systemd-invoke reload apache2 || true
 fi
 
-# Reload Apache
-deb-systemd-invoke reload apache2
+# Enable Nginx autobuild conf
+if [[ -d /etc/nginx ]]; then
+	cp /usr/share/autobuild-web/nginx/autobuild-web.conf /etc/nginx/autobuild-web.conf
+	for site in /etc/nginx/sites-enabled/*; do
+		if [[ -f "$site" ]]; then
+			if ! grep -q "include /etc/nginx/autobuild-web.conf;" "$site"; then
+				sed -i '/^server {/a \    include /etc/nginx/autobuild-web.conf;' "$site"
+			fi
+		fi
+	done
+fi
 
 #DEBHELPER#
