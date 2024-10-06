@@ -24,7 +24,7 @@ if ($username && basename($_SERVER["PHP_SELF"]) == "setup.php") {
 	die();
 }
 
-if (!$_SESSION['logged-in'] && basename($_SERVER['PHP_SELF']) != "login.php") {
+if ($username && !$_SESSION['logged-in'] && basename($_SERVER['PHP_SELF']) != "login.php") {
 	header('location: login.php');
 	die();
 }
