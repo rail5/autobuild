@@ -1,3 +1,11 @@
+autobuild (3.2.2) unstable; urgency=medium
+
+  * Added support for nginx in autobuild-web
+    Autobuild-web now works with either nginx or apache. Hopefully we
+    can add more httpd options later.
+
+ -- rail5 <andrew@rail5.org>  Sun, 06 Oct 2024 15:06:23 +0800
+
 autobuild (3.2.1) unstable; urgency=medium
 
   * Only remove /var/autobuild/web if apt remove --purge
