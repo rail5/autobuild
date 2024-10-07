@@ -3,10 +3,7 @@ require_once "global.php";
 
 $settings = parse_config();
 
-$debian_repos = array_filter(glob('/var/autobuild/repo/*'), 'is_dir');
-for ($i = 0; $i < count($debian_repos); $i++) {
-	$debian_repos[$i] = basename($debian_repos[$i]);
-}
+$debian_repos = get_debian_repos();
 
 $github_configured = github_is_configured($settings);
 $forgejo_configured = forgejo_is_configured($settings);

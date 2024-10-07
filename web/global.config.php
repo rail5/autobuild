@@ -1,7 +1,8 @@
 <?php
 /* Config access functions */
-$config_file = "/var/autobuild/config.toml";
-$build_farm_directory = "/var/autobuild/build-farm";
+$config_file			= "/var/autobuild/config.toml";
+$build_farm_directory	= "/var/autobuild/build-farm";
+$repository_directory	= "/var/autobuild/repo";
 
 function parse_config() {
 	global $config_file;
@@ -98,4 +99,19 @@ function vm_is_configured($arch) {
 	$file_to_check .= "image.qcow";
 
 	return file_exists($file_to_check);
+}
+
+function get_debian_repos() {
+	global $repository_directory;
+
+	$repo_folders = array_filter(glob('/var/autobuild/repo/*'), 'is_dir');
+	$debian_repos = array();
+
+	foreach ($repo_folders as $repo_folder) {
+		if (file_exists($repo_folder."/autobuild_repo.conf")) {
+			$debian_repos[] = basename($repo_folder);
+		}
+	}
+
+	return $debian_repos;
 }
