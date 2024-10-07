@@ -12,11 +12,6 @@ if [[ $(getent group kvm) ]]; then
 	usermod -aG kvm _autobuild
 fi
 
-# Make sure the autobuild user has permission to talk to the web frontend
-if [[ $(getent group www-data) ]]; then
-	usermod -aG www-data _autobuild
-fi
-
 # Create the /var/autobuild directory
 if [[ ! -d /var/autobuild ]]; then
 	mkdir -p /var/autobuild
@@ -34,10 +29,6 @@ if [[ ! -f /var/autobuild/config.toml ]]; then
 fi
 
 chown _autobuild /var/autobuild/config.toml
-
-if [[ $(getent group www-data) ]]; then
-	chown _autobuild:www-data /var/autobuild/config.toml
-fi
 
 # Set permissions on config file
 chmod 660 /var/autobuild/config.toml

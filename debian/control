@@ -21,7 +21,7 @@ License: AGPL-3.0
 Vendor: rail5 <andrew@rail5.org>
 Priority: optional
 Architecture: all
-Depends: autobuild, reserialize, php | php-fpm, php-sqlite3, ${misc:Depends}
-Recommends: apache2 | nginx, libapache2-mod-php | nginx
+Depends: autobuild, reserialize, php-fpm, php-sqlite3, ${misc:Depends}
+Recommends: apache2 | nginx
 Description: Web-based front-end for autobuild
  Web-based UI to configure and run autobuild

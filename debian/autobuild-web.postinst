@@ -4,33 +4,44 @@ set -e
 
 mkdir -p "/var/autobuild/web/log"
 
-if [[ $(getent group www-data) ]]; then
-	if [[ ! -f /var/autobuild/config.toml ]]; then
-		cp /usr/share/autobuild/config.toml /var/autobuild/config.toml
-	fi
-	chown _autobuild:www-data /var/autobuild/config.toml
-	chown _autobuild:www-data /var/autobuild/web
-	chown _autobuild:www-data /var/autobuild/web/log
+if [[ ! -f /var/autobuild/config.toml ]]; then
+	cp /usr/share/autobuild/config.toml /var/autobuild/config.toml
 fi
 
 # Set permissions on config file
+chown _autobuild:nogroup /var/autobuild/config.toml
 chmod 660 /var/autobuild/config.toml
 
+# Set up for PHP sessions
+mkdir -p /var/autobuild/web/sessions
+chown _autobuild /var/autobuild/web/sessions
+chmod 700 /var/autobuild/web/sessions
+
 # Set RWX permissions on /var/autobuild/web
+chown _autobuild:nogroup /var/autobuild/web
+chown _autobuild:nogroup /var/autobuild/web/log
 chmod 770 /var/autobuild/web
 chmod 770 /var/autobuild/web/log
+
+# Configure PHP-FPM
+PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')
+if [[ -d /etc/php/$PHP_VERSION/fpm/pool.d ]]; then
+	ln -sf /usr/share/autobuild-web/php-fpm/autobuild-web.conf /etc/php/$PHP_VERSION/fpm/pool.d/autobuild-web.conf
+	deb-systemd-invoke restart php$PHP_VERSION-fpm || true
+fi
 
 # Enable Apache autobuild conf
 if [[ -e /usr/share/apache2/apache2-maintscript-helper ]]; then
 	. /usr/share/apache2/apache2-maintscript-helper
-	cp /usr/share/autobuild-web/apache/autobuild-web.conf /etc/apache2/conf-available/autobuild-web.conf
+	ln -sf /usr/share/autobuild-web/apache/autobuild-web.conf /etc/apache2/conf-available/autobuild-web.conf
+	apache2_invoke enmod proxy_fcgi || true
 	apache2_invoke enconf autobuild-web || true
 	deb-systemd-invoke reload apache2 || true
 fi
 
 # Enable Nginx autobuild conf
 if [[ -d /etc/nginx ]]; then
-	cp /usr/share/autobuild-web/nginx/autobuild-web.conf /etc/nginx/autobuild-web.conf
+	ln -sf /usr/share/autobuild-web/nginx/autobuild-web.conf /etc/nginx/autobuild-web.conf
 	for site in /etc/nginx/sites-enabled/*; do
 		if [[ -f "$site" ]]; then
 			if ! grep -q "include /etc/nginx/autobuild-web.conf;" "$site"; then

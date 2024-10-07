@@ -20,6 +20,19 @@ if [[ -f /etc/nginx/autobuild-web.conf ]]; then
 	deb-systemd-invoke reload nginx || true
 fi
 
+
+if [[ -x "$(command -v php)" ]]; then
+	PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')
+	if [[ -f /etc/php/$PHP_VERSION/fpm/pool.d/autobuild-web.conf ]]; then
+		rm -f /etc/php/$PHP_VERSION/fpm/pool.d/autobuild-web.conf
+		deb-systemd-invoke restart php$PHP_VERSION-fpm || true
+	fi
+fi
+
+if [[ -d /var/autobuild/web/sessions ]]; then
+	rm -rf /var/autobuild/web/sessions
+fi
+
 if [[ -d /var/autobuild/web ]] && [[ "$1" == purge ]]; then
 	rm -rf /var/autobuild/web
 fi
