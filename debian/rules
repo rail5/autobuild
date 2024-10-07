@@ -18,6 +18,6 @@ override_dh_auto_install:
 	mkdir -p "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/php-fpm"
 	mkdir -p "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/apache"
 	mkdir -p "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/nginx"
-	cp "webconf/php/autobuild-web.conf" "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/php-fpm/autobuild-web.conf"
+	cp "webconf/php-fpm/autobuild-web.conf" "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/php-fpm/autobuild-web.conf"
 	cp "webconf/apache/autobuild-web.conf" "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/apache/autobuild-web.conf"
 	cp "webconf/nginx/autobuild-web.conf" "$$(pwd)/debian/autobuild-web/usr/share/autobuild-web/nginx/autobuild-web.conf"
