@@ -1,3 +1,14 @@
+autobuild (3.2.3) unstable; urgency=medium
+
+  * autobuild-web: Run PHP as _autobuild user rather than www-data
+    Security improvement for autobuild-web
+    Incidentally, this allows nginx users to run autobuild-web
+    without having configured PHP in their nginx conf already, since
+    we're now running php-fpm instead of relying on the web server's
+    configuration for PHP.
+
+ -- rail5 <andrew@rail5.org>  Mon, 07 Oct 2024 12:16:45 +0800
+
 autobuild (3.2.2) unstable; urgency=medium
 
   * Added support for nginx in autobuild-web
