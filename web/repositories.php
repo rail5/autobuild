@@ -69,6 +69,12 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 				redirect_and_die("repositories.php", $_GET);
 			}
 
+			foreach($_GET["delete"] as $repo) {
+				if (!in_array($repo, $debian_repos)) {
+					redirect_and_die("repositories.php", array("error" => "invalid-repo"));
+				}
+			}
+
 			if (isset($_GET["confirm"])) {
 				delete_debian_repos($_GET["delete"]);
 				redirect_and_die("repositories.php");
