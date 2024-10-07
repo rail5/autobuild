@@ -69,6 +69,7 @@ function github_is_configured($config_data = 0) {
 	}
 
 	return isset($config_data["github"]["repo_owner"])
+		&& isset($config_data["github"]["email"])
 		&& isset($config_data["github"]["access_token"]);
 }
 
