@@ -19,7 +19,7 @@ function file_not_empty($file) {
 function redirect_and_die($url, $params = false) {
     switch ($url) {
         case "back":
-            $url = $_SERVER['HTTP_REFERER'];
+            $url = strtok($_SERVER['HTTP_REFERER'], "?");
             break;
         case "self":
             $url = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP_HOST]".parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
