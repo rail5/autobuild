@@ -32,6 +32,33 @@ function display_error_message() {
 			case "invalid-credentials":
 				$error_message = "Incorrect username or password";
 				break;
+			case "no-repo-name":
+				$error_message = "Provide a repository name";
+				break;
+			case "no-repo-url":
+				$error_message = "Provide a repository URL";
+				break;
+			case "invalid-repo-name":
+				$error_message = "Invalid repository name";
+				break;
+			case "invalid-repo-url":
+				$error_message = "Invalid repository URL";
+				break;
+			case "repo-exists":
+				$error_message = "Repository already exists";
+				break;
+			case "key-exists":
+				$error_message = "Signing key already exists";
+				break;
+			case "invalid-email":
+				$error_message = "Invalid email address";
+				break;
+			case "invalid-github-pages-url":
+				$error_message = "Invalid GitHub Pages URL";
+				break;
+			case "github-not-configured":
+				$error_message = "Your GitHub credentials are not configured";
+				break;
 		}
 		echo PHP_EOL.'<div align="center" width="50%" height="50%" class="error-message">Error: '.$error_message.'</div>'.PHP_EOL;
 	}
