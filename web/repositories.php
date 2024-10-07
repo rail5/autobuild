@@ -84,28 +84,30 @@ display_error_message();
 	<main>
 		<?php
 			if (isset($_GET["delete"]) && !isset( $_GET["confirm"])) {
-				echo "<div class=\"overlay modal\">
-					<div class=\"modal-content\">
-						<h2>Confirm Deletion</h2>
-						<p>Are you sure you want to delete the selected repositories?</p>
-						<p>Repositories: ";
-						for ($i = 0; $i < count($_GET["delete"]) - 1; $i++) {
-							echo $_GET["delete"][$i].", ";
+				echo "<div class=\"overlay-container\">
+			<div class=\"overlay modal\">
+				<div class=\"modal-content\">
+					<h2>Confirm Deletion</h2>
+					<p>Are you sure you want to delete the selected repositories?</p>
+					<p>Repositories: ";
+					for ($i = 0; $i < count($_GET["delete"]) - 1; $i++) {
+						echo $_GET["delete"][$i].", ";
+					}
+					echo $_GET["delete"][count($_GET["delete"]) - 1];
+					echo "</p>
+					<p>This action is <b>irreversible</b>.</p>
+					<form action=\"repositories.php\" method=\"get\">
+						<input type=\"hidden\" name=\"action\" value=\"delete\">
+						<input type=\"hidden\" name=\"confirm\" value=\"true\">";
+						foreach ($_GET["delete"] as $repo) {
+							echo "<input type=\"hidden\" name=\"delete[]\" value=\"$repo\">";
 						}
-						echo $_GET["delete"][count($_GET["delete"]) - 1];
-						echo "</p>
-						<p>This action is <b>irreversible</b>.</p>
-						<form action=\"repositories.php\" method=\"get\">
-							<input type=\"hidden\" name=\"action\" value=\"delete\">
-							<input type=\"hidden\" name=\"confirm\" value=\"true\">";
-							foreach ($_GET["delete"] as $repo) {
-								echo "<input type=\"hidden\" name=\"delete[]\" value=\"$repo\">";
-							}
-							echo "<button type=\"submit\">Yes</button>
-							<a class=\"button\" href=\"repositories.php\">No</a>
-						</form>
-					</div>
-				</div>";
+						echo "<button type=\"submit\">Yes</button>
+						<a class=\"button\" href=\"repositories.php\">No</a>
+					</form>
+				</div>
+			</div>
+		</div>".PHP_EOL;
 			}
 		?>
 		<div class="container">
