@@ -17,7 +17,7 @@ if (!isset($_GET["error"])) {
 
 	// Are we canceling the job?
 	// If the user asked to cancel, first make sure that the job is actually running (first bit in the status code = 1)
-	if (isset($_GET["cancel"]) && $autobuild_status[0] == 1) {
+	if (isset($_GET["cancel"]) && $autobuild_status & 4) {
 		run_autobuild("-k $autobuild_pid");
 	}
 }
@@ -42,7 +42,7 @@ display_error_message();
 								<h2>Build Log</h2>
 							</div>
 							<?php
-							if ($autobuild_status[0] == 1) {
+							if ($autobuild_status & 4) {
 								echo '
 							<div id="control-buttons" style="margin-left: calc(100% - 85px);">
 								<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&cancel=true">
@@ -71,7 +71,7 @@ display_error_message();
 						<div style="width: 100%; overflow: hidden;">
 							<h2>Files</h2>
 							<?php
-								if ($autobuild_status == "010") {
+								if ($autobuild_status & 2) {
 									foreach (get_download_links($log_number) as $file => $link) {
 										echo "<a href=\"$link\">$file</a><br>";
 									}

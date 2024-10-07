@@ -83,6 +83,27 @@ function get_job_jobid($log_number) {
 	return trim(`sed -n '2{p;q;}' $log_file | awk '{print \$2}'`);
 }
 
+function all_job_files_present($jobid) {
+	global $autobuild_builds_directory;
+	$build_files_directory = "$autobuild_builds_directory/$jobid/";
+	$package_directories = array_filter(glob(pattern: "$build_files_directory/*"), 'is_dir');
+	if (empty($package_directories)) {
+		return false;
+	}
+
+	foreach ($package_directories as $package_directory) {
+		$file_iterator = new FilesystemIterator($package_directory);
+
+		// A failed build will generate only one file in the package directory: the package .build file
+		// A successful build will generate multiple files, including of course the actual .deb package
+		if (iterator_count($file_iterator) <= 1) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 function get_job_status($log_number) {
 	global $log_directory;
 	global $autobuild_builds_directory;
@@ -100,39 +121,24 @@ function get_job_status($log_number) {
 	 * 		Second bit:	Did the job generate all the files we expected it to?
 	 * 		Third bit:	Is the job either QUEUED or was it CANCELED?
 	 * From this, here are the status codes:
-	 * 	000:
+	 * 	000: (Decimal 0)
 	 * 		Job failed
-	 * 	001:
+	 * 	001: (Decimal 1)
 	 * 		Job canceled
-	 * 	010:
+	 * 	010: (Decimal 2)
 	 * 		Job completed successfully
-	 * 	100:
+	 * 	100: (Decimal 4)
 	 * 		Job in progress
-	 * 	101:
+	 * 	101: (Decimal 5)
 	 * 		Job queued
 	 * We don't need to care about any other codes
 	*/ 
-	$status_code = "010";
-	
-	$status_code[0] = file_exists("/proc/$pid") ? 1 : 0;
-	$status_code[2] = (($logfile_last_line == "Queued") || ($logfile_last_line == "Canceled")) ? 1 : 0;
 
-	$build_files_directory = "$autobuild_builds_directory/$jobid/";
-	$package_directories = array_filter(glob(pattern: "$build_files_directory/*"), 'is_dir');
-	if (empty($package_directories)) {
-		$status_code[1] = 0;
-	}
+	$in_progress		= 4	* file_exists("/proc/$pid");
+	$files_present		= 2	* all_job_files_present($jobid);
+	$queued_or_canceled	= 1	* (($logfile_last_line == "Queued") || ($logfile_last_line == "Canceled"));
 
-	foreach ($package_directories as $package_directory) {
-		$file_iterator = new FilesystemIterator($package_directory);
-
-		// A failed build will generate only one file in the package directory: the package .build file
-		// A successful build will generate multiple files, including of course the actual .deb package
-		if (iterator_count($file_iterator) <= 1) {
-			$status_code[1] = 0;
-			break;
-		}
-	}
+	$status_code = $in_progress | $files_present | $queued_or_canceled;
 
 	return $status_code;
 }
@@ -142,23 +148,23 @@ function print_status_code($status_code, $html = false) {
 	$color = "000000";
 
 	switch ($status_code) {
-		case "000":
+		case 0:
 			$label = "Failed";
 			$color = "FF0000";
 			break;
-		case "001":
+		case 1:
 			$label = "Canceled";
 			$color = "FF0000";
 			break;
-		case "010":
+		case 2:
 			$label = "Successful";
 			$color = "00FF00";
 			break;
-		case "100":
+		case 4:
 			$label = "In progress";
 			$color = "0000FF";
 			break;
-		case "101":
+		case 5:
 			$label = "Queued";
 			$color = "0000FF";
 			break;
