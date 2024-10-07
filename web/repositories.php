@@ -35,6 +35,10 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 			$github_pages_url = $github_pages ? $_GET["github_pages_url"] : "";
 
 			// Validate input
+			if (empty($debian_repos)) {
+				$repo_name = "default"; // First repo must be called 'default'
+			}
+
 			if (preg_match("/[^a-zA-Z0-9\-\_]/", $repo_name)) {
 				$_GET["error"] = "invalid-repo-name";
 				redirect_and_die("repositories.php", $_GET);
