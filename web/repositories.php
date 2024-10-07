@@ -134,7 +134,7 @@ display_error_message();
 								<button type=\"submit\" class=\"no-decoration\">Delete selected repositories</button>
 								<br>";
 								foreach ($debian_repos as $debian_repo) {
-									echo "<input type=\"checkbox\" name=\"delete[]\" value=\"$debian_repo\"> $debian_repo<br>".PHP_EOL;
+									echo "<input type=\"checkbox\" name=\"delete[]\" value=\"$debian_repo\" id=\"$debian_repo\"> <label for=\"$debian_repo\">$debian_repo</label><br>".PHP_EOL;
 								}
 						echo "
 						</form>
