@@ -102,7 +102,7 @@ display_error_message();
 								echo "<input type=\"hidden\" name=\"delete[]\" value=\"$repo\">";
 							}
 							echo "<button type=\"submit\">Yes</button>
-							<button type=\"button\" onclick=\"window.location.href='repositories.php'\">No</button>
+							<a class=\"button\" href=\"repositories.php\">No</a>
 						</form>
 					</div>
 				</div>";
