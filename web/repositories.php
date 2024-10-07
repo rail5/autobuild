@@ -11,6 +11,9 @@ $github_configured = github_is_configured();
 
 if (isset($_GET["action"]) && !isset($_GET["error"])) {
 	// Form submitted
+	if (is_array($_GET["action"])) {
+		redirect_and_die("self");
+	}
 	switch ($_GET["action"]) {
 		case "create":
 			// Do we have everything we need?
@@ -60,6 +63,17 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 
 			redirect_and_die("repositories.php");
 			break;
+		case "delete":
+			if (empty($_GET["delete"])) {
+				$_GET["error"] = "invalid-repo";
+				redirect_and_die("repositories.php", $_GET);
+			}
+
+			if (isset($_GET["confirm"])) {
+				delete_debian_repos($_GET["delete"]);
+				redirect_and_die("repositories.php");
+			}
+			break;
 	}
 }
 
@@ -68,6 +82,32 @@ display_error_message();
 ?>
 
 	<main>
+		<?php
+			if (isset($_GET["delete"]) && !isset( $_GET["confirm"])) {
+				echo "<div class=\"overlay modal\">
+					<div class=\"modal-content\">
+						<h2>Confirm Deletion</h2>
+						<p>Are you sure you want to delete the selected repositories?</p>
+						<p>Repositories: ";
+						for ($i = 0; $i < count($_GET["delete"]) - 1; $i++) {
+							echo $_GET["delete"][$i].", ";
+						}
+						echo $_GET["delete"][count($_GET["delete"]) - 1];
+						echo "</p>
+						<p>This action is <b>irreversible</b>.</p>
+						<form action=\"repositories.php\" method=\"get\">
+							<input type=\"hidden\" name=\"action\" value=\"delete\">
+							<input type=\"hidden\" name=\"confirm\" value=\"true\">";
+							foreach ($_GET["delete"] as $repo) {
+								echo "<input type=\"hidden\" name=\"delete[]\" value=\"$repo\">";
+							}
+							echo "<button type=\"submit\">Yes</button>
+							<button type=\"button\" onclick=\"window.location.href='repositories.php'\">No</button>
+						</form>
+					</div>
+				</div>";
+			}
+		?>
 		<div class="container">
 			<div class="content-wrapper">
                 <aside class="sidebar">

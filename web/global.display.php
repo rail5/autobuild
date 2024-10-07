@@ -38,6 +38,9 @@ function display_error_message() {
 			case "no-repo-url":
 				$error_message = "Provide a repository URL";
 				break;
+			case "invalid-repo":
+				$error_message = "Invalid repository";
+				break;
 			case "invalid-repo-name":
 				$error_message = "Invalid repository name";
 				break;

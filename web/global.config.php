@@ -209,6 +209,29 @@ function create_debian_repo($repo_name, $repo_url, $signing_key, $github_pages, 
 	}
 }
 
+function delete_debian_repo($repo) {
+	global $repository_directory;
+	$valid_repos = get_debian_repos();
+	if (!in_array($repo, $valid_repos)) {
+		redirect_and_die("back", array("error" => "invalid-repo"));
+	}
+
+	remove_directory("$repository_directory/$repo");
+}
+
+function delete_debian_repos($repo_list) {
+	$valid_repos = get_debian_repos();
+	foreach ($repo_list as $repo) {
+		if (!in_array($repo, $valid_repos)) {
+			redirect_and_die("back", array("error" => "invalid-repo"));
+		}
+	}
+
+	foreach ($repo_list as $repo) {
+		delete_debian_repo($repo);
+	}
+}
+
 function get_signing_keys($field = "all") {
 	$keys = `gpg --list-secret-keys --with-colons | awk -F: '$1=="uid" {print $10}'`;
 

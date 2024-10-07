@@ -22,7 +22,7 @@ function redirect_and_die($url, $params = false) {
             $url = $_SERVER['HTTP_REFERER'];
             break;
         case "self":
-            $url = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+            $url = (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP_HOST]".parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
             break;
     }
 
@@ -36,4 +36,26 @@ function redirect_and_die($url, $params = false) {
 function is_secure() {
 	return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
 			|| $_SERVER['SERVER_PORT'] == 443;
+}
+
+function remove_directory($directory) {
+    if (!file_exists($directory)) {
+        return true;
+    }
+
+    if (!is_dir($directory)) {
+        return unlink($directory);
+    }
+
+    foreach (scandir($directory) as $file) {
+        if ($file == '.'|| $file == '..') {
+            continue;
+        }
+
+        if (!remove_directory($directory .'/'. $file)) {
+            return false;
+        }
+    }
+
+    return rmdir($directory);
 }
