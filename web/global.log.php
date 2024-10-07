@@ -21,7 +21,7 @@ function get_log_file($log_number) {
 	
 	if (!$valid_log) {
 		$_GET["error"] = "invalid-log";
-		redirect_and_die("logs.php", $_GET);
+		redirect_and_die("back", $_GET);
 		return "";
 	}
 
@@ -55,7 +55,7 @@ function delete_log($log_number) {
 	
 	if (!$valid_log) {
 		$_GET["error"] = "invalid-log";
-		redirect_and_die("logs.php", $_GET);
+		redirect_and_die("back", $_GET);
 		return "";
 	}
 

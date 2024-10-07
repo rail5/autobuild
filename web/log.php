@@ -2,24 +2,28 @@
 require_once "global.php";
 
 $log_number = $_GET["log"];
-$log_file = get_log_file($log_number);
 
-while (filesize($log_file) === 0) {
-	sleep(1); // Sleep until we can get the job info
-	clearstatcache(); // Don't cache the result of filesize()
-}
+if (!isset($_GET["error"])) {
+	$log_file = get_log_file($log_number);
 
-// Get the PID and the Job ID
-$autobuild_pid = get_job_pid($log_number);
-$autobuild_status = get_job_status($log_number);
+	while (filesize($log_file) === 0) {
+		sleep(1); // Sleep until we can get the job info
+		clearstatcache(); // Don't cache the result of filesize()
+	}
 
-// Are we canceling the job?
-// If the user asked to cancel, first make sure that the job is actually running (first bit in the status code = 1)
-if (isset($_GET["cancel"]) && $autobuild_status[0] == 1) {
-	run_autobuild("-k $autobuild_pid");
+	// Get the PID and the Job ID
+	$autobuild_pid = get_job_pid($log_number);
+	$autobuild_status = get_job_status($log_number);
+
+	// Are we canceling the job?
+	// If the user asked to cancel, first make sure that the job is actually running (first bit in the status code = 1)
+	if (isset($_GET["cancel"]) && $autobuild_status[0] == 1) {
+		run_autobuild("-k $autobuild_pid");
+	}
 }
 
 display_header();
+display_error_message();
 ?>
 
 	<main>
@@ -57,7 +61,11 @@ display_header();
 								echo print_status_code($autobuild_status, true);
 							?>
 						</label>
-						<iframe src="view-log.php?log=<?php echo $_GET["log"]; ?>#end" title="Build log" height="400" width="100%" id="build-log-iframe"></iframe><br>
+						<?php
+						if (!isset($_GET["error"])) {
+							echo '	<iframe src="view-log.php?log='.$_GET["log"].'#end" title="Build log" height="400" width="100%" id="build-log-iframe"></iframe><br>';
+						}
+						?>
 					</div>
 					<div class="card" id="new-build">
 						<div style="width: 100%; overflow: hidden;">

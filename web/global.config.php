@@ -122,14 +122,14 @@ function create_debian_repo($repo_name, $repo_url, $signing_key, $github_pages, 
 
 	if ($github_pages && !github_is_configured()) {
 		$_GET["error"] = "github-not-configured";
-		redirect_and_die("repositories.php", $_GET);
+		redirect_and_die("back", $_GET);
 	}
 
 	$debian_repos = get_debian_repos();
 
 	if (in_array($repo_name, $debian_repos)) {
 		$_GET["error"] = "repo-exists";
-		redirect_and_die("repositories.php", $_GET);
+		redirect_and_die("back", $_GET);
 	}
 
 	$repo_folder = $repository_directory."/".$repo_name;
@@ -271,12 +271,12 @@ function create_signing_key($name, $email) {
 
 	if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 		$_GET["error"] = "invalid-email";
-		redirect_and_die("repositories.php", $_GET);
+		redirect_and_die("back", $_GET);
 	}
 
 	if (in_array(strtolower($email), $signing_keys)) {
 		$_GET["error"] = "key-exists";
-		redirect_and_die("repositories.php", $_GET);
+		redirect_and_die("back", $_GET);
 	}
 
 	$escaped_email = filter_var($email, FILTER_SANITIZE_EMAIL);
