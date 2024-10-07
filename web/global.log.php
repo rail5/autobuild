@@ -48,23 +48,33 @@ function create_log_file() {
 
 function delete_log($log_number) {
 	global $log_directory;
-	$log_file = "$log_directory/$log_number.log";
-	
-	$valid_log = file_exists($log_file)
-		&& dirname(realpath($log_file)) == $log_directory;
-	
-	if (!$valid_log) {
-		$_GET["error"] = "invalid-log";
-		redirect_and_die("back", $_GET);
-		return "";
-	}
+	$log_file = get_log_file($log_number);
+	$status_file = get_status_file($log_number);
 
 	unlink($log_file);
+	unlink($status_file);
+}
+
+function get_status_file($log_number) {
+	global $log_directory;
+	$status_file = "$log_directory/$log_number.status";
+
+	return $status_file;
+}
+
+function write_status_file($log_number, $status_code) {
+	$status_file = get_status_file($log_number);
+	file_put_contents($status_file, $status_code);
+
+	// Make sure the autobuild user can read/write the status file
+	chmod($status_file, 0770);
+
+	return $status_file;
 }
 
 function delete_all_logs() {
 	global $log_directory;
-	$logs = array_filter(glob("$log_directory/*.log"));
+	$logs = array_filter(glob("$log_directory/*.{log,status}", GLOB_BRACE));
 
 	foreach ($logs as $log) {
 		unlink($log);
@@ -134,11 +144,20 @@ function get_job_status($log_number) {
 	 * We don't need to care about any other codes
 	*/ 
 
+	if (file_exists(get_status_file($log_number))) {
+		return intval(file_get_contents(get_status_file($log_number)));
+	}
+
 	$in_progress		= 4	* file_exists("/proc/$pid");
 	$files_present		= 2	* all_job_files_present($jobid);
 	$queued_or_canceled	= 1	* (($logfile_last_line == "Queued") || ($logfile_last_line == "Canceled"));
 
 	$status_code = $in_progress | $files_present | $queued_or_canceled;
+
+	if (($status_code & 4) == 0) {
+		// Job is not running anymore -- write a status file
+		write_status_file($log_number, $status_code);
+	}
 
 	return $status_code;
 }
