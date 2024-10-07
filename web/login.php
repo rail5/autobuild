@@ -32,7 +32,7 @@ display_error_message();
 		<div class="container">
 			<div class="content-wrapper">
 				<section class="main-content">
-					<div class="card" id="dashboard" style="margin-left: 25%; width: 50%;">
+					<div class="card" id="login">
 						<h2>Log In</h2>
 						<form action="login.php" method="post">
 							<input type="text" name="username" placeholder="Username">
