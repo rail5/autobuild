@@ -179,7 +179,7 @@ display_error_message();
 				<section class="main-content">
 				<div class="card" id="new-build">
 						<h2>Start New Build</h2>
-						<form action="<?php echo (empty($_SERVER['HTTPS']) ? 'http' : 'https') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]"; ?>" method="get">
+						<form action="build.php" method="get">
 							<h3><u>Packages</u></h3>
 							<div class="checkbox-list">
 <?php
