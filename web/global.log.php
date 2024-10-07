@@ -117,13 +117,6 @@ function all_job_files_present($jobid) {
 function get_job_status($log_number) {
 	global $log_directory;
 	global $autobuild_builds_directory;
-	$log_file = escapeshellarg(get_log_file($log_number));
-
-	// Get the PID and the Job ID
-	$pid = get_job_pid($log_number);
-	$jobid = get_job_jobid($log_number);
-
-	$logfile_last_line = trim(`tail -n 1 $log_file`);
 
 	/***
 	 *  3 bits:
@@ -147,6 +140,14 @@ function get_job_status($log_number) {
 	if (file_exists(get_status_file($log_number))) {
 		return intval(file_get_contents(get_status_file($log_number)));
 	}
+
+	// Get the PID and the Job ID
+	$pid = get_job_pid($log_number);
+	$jobid = get_job_jobid($log_number);
+
+	$log_file = escapeshellarg(get_log_file($log_number));
+	$logfile_last_line = trim(`tail -n 1 $log_file`);
+
 
 	$in_progress		= 4	* file_exists("/proc/$pid");
 	$files_present		= 2	* all_job_files_present($jobid);
