@@ -51,8 +51,11 @@ function delete_log($log_number) {
 	$log_file = get_log_file($log_number);
 	$status_file = get_status_file($log_number);
 
+	$jobid = escapeshellarg(get_job_jobid($log_number));
+
 	unlink($log_file);
 	unlink($status_file);
+	run_autobuild("-r $jobid");
 }
 
 function get_status_file($log_number) {
@@ -79,6 +82,8 @@ function delete_all_logs() {
 	foreach ($logs as $log) {
 		unlink($log);
 	}
+
+	run_autobuild("-r all");
 }
 
 function get_job_pid($log_number) {
