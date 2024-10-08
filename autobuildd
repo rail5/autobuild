@@ -714,6 +714,26 @@ function save_debs() {
 		cp -r "$autobuild_temp_directory/$pkgs_build_base_directory/release/"* "$output_directory/"
 }
 
+function verify_success() {
+	local success=false
+
+	for directory in "$output_directory/"*; do
+		if [[ -d "$directory" ]]; then
+			success=true
+		fi
+		if [[ -z $(find "$directory" -name "*.deb" | head -n 1) ]]; then
+			success=false
+			break
+		fi
+	done
+	echo ""
+	if [[ $success == true ]]; then
+		echo "Success"
+	else
+		echo "Failure"
+	fi
+}
+
 # shellcheck disable=SC2317
 ## SC2317 says this function is unreachable, because it can't detect that it's called by 'trap' at the top
 ## (We're trapping some interrupt signals and rerouting them to this function)
@@ -1166,6 +1186,6 @@ save_debs
 maybe_publish_to_deb_repo
 maybe_make_release_pages
 
-echo "" # End with newline
+verify_success
 
 graceful_exit 0 1

@@ -93,27 +93,6 @@ function get_job_jobid($log_number) {
 	return trim(`sed -n '2{p;q;}' $log_file | awk '{print \$2}'`);
 }
 
-function all_job_files_present($jobid) {
-	global $autobuild_builds_directory;
-	$build_files_directory = "$autobuild_builds_directory/$jobid/";
-	$package_directories = array_filter(glob(pattern: "$build_files_directory/*"), 'is_dir');
-	if (empty($package_directories)) {
-		return false;
-	}
-
-	foreach ($package_directories as $package_directory) {
-		$file_iterator = new FilesystemIterator($package_directory);
-
-		// A failed build will generate only one file in the package directory: the package .build file
-		// A successful build will generate multiple files, including of course the actual .deb package
-		if (iterator_count($file_iterator) <= 1) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 function get_job_status($log_number) {
 	global $log_directory;
 	global $autobuild_builds_directory;
@@ -121,7 +100,7 @@ function get_job_status($log_number) {
 	/***
 	 *  3 bits:
 	 * 		First bit:	Is the job still running?
-	 * 		Second bit:	Did the job generate all the files we expected it to?
+	 * 		Second bit:	Did autobuild report success?
 	 * 		Third bit:	Is the job either QUEUED or was it CANCELED?
 	 * From this, here are the status codes:
 	 * 	000: (Decimal 0)
@@ -150,10 +129,10 @@ function get_job_status($log_number) {
 
 
 	$in_progress		= 4	* file_exists("/proc/$pid");
-	$files_present		= 2	* all_job_files_present($jobid);
+	$reported_success	= 2	* ($logfile_last_line == "Success");
 	$queued_or_canceled	= 1	* (($logfile_last_line == "Queued") || ($logfile_last_line == "Canceled"));
 
-	$status_code = $in_progress | $files_present | $queued_or_canceled;
+	$status_code = $in_progress | $reported_success | $queued_or_canceled;
 
 	if (($status_code & 4) == 0) {
 		// Job is not running anymore -- write a status file
