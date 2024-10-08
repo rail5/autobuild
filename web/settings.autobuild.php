@@ -9,7 +9,7 @@ if (isset($_POST["submitted"])) {
 		|| !isset($_POST["forgejo-url"])
 		|| !isset($_POST["forgejo-owner"])) {
 			$error_params = array("error" => "form-incomplete");
-			redirect_and_die("settings.php", $error_params);
+			redirect_and_die("settings.autobuild.php", $error_params);
 	}
 
 	$old_config = parse_config();
@@ -67,7 +67,7 @@ display_error_message();
                     ?>
                 </aside>
 				<section class="main-content">
-				<form action="settings.php" method="post">
+				<form action="settings.autobuild.php" method="post">
 					<div class="card" id="packages">
 						<h2>Packages</h2>
 						Enter <b>Git URLs</b> to your source packages below (<b>one per line</b>)<br>
