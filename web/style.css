@@ -192,11 +192,11 @@ input[type='checkbox']:disabled {
 	pointer-events: auto;
 }
 
-.hidden {
+.hidden, .hidden2 {
 	display: none;
 }
 
-.shown {
+.shown, .shown2 {
 	display: block;
 }
 
@@ -206,14 +206,6 @@ input[type='checkbox']:disabled {
 
 .unhide:checked ~ .shown {
 	display: none;
-}
-
-.hidden2 {
-	display: none;
-}
-
-.shown2 {
-	display: block;
 }
 
 .unhide2:checked ~ .hidden2 {
