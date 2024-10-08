@@ -1,4 +1,11 @@
 <?php
+/**
+ * autobuild-web
+ * Copyright (C) 2024 rail5
+ * This is free software (GPL 3), and you are permitted to redistribute it under certain conditions
+ * Please see the LICENSE file for more information
+ */
+
 $db_file = "/var/autobuild/web/db.sqlite";
 
 $db = new SQLite3($db_file) or die("Cannot access SQLite database file");
