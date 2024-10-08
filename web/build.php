@@ -157,8 +157,8 @@ if (isset($_GET['submitted']) && !isset($_GET['error'])) {
 }
 
 $debian_checkbox_enabled	= $debian_repos_configured	? "" : " disabled";
-$github_checkbox_enabled	= $github_configured	? "" : " disabled";
-$forgejo_checkbox_enabled	= $forgejo_configured	? "" : " disabled";
+$github_checkbox_enabled	= $github_configured		? "" : " disabled";
+$forgejo_checkbox_enabled	= $forgejo_configured		? "" : " disabled";
 
 $amd64_checkbox_enabled	= $amd64_configured	? "" : " disabled";
 $i386_checkbox_enabled	= $i386_configured	? "" : " disabled";
@@ -215,7 +215,7 @@ $arm64_checkbox_onoff = isset($_GET["arch"]) && in_array("arm64", $_GET["arch"])
 
 							<h3><u>Distribution Channels</u></h3>
 							
-									<div class="checkbox-two-by-two">
+									<div class="two-by-two">
 										<input type="checkbox" id="debian-repo" name="dist[]" value="debian-repo" class="unhide"<?php echo $debian_checkbox_enabled; ?>>
 										<label for="debian-repo">Debian Repositories</label>
 										<div class="hidden">

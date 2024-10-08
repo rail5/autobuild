@@ -40,6 +40,11 @@ function create_user($username, $password) {
 	return $query->execute();
 }
 
+function get_username() {
+	global $db;
+	return $db->query('SELECT username FROM "data" WHERE uid=1')->fetchArray()[0];
+}
+
 function update_user($username, $password) {
 	global $db;
 	// FIXME

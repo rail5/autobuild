@@ -1,0 +1,2 @@
+<?php
+/* Cron jobs */

@@ -103,6 +103,11 @@ main {
 	flex: 3;
 }
 
+.mini-card-container {
+	display: flex;
+	column-gap: 3%;
+}
+
 .overlay-container {
 	position: relative;
 }
@@ -145,6 +150,24 @@ main {
 	margin-bottom: 1rem;
 }
 
+.card.mini-card {
+	width: 35%;
+}
+
+a.mini-card, a.mini-card:visited, a.mini-card:active {
+	color: inherit;
+	text-decoration: none;
+	text-align: center;
+}
+
+a.mini-card:hover {
+	filter: brightness(120%);
+}
+
+.mini-card-label {
+	text-align: center;
+}
+
 .card#login {
 	position: absolute;
 	left: 50%;
@@ -178,7 +201,7 @@ li {
 	column-gap: 1px;
 }
 
-.checkbox-two-by-two {
+.two-by-two {
 	display: flex;
 	column-gap: 1px;
 }
@@ -219,6 +242,20 @@ input[type="url"],
 input[type="password"],
 select {
 	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+
+select.inline {
+	max-width: fit-content;
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+
+input[type="number"].inline {
+	width: 4.5rem;
 	padding: 0.5rem;
 	border: 1px solid #ccc;
 	border-radius: 4px;
@@ -327,6 +364,15 @@ footer {
 
 	.card#login {
 		width: 75%;
+	}
+
+	.mini-card-container {
+		flex-direction: column;
+	}
+
+	.card.mini-card {
+		width: 75%;
+		align-self: center;
 	}
 
 	.sidebar {

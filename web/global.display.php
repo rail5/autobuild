@@ -109,8 +109,8 @@ function display_sidebar_actions() {
 						<h2>Quick Actions</h2>
 						<ul>
 							<li><a href="build.php">Start New Build</a></li>
-							<li><a href="logs.php">Check Build Status</a></li>
 							<li><a href="repositories.php">Manage Repositories</a></li>
+							<li><a href="settings.farm.php">Configure Build Farm</a></li>
 						</ul>
 					</div>';
 }
