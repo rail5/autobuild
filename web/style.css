@@ -200,22 +200,15 @@ input[type='checkbox']:disabled {
 	display: block;
 }
 
-.unhide:checked ~ .hidden {
-	display: block;
-}
-
-.unhide:checked ~ .shown {
-	display: none;
-}
-
+.unhide:checked ~ .hidden,
 .unhide2:checked ~ .hidden2 {
 	display: block;
 }
 
+.unhide:checked ~ .shown,
 .unhide2:checked ~ .shown2 {
 	display: none;
 }
-
 
 label {
 	font-weight: bold;
