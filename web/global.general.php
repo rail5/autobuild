@@ -35,7 +35,8 @@ function redirect_and_die($url, $params = false) {
 
 function is_secure() {
 	return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-			|| $_SERVER['SERVER_PORT'] == 443;
+			|| $_SERVER['SERVER_PORT'] == 443
+            || $_SERVER['HTTP_HOST'] == "localhost" || $_SERVER['HTTP_HOST'] == "127.0.0.1";
 }
 
 function remove_directory($directory) {
