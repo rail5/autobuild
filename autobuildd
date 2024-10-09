@@ -288,6 +288,9 @@ function maybe_install_vm() {
 	# Mark the VM as installing
 	echo "1" > "$ARCH_DIRECTORY/installing"
 
+	# Copy the preseed file into the VM directory
+	cp "$autobuild_directory/build-farm/preseed.cfg" "$ARCH_DIRECTORY/preseed.cfg"
+
 	# Download the VM image
 	download_vm_image "$ARCH" "$ARCH_DIRECTORY"
 
@@ -296,6 +299,10 @@ function maybe_install_vm() {
 
 	# Install the VM
 	install_vm "$ARCH" "$ARCH_DIRECTORY"
+
+	# Clean up our iso and preseed file
+	rm -f "$ARCH_DIRECTORY/preseed.cfg"
+	rm -f "$ARCH_DIRECTORY/"*.iso
 
 	# Unmark the VM as installing
 	rm -f "$ARCH_DIRECTORY/installing"
