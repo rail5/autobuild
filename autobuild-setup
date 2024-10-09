@@ -40,6 +40,7 @@ function setup_single_vm() {
 
 	cp ../preseed.cfg ./preseed.cfg
 
+	echo "1" > "installing"
 	download_vm_image "$ARCH" "$ARCH_DIRECTORY" 2>/dev/null | dialog --title "$window_title" \
 			--progressbox "Downloading $ARCH image... (Please wait)" 15 55
 	preseed_vm_image "$ARCH" "$ARCH_DIRECTORY" 2>/dev/null | dialog --title "$window_title" \
@@ -48,6 +49,7 @@ function setup_single_vm() {
 			--progressbox "Installing $ARCH VM... (Please wait, this may take a while)" 15 55
 
 	rm -f "./"*.iso
+	rm -f "installing"
 }
 
 function setup_build_farm() {

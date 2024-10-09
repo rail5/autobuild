@@ -9,15 +9,12 @@ function download_vm_image() {
 	cd "$DIRECTORY" || (echo ""; echo "download_vm_image: Could not cd into $DIRECTORY"; exit)
 
 	temporary_file=$(mktemp -p ./)
-	wget -O "$temporary_file" https://www.debian.org/CD/netinst/
+	curl -L -o "$temporary_file" https://www.debian.org/CD/netinst/
 
 	image_url=$(grep -o -P -e "https://cdimage.debian.org/debian-cd/current/$ARCH/iso-cd/debian.*?netinst.iso" "$temporary_file" | head -n1)
 
-	file_name=$(echo "$image_url" | grep -o -P -e "/debian-[0-9].*?-netinst.iso" | cut -c2-)
-
-	wget -N "$image_url"
+	curl -L -o "debian-$ARCH-netinst.iso" "$image_url"
 	rm -f "$temporary_file"
-	mv "$file_name" "debian-$ARCH-netinst.iso"
 }
 
 function preseed_vm_image() {

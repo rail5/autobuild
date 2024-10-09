@@ -92,6 +92,11 @@ function forgejo_is_configured($config_data = 0) {
 
 function vm_is_configured($arch) {
 	global $build_farm_directory;
+
+	if (vm_is_installing($arch)) {
+		return false;
+	}
+
 	$file_to_check = "$build_farm_directory/";
 	switch ($arch) {
 		case "amd64":
@@ -107,6 +112,93 @@ function vm_is_configured($arch) {
 	$file_to_check .= "image.qcow";
 
 	return file_exists($file_to_check);
+}
+
+function vm_is_installing($arch) {
+	global $build_farm_directory;
+	$file_to_check = "$build_farm_directory/";
+	switch ($arch) {
+		case "amd64":
+			$file_to_check .= "debian-stable-amd64/";
+			break;
+		case "i386":
+			$file_to_check .= "debian-stable-i386/";
+			break;
+		case "arm64":
+			$file_to_check .= "debian-stable-arm64/";
+			break;
+	}
+	$file_to_check .= "installing";
+
+	return file_exists($file_to_check);
+}
+
+function vm_is_upgrading($arch) {
+	global $build_farm_directory;
+	$file_to_check = "$build_farm_directory/";
+	switch ($arch) {
+		case "amd64":
+			$file_to_check .= "debian-stable-amd64/";
+			break;
+		case "i386":
+			$file_to_check .= "debian-stable-i386/";
+			break;
+		case "arm64":
+			$file_to_check .= "debian-stable-arm64/";
+			break;
+	}
+	$file_to_check .= "upgrading";
+
+	return file_exists($file_to_check);
+}
+
+function vm_upgrade($arch_list) {
+	global $build_farm_directory;
+	foreach ($arch_list as $arch) {
+		if (vm_is_upgrading($arch) || !vm_is_configured($arch)) {
+			continue;
+		}
+		run_autobuild("--$arch -u");
+	}
+	redirect_and_die("back", array("note" => "upgrading-vm"));
+}
+
+function vm_install($arch_list) {
+	global $build_farm_directory;
+	$log_file = escapeshellarg(create_log_file());
+	foreach ($arch_list as $arch) {
+		if (vm_is_installing($arch) || vm_is_configured($arch) || vm_is_upgrading($arch)) {
+			continue;
+		}
+		run_autobuild("--$arch -i");
+	}
+	redirect_and_die("back", array("note" => "installing-vm"));
+}
+
+function vm_uninstall($arch_list) {
+	global $build_farm_directory;
+	foreach ($arch_list as $arch) {
+		if (!vm_is_configured($arch) || vm_is_installing($arch) || vm_is_upgrading($arch)) {
+			continue;
+		}
+
+		$arch_directory = "$build_farm_directory/";
+		switch ($arch) {
+			case "amd64":
+				$arch_directory .= "debian-stable-amd64/";
+				break;
+			case "i386":
+				$arch_directory .= "debian-stable-i386/";
+				break;
+			case "arm64":
+				$arch_directory .= "debian-stable-arm64/";
+				break;
+		}
+		
+		unlink($arch_directory."image.qcow");
+		unlink($arch_directory."preseed.cfg");
+		redirect_and_die("back", array("note" => "removed-vm"));
+	}
 }
 
 function get_debian_repos() {

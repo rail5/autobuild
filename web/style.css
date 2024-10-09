@@ -92,6 +92,15 @@ nav ul li a {
 	font-size: 1.3rem;
 }
 
+.note-message {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: #00ff00;
+	color: #000000;
+	font-size: 1.3rem;
+}
+
 /* Main content */
 main {
 	padding: 2rem 0;
@@ -213,6 +222,12 @@ li {
 	column-gap: 1px;
 }
 
+.three-by-three {
+	display: grid;
+	grid-template-columns: auto auto auto;
+	column-gap: 1px;
+}
+
 input[type='checkbox'] {
 	width: 15px;
 	height: 15px;
@@ -238,6 +253,17 @@ input[type='checkbox']:disabled {
 .unhide:checked ~ .shown,
 .unhide2:checked ~ .shown2 {
 	display: none;
+}
+
+.not-installed:checked ~ .button-vm-upgrade,
+.not-installed:checked ~ .button-vm-uninstall,
+.installing:checked ~ .button-vm-upgrade,
+.installing:checked ~ .button-vm-uninstall,
+.installing:checked ~ .button-vm-install,
+.installed:checked ~ .button-vm-install {
+	background-color: #ccc;
+	color: #666;
+	pointer-events: none;
 }
 
 label {
@@ -380,6 +406,15 @@ footer {
 	.card.mini-card {
 		width: 75%;
 		align-self: center;
+	}
+
+	.overlay {
+		width: 75%;
+	}
+
+	.multi-button-form button {
+		display: flex;
+		flex-direction: column;
 	}
 
 	.sidebar {

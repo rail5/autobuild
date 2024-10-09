@@ -17,6 +17,9 @@ function display_error_message() {
 			case "no-arch":
 				$error_message = "No build architectures selected";
 				break;
+			case "invalid-arch":
+				$error_message = "Invalid build architecture selected";
+				break;
 			case "no-log":
 				$error_message = "No log selected";
 				break;
@@ -68,10 +71,44 @@ function display_error_message() {
 			case "github-not-configured":
 				$error_message = "Your GitHub credentials are not configured";
 				break;
+			case "no-action":
+				$error_message = "No action specified";
+				break;
+			case "invalid-action":
+				$error_message = "Invalid action specified";
+				break;
 		}
 		echo PHP_EOL.'<div align="center" width="50%" height="50%" class="error-message">Error: '.$error_message.'</div>'.PHP_EOL;
 	}
 }
+
+function display_note() {
+	if (isset($_GET["note"])) {
+		$note_message = "Note";
+		switch ($_GET["note"]) {
+			case "account-updated":
+				$note_message = "Account updated";
+				break;
+			case "key-added":
+				$note_message = "Signing key added";
+				break;
+			case "key-removed":
+				$note_message = "Signing key removed";
+				break;
+			case "installing-vm":
+				$note_message = "Installing VMs";
+				break;
+			case "upgrading-vm":
+				$note_message = "Upgrading VMs";
+				break;
+			case "removed-vm":
+				$note_message = "Removed VMs";
+				break;
+		}
+		echo PHP_EOL.'<div align="center" width="50%" height="50%" class="note-message">Note: '.$note_message.'</div>'.PHP_EOL;
+	}
+}
+
 function display_header() {
 	echo '<!DOCTYPE html>
 <html lang="en">

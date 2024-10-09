@@ -73,6 +73,7 @@ display_error_message();
 							echo '	<iframe src="view-log.php?log='.$_GET["log"].'#end" title="Build log" height="400" width="100%" id="build-log-iframe"></iframe><br>';
 						}
 						?>
+						
 					</div>
 					<div class="card" id="new-build">
 						<div style="width: 100%; overflow: hidden;">
