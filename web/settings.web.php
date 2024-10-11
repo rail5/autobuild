@@ -42,6 +42,33 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 				redirect_and_die("settings.web.php");
 			}
 
+			switch ($_GET["auto-clear-builds-length-unit"]) {
+				case "hours":
+					$auto_clear_builds_minutes = $auto_clear_builds_minutes * 60;
+					break;
+				case "days":
+					$auto_clear_builds_minutes = $auto_clear_builds_minutes * 60 * 24;
+					break;
+			}
+
+			switch ($_GET["auto-clear-logs-length-unit"]) {
+				case "hours":
+					$auto_clear_logs_minutes = $auto_clear_logs_minutes * 60;
+					break;
+				case "days":
+					$auto_clear_logs_minutes = $auto_clear_logs_minutes * 60 * 24;
+					break;
+			}
+
+			switch ($_GET["auto-upgrade-vms-cycle-unit"]) {
+				case "hours":
+					$auto_upgrade_vms_minutes = $auto_upgrade_vms_minutes * 60;
+					break;
+				case "days":
+					$auto_upgrade_vms_minutes = $auto_upgrade_vms_minutes * 60 * 24;
+					break;
+			}
+
 			$new_cron_settings = array();
 			$new_cron_settings["auto_clear_builds"]			= intval($auto_clear_builds);
 			$new_cron_settings["auto_clear_logs"]			= intval($auto_clear_logs);
@@ -66,6 +93,42 @@ $auto_upgrade_vms_checked	= $cron_settings["auto_upgrade_vms"] == "1" ? " checke
 $auto_clear_builds_minutes	= $cron_settings["auto_clear_builds_minutes"];
 $auto_clear_logs_minutes	= $cron_settings["auto_clear_logs_minutes"];
 $auto_upgrade_vms_minutes	= $cron_settings["auto_upgrade_vms_minutes"];
+
+if ($auto_clear_builds_minutes % 1440 == 0) {
+	$auto_clear_builds_minutes = $auto_clear_builds_minutes / 1440;
+	$auto_clear_builds_unit = "days";
+} elseif ($auto_clear_builds_minutes % 60 == 0) {
+	$auto_clear_builds_minutes = $auto_clear_builds_minutes / 60;
+	$auto_clear_builds_unit = "hours";
+} else {
+	$auto_clear_builds_unit = "minutes";
+}
+
+if ($auto_clear_logs_minutes % 1440 == 0) {
+	$auto_clear_logs_minutes = $auto_clear_logs_minutes / 1440;
+	$auto_clear_logs_unit = "days";
+} elseif ($auto_clear_logs_minutes % 60 == 0) {
+	$auto_clear_logs_minutes = $auto_clear_logs_minutes / 60;
+	$auto_clear_logs_unit = "hours";
+} else {
+	$auto_clear_logs_unit = "minutes";
+}
+
+if ($auto_upgrade_vms_minutes % 1440 == 0) {
+	$auto_upgrade_vms_minutes = $auto_upgrade_vms_minutes / 1440;
+	$auto_upgrade_vms_unit = "days";
+} elseif ($auto_upgrade_vms_minutes % 60 == 0) {
+	$auto_upgrade_vms_minutes = $auto_upgrade_vms_minutes / 60;
+	$auto_upgrade_vms_unit = "hours";
+} else {
+	$auto_upgrade_vms_unit = "minutes";
+}
+
+$units_options_array = array(
+	"minutes" => "<option value=\"minutes\"%selected%>Minutes</option>",
+	"hours" => "<option value=\"hours\"%selected%>Hours</option>",
+	"days" => "<option value=\"days\"%selected%>Days</option>"
+);
 
 display_header();
 display_error_message();
@@ -93,10 +156,14 @@ display_error_message();
 							<input type="hidden" name="action" value="update-cron">
 							<li><input type="checkbox" name="auto-clear-builds" id="auto-clear-builds"<?php echo $auto_clear_builds_checked; ?>> <label for="auto-clear-builds">Auto-delete <u>builds</u> older than &nbsp; </label>
 								<input type="number" name="auto-clear-builds-length" class="inline" min="1" value="<?php echo $auto_clear_builds_minutes; ?>">
+								
 								<select name="auto-clear-builds-length-unit" class="inline">
-									<option value="minutes">Minutes</option>
-									<option value="hours">Hours</option>
-									<option value="days">Days</option>
+									<?php
+										foreach ($units_options_array as $unit => $option) {
+											$selected = $auto_clear_builds_unit == $unit ? " selected" : "";
+											echo str_replace("%selected%", $selected, $option);
+										}
+									?>
 								</select> 
 							</li>
 							<br>
@@ -104,9 +171,12 @@ display_error_message();
 							<li><input type="checkbox" name="auto-clear-logs" id="auto-clear-logs"<?php echo $auto_clear_logs_checked; ?>> <label for="auto-clear-logs">Auto-delete <u>logs</u> older than &nbsp; </label>
 								<input type="number" name="auto-clear-logs-length" class="inline" min="1" value="<?php echo $auto_clear_logs_minutes; ?>">
 								<select name="auto-clear-logs-length-unit" class="inline">
-									<option value="minutes">Minutes</option>
-									<option value="hours">Hours</option>
-									<option value="days">Days</option>
+								<?php
+										foreach ($units_options_array as $unit => $option) {
+											$selected = $auto_clear_logs_unit == $unit ? " selected" : "";
+											echo str_replace("%selected%", $selected, $option);
+										}
+									?>
 								</select>
 							</li>
 							<br><br>
@@ -114,9 +184,12 @@ display_error_message();
 							<li><input type="checkbox" name="auto-upgrade-vms" id="auto-upgrade-vms"<?php echo $auto_upgrade_vms_checked; ?>> <label for="auto-upgrade-vms">Auto-upgrade VMs every &nbsp; </label>
 								<input type="number" name="auto-upgrade-vms-cycle" class="inline" min="1" value="<?php echo $auto_upgrade_vms_minutes; ?>">
 								<select name="auto-upgrade-vms-cycle-unit" class="inline">
-									<option value="minutes">Minutes</option>
-									<option value="hours">Hours</option>
-									<option value="days">Days</option>
+								<?php
+										foreach ($units_options_array as $unit => $option) {
+											$selected = $auto_upgrade_vms_unit == $unit ? " selected" : "";
+											echo str_replace("%selected%", $selected, $option);
+										}
+									?>
 								</select>
 							</li>
 							<br><br>
