@@ -25,25 +25,7 @@ $db->exec('CREATE TABLE IF NOT EXISTS "data" (
 	PRIMARY KEY("uid" AUTOINCREMENT)
 );');
 
-if (!db_structure_is_up_to_date()) {
-	try {
-		$db->exec('BEGIN TRANSACTION;
-		ALTER TABLE "data" ADD COLUMN "uid" INTEGER NOT NULL UNIQUE;
-		ALTER TABLE "data" ADD COLUMN "username" TEXT NOT NULL;
-		ALTER TABLE "data" ADD COLUMN "password" TEXT NOT NULL;
-		ALTER TABLE "data" ADD COLUMN "latest_build" TEXT NOT NULL DEFAULT "Never";
-		ALTER TABLE "data" ADD COLUMN "builds" INTEGER NOT NULL DEFAULT 0;
-		ALTER TABLE "data" ADD COLUMN "auto_clear_builds" INTEGER NOT NULL DEFAULT 0;
-		ALTER TABLE "data" ADD COLUMN "auto_clear_builds_minutes" INTEGER NOT NULL DEFAULT 0;
-		ALTER TABLE "data" ADD COLUMN "auto_clear_logs" INTEGER NOT NULL DEFAULT 0;
-		ALTER TABLE "data" ADD COLUMN "auto_clear_logs_minutes" INTEGER NOT NULL DEFAULT 0;
-		ALTER TABLE "data" ADD COLUMN "auto_upgrade_vms" INTEGER NOT NULL DEFAULT 0;
-		ALTER TABLE "data" ADD COLUMN "auto_upgrade_vms_minutes" INTEGER NOT NULL DEFAULT 0;
-		COMMIT;');
-	} catch (Exception $e) {
-		// Do nothing
-	}
-}
+bring_db_structure_up_to_date();
 
 $username = $db->query('SELECT username FROM "data" WHERE uid=1')->fetchArray();
 
@@ -64,14 +46,11 @@ if ($username && !$_SESSION['logged-in'] && basename($_SERVER['PHP_SELF']) != "l
 
 
 /* Database functions */
-function db_structure_is_up_to_date() {
+function bring_db_structure_up_to_date() {
 	global $db;
-	$tables = array(
-		"uid",
-		"username",
-		"password",
-		"latest_build",
-		"builds",
+
+	// Fields that were not included in the initial release of autobuild-web
+	$columns = array(
 		"auto_clear_builds",
 		"auto_clear_builds_minutes",
 		"auto_clear_logs",
@@ -80,16 +59,18 @@ function db_structure_is_up_to_date() {
 		"auto_upgrade_vms_minutes"
 	);
 
-	foreach ($tables as $table) {
-		$test_query = "SELECT INSTR(sql, '$table') FROM sqlite_master WHERE type='table' AND name='data'";
+	foreach ($columns as $column) {
+		$test_query = "SELECT INSTR(sql, '$column') FROM sqlite_master WHERE type='table' AND name='data'";
 		$test_result = $db->query($test_query)->fetchArray();
 		
-		if ($test_result == 0) {
-			return false;
+		if ($test_result[0] == 0) {
+			try {
+				$db->exec("ALTER TABLE data ADD COLUMN $column INTEGER NOT NULL DEFAULT 0;");
+			} catch (Exception $e) {
+				// Do nothing
+			}
 		}
 	}
-	
-	return true;
 }
 
 function create_user($username, $password) {
