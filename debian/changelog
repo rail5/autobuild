@@ -1,3 +1,30 @@
+autobuild (3.2.6) unstable; urgency=medium
+
+  * autobuild-web: Settings page is now split into 3 sections:
+    settings.web.php, settings.autobuild.php, and settings.farm.php
+  * autobuild-web: Implemented Build Farm management through web UI
+    Can install, upgrade, and remove build farm VMs through
+    settings.farm.php
+  * autobuild-web: Implemented cron jobs
+    Auto-delete old builds, auto-delete old logs, auto-upgrade VMs
+    Configurable through settings.web.php
+  * autobuild: Make sure to restore build environment's original state
+    if the job is interrupted. In particular, if we're cancelling, we
+    need to make sure we clear any 'upgrading' or 'installing' files we
+    created
+  * autobuild-web: Added case-insensitive captcha to the login page
+    The debian package php-gregwar- captcha is now a dependency of
+    autobuild-web
+  * autobuild: Fixed a bug where the initrd preseed wasn't always
+    properly applied
+  * autobuild: Now accepts an -i argument (--install-vm), which, when
+    paired with one of the options --amd64, --i386, --arm64, does exactly
+    what you would expect.
+  * autobuild: Swapped wget for cURL
+  * autobuild: Build logs now report success or failure at the end
+
+ -- rail5 <andrew@rail5.org>  Fri, 11 Oct 2024 21:37:01 +0800
+
 autobuild (3.2.5) unstable; urgency=medium
 
   * Patched a bug: first repo was not called 'default'
