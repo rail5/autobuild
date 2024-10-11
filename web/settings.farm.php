@@ -27,8 +27,7 @@ if (isset($_GET["submitted"]) && !isset($_GET["error"])) {
 
 	// Do we have everything we need?
 	if (!isset($_GET["arch"])) {
-		$_GET["error"] = "no-arch";
-		redirect_and_die("settings.farm.php", $_GET);
+		redirect_and_die("settings.farm.php", array("error" => "no-arch"));
 	}
 
 	if (!isset($_GET["action"])) {
