@@ -281,7 +281,7 @@ select {
 }
 
 input.captcha {
-	width: 50%;
+	width: 28%;
 	vertical-align: top;
 }
 
@@ -433,10 +433,6 @@ footer {
 	.multi-button-form button {
 		display: flex;
 		flex-direction: column;
-	}
-
-	input.captcha {
-		width: 28%;
 	}
 
 	.sidebar {
