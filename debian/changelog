@@ -1,4 +1,4 @@
-autobuild (3.2.6) unstable; urgency=medium
+autobuild (3.3.0) unstable; urgency=medium
 
   * autobuild-web: Settings page is now split into 3 sections:
     settings.web.php, settings.autobuild.php, and settings.farm.php
