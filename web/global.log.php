@@ -93,6 +93,24 @@ function delete_all_logs() {
 	run_autobuild("-r all");
 }
 
+function get_logs_to_clear($older_than) {
+	global $log_directory;
+	$logs = array_filter(glob("$log_directory/*.log"), 'file_not_empty');
+
+	$logs_to_clear = array();
+
+	foreach ($logs as $log) {
+		$log_number = basename($log, ".log");
+		$timestamp = filemtime($log);
+
+		if ((time() - $timestamp) > ($older_than * 60) && get_job_status($log_number) != 4) {
+			$logs_to_clear[] = $log_number;
+		}
+	}
+
+	return $logs_to_clear;
+}
+
 function get_job_pid($log_number) {
 	global $log_directory;
 	$log_file = escapeshellarg(get_log_file($log_number));
@@ -152,6 +170,23 @@ function get_job_status($log_number) {
 	}
 
 	return $status_code;
+}
+
+function get_builds_to_clear($older_than) {
+	global $autobuild_builds_directory;
+	$builds = array_filter(glob("$autobuild_builds_directory/*"), 'is_dir');
+
+	$builds_to_clear = array();
+
+	foreach ($builds as $build) {
+		$timestamp = filemtime("$build/.");
+
+		if ((time() - $timestamp) > ($older_than * 60)) {
+			$builds_to_clear[] = basename($build);
+		}
+	}
+
+	return $builds_to_clear;
 }
 
 function print_status_code($status_code, $html = false) {

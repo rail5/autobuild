@@ -176,7 +176,7 @@ display_error_message();
 							<input type="hidden" name="submitted" value="true">
 							<input type="hidden" name="action" value="update-cron">
 							<li><input type="checkbox" name="auto-clear-builds" id="auto-clear-builds"<?php echo $auto_clear_builds_checked; ?>> <label for="auto-clear-builds">Auto-delete <u>builds</u> older than &nbsp; </label>
-								<input type="number" name="auto-clear-builds-length" class="inline" min="1" value="<?php echo $auto_clear_builds_minutes; ?>">
+								<input type="number" name="auto-clear-builds-length" class="inline" min="0" value="<?php echo $auto_clear_builds_minutes; ?>">
 								
 								<select name="auto-clear-builds-length-unit" class="inline">
 									<?php
@@ -190,7 +190,7 @@ display_error_message();
 							<br>
 							<h3>Old Logs</h3>
 							<li><input type="checkbox" name="auto-clear-logs" id="auto-clear-logs"<?php echo $auto_clear_logs_checked; ?>> <label for="auto-clear-logs">Auto-delete <u>logs</u> older than &nbsp; </label>
-								<input type="number" name="auto-clear-logs-length" class="inline" min="1" value="<?php echo $auto_clear_logs_minutes; ?>">
+								<input type="number" name="auto-clear-logs-length" class="inline" min="0" value="<?php echo $auto_clear_logs_minutes; ?>">
 								<select name="auto-clear-logs-length-unit" class="inline">
 								<?php
 										foreach ($units_options_array as $unit => $option) {
@@ -203,7 +203,7 @@ display_error_message();
 							<br><br>
 							<h3>Build Farm</h3>
 							<li><input type="checkbox" name="auto-upgrade-vms" id="auto-upgrade-vms"<?php echo $auto_upgrade_vms_checked; ?>> <label for="auto-upgrade-vms">Auto-upgrade VMs every &nbsp; </label>
-								<input type="number" name="auto-upgrade-vms-cycle" class="inline" min="1" value="<?php echo $auto_upgrade_vms_minutes; ?>">
+								<input type="number" name="auto-upgrade-vms-cycle" class="inline" min="0" value="<?php echo $auto_upgrade_vms_minutes; ?>">
 								<select name="auto-upgrade-vms-cycle-unit" class="inline">
 								<?php
 										foreach ($units_options_array as $unit => $option) {

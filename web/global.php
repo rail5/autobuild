@@ -20,3 +20,4 @@ require_once "global.job.php";
 require_once "global.log.php";
 require_once "global.config.php";
 require_once "global.display.php";
+require_once "global.cron.php";
