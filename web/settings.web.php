@@ -82,6 +82,27 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 			redirect_and_die("settings.web.php");
 			break;
 	}
+} else if (isset($_POST["action"]) & $_POST["action"] == "update-account") {
+	$username = $_POST["username"];
+	$current_password = $_POST["current-password"];
+	$password = $_POST["password"];
+	$password_confirm = $_POST["password-confirm"];
+
+	if (empty($username) || empty($current_password) || empty($password)) {
+		redirect_and_die("settings.web.php", array("error" => "form-incomplete"));
+	}
+
+	if (!log_in(get_username(), $current_password)) {
+		redirect_and_die("settings.web.php", array("error" => "invalid-credentials"));
+	}
+
+	if ($password == $password_confirm) {
+		update_user($username, $password);
+	} else {
+		redirect_and_die("settings.web.php", array("error" => "password-mismatch"));
+	}
+
+	redirect_and_die("settings.web.php");
 }
 
 $cron_settings = get_cron_settings();

@@ -89,7 +89,11 @@ function get_username() {
 
 function update_user($username, $password) {
 	global $db;
-	// FIXME
+	
+	$query = $db->prepare('UPDATE data SET username = :user, password = :pass WHERE uid=1');
+	$query->bindValue(':user', $username);
+	$query->bindValue(':pass', password_hash($password, PASSWORD_DEFAULT));
+	return $query->execute();
 }
 
 function log_in($username, $password) {
