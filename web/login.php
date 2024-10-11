@@ -16,6 +16,12 @@ if (isset($_POST["submitted"])) {
 	// Form submitted, create a new user account
 	$username = $_POST["username"];
 	$password = $_POST["password"];
+	$captcha = $_POST["captcha"];
+
+	if (strtolower($captcha) != strtolower($_SESSION["captcha"])) {
+		$params["error"] = "invalid-captcha";
+		redirect_and_die("login.php", $params);
+	}
 
 	if ($username == "" || $password == "") {
 		$params["error"] = "form-incomplete";
@@ -44,6 +50,11 @@ display_error_message();
 						<form action="login.php" method="post">
 							<input type="text" name="username" placeholder="Username">
 							<input type="password" name="password" placeholder="Password">
+							<br>
+							<li>
+								<input type="text" name="captcha" class="captcha" placeholder="Captcha">
+								<iframe src="view-captcha.php" class="captcha"></iframe>
+							</li>
 							<input type="hidden" name="submitted" value="true">
 							<div align="center">
 								<button type="submit">Log In</button>

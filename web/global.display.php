@@ -32,6 +32,9 @@ function display_error_message() {
 			case "password-mismatch":
 				$error_message = "Passwords do not match";
 				break;
+			case "invalid-captcha":
+				$error_message = "Invalid captcha";
+				break;
 			case "form-incomplete":
 				$error_message = "Please fill out all fields";
 				break;

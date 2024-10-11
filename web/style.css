@@ -280,6 +280,20 @@ select {
 	border-radius: 4px;
 }
 
+input.captcha {
+	width: 50%;
+	vertical-align: top;
+}
+
+iframe.captcha {
+	width: calc(160px + 1rem);
+	height: 50px;
+	position: relative;
+	float: right;
+	border: none;
+	scrollbar-width: 0;
+}
+
 select.inline {
 	max-width: fit-content;
 	padding: 0.5rem;
@@ -317,6 +331,10 @@ a.button {
 }
 
 a.button:hover {
+	filter: brightness(120%);
+}
+
+a.button-no-decoration:hover {
 	filter: brightness(120%);
 }
 
@@ -415,6 +433,10 @@ footer {
 	.multi-button-form button {
 		display: flex;
 		flex-direction: column;
+	}
+
+	input.captcha {
+		width: 28%;
 	}
 
 	.sidebar {
