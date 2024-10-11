@@ -23,6 +23,11 @@ chown _autobuild:nogroup /var/autobuild/web/log
 chmod 770 /var/autobuild/web
 chmod 770 /var/autobuild/web/log
 
+# If the database is present, make sure it has proper permissions
+if [[ -f /var/autobuild/web/db.sqlite ]]; then
+	chmod 644 /var/autobuild/web/db.sqlite
+fi
+
 # Configure PHP-FPM
 PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')
 if [[ -d /etc/php/$PHP_VERSION/fpm/pool.d ]]; then
