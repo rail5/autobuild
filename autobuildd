@@ -89,6 +89,20 @@ debian_repos_to_push_to=()
 this_job_id="$(date +%Y-%h-%d.%H:%M:%S).$$"
 output_directory="$local_storage_directory/builds/$this_job_id/"
 
+# Information that we'll need if we cancel the job early
+# This information will store (live) the current state of the build environment
+# So that we can restore it to its original state if the job is cancelled
+declare -A currently_installing
+declare -A currently_upgrading
+
+currently_installing["amd64"]=false
+currently_installing["i386"]=false
+currently_installing["arm64"]=false
+
+currently_upgrading["amd64"]=false
+currently_upgrading["i386"]=false
+currently_upgrading["arm64"]=false
+
 
 echo "PID: $$" # Echo the PID as the first line of output
 	# This is so other processes can terminate the autobuild daemon early if desired
@@ -247,6 +261,19 @@ function clean_up() {
 	rm -f "$build_farm_directory/debian-stable-amd64/snapshot.qcow"
 	rm -f "$build_farm_directory/debian-stable-i386/snapshot.qcow"
 	rm -f "$build_farm_directory/debian-stable-arm64/snapshot.qcow"
+
+	# Restore the build environment to its original state
+	for arch in "${!currently_installing[@]}"; do
+		if [[ ${currently_installing["$arch"]} == true ]]; then
+			rm -f "$build_farm_directory/debian-stable-$arch/installing"
+		fi
+	done
+
+	for arch in "${!currently_upgrading[@]}"; do
+		if [[ ${currently_upgrading["$arch"]} == true ]]; then
+			rm -f "$build_farm_directory/debian-stable-$arch/upgrading"
+		fi
+	done
 }
 
 function upgrade_vm() {
@@ -258,6 +285,7 @@ function upgrade_vm() {
 		echo "Skipping upgrade of $ARCH VM..."
 		return
 	fi
+	currently_upgrading["$ARCH"]=true
 	echo "1" > "$build_farm_directory/debian-stable-$ARCH/upgrading"
 	echo "---"
 	echo "Upgrading $ARCH VM..."
@@ -268,6 +296,7 @@ function upgrade_vm() {
 	done
 	shutdown_build_vm
 	rm -f "$build_farm_directory/debian-stable-$ARCH/upgrading"
+	currently_upgrading["$ARCH"]=false
 }
 
 function maybe_install_vm() {
@@ -286,6 +315,7 @@ function maybe_install_vm() {
 	fi
 
 	# Mark the VM as installing
+	currently_installing["$ARCH"]=true
 	echo "1" > "$ARCH_DIRECTORY/installing"
 
 	# Copy the preseed file into the VM directory
@@ -306,6 +336,7 @@ function maybe_install_vm() {
 
 	# Unmark the VM as installing
 	rm -f "$ARCH_DIRECTORY/installing"
+	currently_installing["$ARCH"]=false
 }
 
 function start_build_vm() {
