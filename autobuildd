@@ -526,21 +526,30 @@ function build_all_pkgs_in_pkgarrays() {
 	local building_locally=true # Only building locally if we're NOT building on ANY of the VMs
 
 	# The loop for each architecture:
-	# Start a VM, build a package, shut it down
+	## Enter the queue
+	### Start a VM, build a package, shut it down
+	## Exit the queue
+
+	enter_queue_for_build_vm "amd64"
 	for pkgname in "${amd64_builds[@]}"; do
 		upgrade_vm_and_build_pkg "amd64" "$pkgname"
 		building_locally=false
 	done
+	exit_queue_for_build_vm "amd64"
 
+	enter_queue_for_build_vm "i386"
 	for pkgname in "${i386_builds[@]}"; do
 		upgrade_vm_and_build_pkg "i386" "$pkgname"
 		building_locally=false
 	done
+	exit_queue_for_build_vm "i386"
 	
+	enter_queue_for_build_vm "arm64"
 	for pkgname in "${arm64_builds[@]}"; do
 		upgrade_vm_and_build_pkg "arm64" "$pkgname"
 		building_locally=false
 	done
+	exit_queue_for_build_vm "arm64"
 
 	if [[ $building_locally == true ]]; then
 		# Building packages locally
@@ -548,6 +557,66 @@ function build_all_pkgs_in_pkgarrays() {
 			build_package_universal "$pkgname" "${packages[$pkgname]}" "local"
 		done
 	fi
+}
+
+function enter_queue_for_build_vm() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to enter_queue_for_build_vm" && graceful_exit 2
+	fi
+	local ARCH="$1"
+	
+	echo ""
+	echo "Queued"
+
+	# Attempt to obtain a file lock on the queue file
+	## If we can't, then somebody else is writing to the queue file
+	exec 200>>"$build_farm_directory/debian-stable-$ARCH/queue"
+	flock -x 200
+
+	# Once we've obtained the lock, write our job ID to the bottom of the queue file
+	## And release our lock to let other jobs queue
+	echo "$this_job_id" >> "$build_farm_directory/debian-stable-$ARCH/queue"
+	flock -u 200
+
+	queue_for_build_vm "$ARCH"
+}
+
+function queue_for_build_vm() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to enter_queue_for_build_vm" && graceful_exit 2
+	fi
+	local ARCH="$1"
+
+	# Verify that our job ID is somewhere in the queue
+	## If it isn't, then we should cancel the job
+	if ! grep -q "$this_job_id" "$build_farm_directory/debian-stable-$ARCH/queue"; then
+		# We're not in the queue at all anymore
+		## Cancel the job
+		graceful_interrupt
+	fi
+
+	# Watch the queue file until our job ID is at the top
+	## At which point, we return from the function
+	## Whatever comes next must properly call exit_queue_for_build_vm when the job is done
+	until [[ $(head -n 1 "$build_farm_directory/debian-stable-$ARCH/queue") == "$this_job_id" ]]; do
+		sleep 1
+	done
+}
+
+function exit_queue_for_build_vm() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to exit_queue_for_build_vm" && graceful_exit 2
+	fi
+	local ARCH="$1"
+
+	# Attempt to obtain a lock on the queue file
+	flock -x 200
+
+	# Remove our job ID from the queue
+	sed -i "/$this_job_id/d" "$build_farm_directory/debian-stable-$ARCH/queue"
+
+	# Release our lock
+	flock -u 200
 }
 
 function push_github_release_page() {
@@ -923,6 +992,11 @@ function graceful_exit() {
 
 	# Delete this session's temporary files
 	rm -rf "${autobuild_temp_directory:?}"
+
+	# Remove ourselves from any queue we might be in
+	exit_queue_for_build_vm "amd64"
+	exit_queue_for_build_vm "i386"
+	exit_queue_for_build_vm "arm64"
 
 	# Finally exit
 	# shellcheck disable=SC2086
