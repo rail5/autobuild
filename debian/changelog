@@ -1,3 +1,14 @@
+autobuild (3.3.1) unstable; urgency=medium
+
+  * autobuild: Handle job queueing properly
+    This closes #53
+  * autobuild-web: Security: verify captcha isn't blank
+  * autobuild-web: Allow signing key management via web ui
+    This closes #49. Outsourced signing key creation to autobuild
+    daemon
+
+ -- rail5 <andrew@rail5.org>  Sat, 12 Oct 2024 13:57:08 +0800
+
 autobuild (3.3.0) unstable; urgency=medium
 
   * autobuild-web: Settings page is now split into 3 sections:
