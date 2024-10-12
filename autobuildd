@@ -304,13 +304,19 @@ function maybe_install_vm() {
 		echo "bad args to maybe_install_vm" && graceful_exit 2
 	fi
 
-	local ARCH="$1"
+	local ARCH="$1" vm_is_installed="" vm_is_installing="" vm_is_upgrading=""
 	local ARCH_DIRECTORY="$build_farm_directory/debian-stable-$ARCH"
+	vm_is_installed=$([[ -f "$ARCH_DIRECTORY/image.qcow" ]] && echo "true" || echo "false")
 	vm_is_installing=$([[ -f "$ARCH_DIRECTORY/installing" ]] && echo "true" || echo "false")
 	vm_is_upgrading=$([[ -f "$ARCH_DIRECTORY/upgrading" ]] && echo "true" || echo "false")
 
+	if [[ $vm_is_installed == true ]]; then
+		echo "$ARCH VM is already installed. Skipping..."
+		return
+	fi
+
 	if [[ $vm_is_installing == true ]] || [[ $vm_is_upgrading == true ]]; then
-		echo "VM is already being installed or upgraded. Skipping..."
+		echo "$ARCH VM is already being installed or upgraded. Skipping..."
 		return
 	fi
 
