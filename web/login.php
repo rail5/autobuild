@@ -18,7 +18,7 @@ if (isset($_POST["submitted"])) {
 	$password = $_POST["password"];
 	$captcha = $_POST["captcha"];
 
-	if (strtolower($captcha) != strtolower($_SESSION["captcha"])) {
+	if (strtolower($captcha) != strtolower($_SESSION["captcha"]) || empty($captcha)) {
 		$params["error"] = "invalid-captcha";
 		redirect_and_die("login.php", $params);
 	}
