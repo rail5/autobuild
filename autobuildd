@@ -811,6 +811,90 @@ function verify_success() {
 	fi
 }
 
+function signing_key_already_exists() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to signing_key_already_exists" && graceful_exit 1
+	fi
+
+	local key_email="$1"
+
+	if gpg --list-secret-keys "$key_email" >/dev/null 2>&1; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+function get_signing_key_fingerprint() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to get_signing_key_fingerprint" && graceful_exit 1
+	fi
+
+	local key_email="$1"
+
+	gpg --with-colons -k "$key_email" 2>/dev/null | awk -F: '$1=="fpr" {print $10}' | head -n 1
+}
+
+function repos_depend_on_signing_key() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to repos_depend_on_signing_key" && graceful_exit 1
+	fi
+
+	local key_email="$1" key_fingerprint=""
+
+	if ! signing_key_already_exists "$key_email"; then
+		return 1
+	fi
+
+	key_fingerprint=$(get_signing_key_fingerprint "$key_email")
+
+	for repo in "$local_storage_directory/repo/"*; do
+		if [[ -d "$repo" ]]; then
+			if grep -q "$key_fingerprint" "$repo/conf/distributions"; then
+				return 0
+			fi
+		fi
+	done
+
+	return 1
+}
+
+function create_signing_key() {
+	if [[ $# != 2 ]]; then
+		echo "bad args to create_signing_key" && graceful_exit 1
+	fi
+
+	local key_name="$1" key_email="$2"
+
+	gpg --batch --gen-key >/dev/null 2>&1 <<EOF
+%no-protection
+Key-Type:1
+Key-Length:4096
+Subkey-Type:1
+Subkey-Length:4096
+Name-Real: $key_name
+Name-Email: $key_email
+Expire-Date:0
+EOF
+}
+
+function delete_signing_key() {
+	if [[ $# != 1 ]]; then
+		echo "bad args to delete_signing_key" && graceful_exit 1
+	fi
+
+	local key_email="$1" key_fingerprint=""
+
+	if ! signing_key_already_exists "$key_email"; then
+		return
+	fi
+
+	key_fingerprint=$(get_signing_key_fingerprint "$key_email")
+
+	gpg --batch --yes --delete-secret-keys "$key_fingerprint"
+	gpg --batch --yes --delete-keys "$key_fingerprint"
+}
+
 # shellcheck disable=SC2317
 ## SC2317 says this function is unreachable, because it can't detect that it's called by 'trap' at the top
 ## (We're trapping some interrupt signals and rerouting them to this function)
@@ -941,7 +1025,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bd:fghik:lL:no:p:r:su --long local,amd64,i386,arm64,bell,debian-repo:,forgejo-page,github-page,help,install-vm,kill:,list,log:,no-upgrade,output:,package:,remove-old-builds:,setup,upgrade \
+TEMP=$(getopt -o 0123bCd:DE:fghik:lL:nN:o:p:r:su --long local,amd64,i386,arm64,bell,create-signing-key,debian-repo:,delete-signing-key,key-email:,forgejo-page,github-page,help,install-vm,kill:,list,log:,no-upgrade,key-name:,output:,package:,remove-old-builds:,setup,upgrade \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -959,6 +1043,10 @@ distribute_to_debian_repo=false
 upgrading_vms=true
 just_upgrading_vms=false
 just_installing_vms=false
+just_create_signing_key=false
+just_delete_signing_key=false
+signing_key_name=""
+signing_key_email=""
 
 while true; do
 	case "$1" in
@@ -981,6 +1069,13 @@ while true; do
 		-b | --bell )
 			# Handled by the autobuild client
 			shift ;;
+		-C | --create-signing-key )
+			if [[ $just_delete_signing_key == true ]]; then
+				echo "Error: Cannot create and delete a signing key in the same command"
+				graceful_exit 1
+			fi
+			just_create_signing_key=true;
+			shift ;;
 		-d | --debian-repo )
 			case "$2" in
 				(*[!a-zA-Z0-9\-\_]*)
@@ -1000,6 +1095,21 @@ while true; do
 				debian_repos_to_push_to+=("$this_debian_repo")
 			else
 				echo "Debian repository is not configured: $this_debian_repo"
+				graceful_exit 1
+			fi
+			shift 2 ;;
+		-D | --delete-signing-key )
+			if [[ $just_create_signing_key == true ]]; then
+				echo "Error: Cannot create and delete a signing key in the same command"
+				graceful_exit 1
+			fi
+			just_delete_signing_key=true;
+			shift ;;
+		-E | --key-email )
+			signing_key_email="$2"
+			valid_email_regex="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+			if [[ ! "$signing_key_email" =~ $valid_email_regex ]]; then
+				echo "Error: Invalid email address provided: $signing_key_email"
 				graceful_exit 1
 			fi
 			shift 2 ;;
@@ -1035,6 +1145,8 @@ while true; do
 		-n | --no-upgrade )
 			upgrading_vms=false
 			shift ;;
+		-N | --key-name )
+			signing_key_name="$2"; shift 2 ;;
 		-o | --output )
 			# Handled by the autobuild client
 			shift 2 ;;
@@ -1061,6 +1173,55 @@ while true; do
 		* ) break ;;
 	esac
 done
+
+if [[ $just_create_signing_key == true ]]; then
+	if [[ -z "$signing_key_name" ]]; then
+		echo "Error: No signing key name provided"
+		graceful_exit 1
+	fi
+
+	if [[ -z "$signing_key_email" ]]; then
+		echo "Error: No signing key email provided"
+		graceful_exit 1
+	fi
+
+	if signing_key_already_exists "$signing_key_email"; then
+		echo "Error: Signing key already exists for email: $signing_key_email"
+		graceful_exit 1
+	fi
+
+	create_signing_key "$signing_key_name" "$signing_key_email"
+
+	echo "Signing key created for $signing_key_email"
+	echo ""
+	get_signing_key_fingerprint "$signing_key_email"
+
+	graceful_exit 0
+fi
+
+if [[ $just_delete_signing_key == true ]]; then
+	if [[ -z "$signing_key_email" ]]; then
+		echo "Error: No signing key email provided"
+		graceful_exit 1
+	fi
+
+	if ! signing_key_already_exists "$signing_key_email"; then
+		echo "Error: No signing key found for email: $signing_key_email"
+		graceful_exit 1
+	fi
+
+	if repos_depend_on_signing_key "$signing_key_email"; then
+		echo "Error: Cannot delete signing key $signing_key_email because it is being used by one or more repositories"
+		graceful_exit 1
+	fi
+
+	delete_signing_key "$signing_key_email"
+
+	echo "Signing key deleted for $signing_key_email"
+
+	graceful_exit 0
+
+fi
 
 if [[ $building_on_amd64 == true ]] && [[ $amd64_vm_is_configured == false ]] && [[ $just_installing_vms == false ]]; then
 	echo "The amd64 VM is not configured."
