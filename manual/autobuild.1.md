@@ -101,5 +101,22 @@ The configuration file can be found at /var/autobuild/config.toml. This file may
     This repository must be configured via the config file
     The argument should be the name of a Debian repo to push to
 
+## SIGNING KEY OPTIONS
+-C, \--create-signing-key
+
+    Create a new package signing key
+
+-D, \--delete-signing-key
+
+    Delete an existing package signing key
+
+-E, \--key-email
+
+    Specify email address to use for the signing key
+
+-N, \--key-name
+
+    Specify name to use for the signing key
+
 # AUTHOR
 rail5 (andrew@rail5.org)
