@@ -65,6 +65,12 @@ function display_error_message() {
 			case "key-exists":
 				$error_message = "Signing key already exists";
 				break;
+			case "invalid-key":
+				$error_message = "Invalid signing key";
+				break;
+			case "key-in-use":
+				$error_message = "Signing key is currently still in use";
+				break;
 			case "invalid-email":
 				$error_message = "Invalid email address";
 				break;

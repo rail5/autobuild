@@ -441,3 +441,62 @@ function create_signing_key($name, $email) {
 
 	run_autobuild_and_wait_for_finish("-C -E $escaped_email -N $escaped_name");
 }
+
+function delete_signing_key($email) {
+	$signing_keys = get_signing_keys("email");
+
+	if (!in_array(strtolower($email), $signing_keys)) {
+		redirect_and_die("back", array("error" => "invalid-key"));
+	}
+
+	if (signing_key_is_in_use($email)) {
+		redirect_and_die("back", array("error" => "key-in-use"));
+	}
+
+	$escaped_email = escapeshellarg($email);
+
+	run_autobuild_and_wait_for_finish("-D -E $escaped_email");
+}
+
+function signing_key_is_in_use($email) {
+
+	$signing_keys = get_signing_keys("email");
+	if (!in_array(strtolower($email), $signing_keys)) {
+		return false;
+	}
+
+	$debian_repos = get_debian_repos();
+
+	$key_fingerprint = get_signing_key_fingerprint($email);
+
+	foreach ($debian_repos as $repo) {
+		$repo_conf = file_get_contents("/var/autobuild/repo/$repo/conf/distributions");
+		if (strpos($repo_conf, $key_fingerprint) !== false) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function get_repos_which_use_signing_key($email) {
+	$signing_keys = get_signing_keys("email");
+	if (!in_array(strtolower($email), $signing_keys)) {
+		return array();
+	}
+
+	$debian_repos = get_debian_repos();
+
+	$key_fingerprint = get_signing_key_fingerprint($email);
+
+	$repos = array();
+
+	foreach ($debian_repos as $repo) {
+		$repo_conf = file_get_contents("/var/autobuild/repo/$repo/conf/distributions");
+		if (strpos($repo_conf, $key_fingerprint) !== false) {
+			$repos[] = $repo;
+		}
+	}
+
+	return $repos;
+}

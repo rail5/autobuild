@@ -170,7 +170,7 @@ display_error_message();
 											foreach ($signing_keys as $key) {
 												echo "<option value=\"".$key["email"]."\">".$key["name"]." &lt;".$key["email"]."&gt;</option>".PHP_EOL;
 											}
-											echo "</select>
+											echo "</select> <a href=\"signing-keys.php\">Manage Keys</a>
 										</div>";
 									}
 								?>
