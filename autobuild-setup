@@ -185,16 +185,7 @@ function create_new_debian_repository() {
 		fi
 
 		# Create the new key
-		gpg --batch --gen-key <<EOF
-%no-protection
-Key-Type:1
-Key-Length:4096
-Subkey-Type:1
-Subkey-Length:4096
-Name-Real: $user_name
-Name-Email: $user_email
-Expire-Date:0
-EOF
+		autobuild -C -E "$user_email" -N "$user_name"
 
 	fi
 
