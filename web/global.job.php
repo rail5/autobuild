@@ -16,3 +16,7 @@ function run_autobuild($command) {
 	fwrite($socket, $command);
 	fclose($socket);
 }
+
+function run_autobuild_and_wait_for_finish($command) {
+	`autobuild $command`;
+}

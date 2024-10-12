@@ -436,17 +436,8 @@ function create_signing_key($name, $email) {
 		redirect_and_die("back", $_GET);
 	}
 
-	$escaped_email = filter_var($email, FILTER_SANITIZE_EMAIL);
-	$escaped_name = preg_replace("/[^a-zA-Z0-9\ \-\_\.]/", "", $name);
+	$escaped_email = escapeshellarg(filter_var($email, FILTER_SANITIZE_EMAIL));
+	$escaped_name = escapeshellarg(preg_replace("/[^a-zA-Z0-9\ \-\_\.]/", "", $name));
 
-	`gpg --batch --gen-key <<EOF
-%no-protection
-Key-Type:1
-Key-Length:4096
-Subkey-Type:1
-Subkey-Length:4096
-Name-Real: $escaped_name
-Name-Email: $escaped_email
-Expire-Date:0
-EOF`;
+	run_autobuild_and_wait_for_finish("-C -E $escaped_email -N $escaped_name");
 }
