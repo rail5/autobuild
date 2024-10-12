@@ -194,15 +194,21 @@ EOF
 	# Delete any old repository which may or may not exist
 	rm -rf "${repo_path:?}/"
 
+	# Get the repo "friendly name":
+	## Remove non-alphanumeric characters from the user's name
+	## And convert the remainder to lowercase
+	# shellcheck disable=SC2001
+	repo_friendlyname=$(sed 's/[^A-Za-z0-9\-]//g' <<<"$user_name" | tr '[:upper:]' '[:lower:]')
+
 	# Prepare the new repository for reprepro
 	mkdir -p "${repo_path:?}/conf"
 	cat > "${repo_path:?}/conf/distributions" <<EOF
-Origin: $user_name
-Label: $user_name
+Origin: $repo_friendlyname
+Label: $repo_friendlyname
 Codename: unstable
 Architectures: source amd64 i386 arm64
 Components: main
-Description: Apt repository for $user_name
+Description: Apt repository for $repo_friendlyname
 SignWith: $signing_key_fingerprint
 Contents: .gz
 EOF
@@ -216,12 +222,6 @@ EOF
 		# User pressed cancel
 		return
 	fi
-
-	# Get the repo "friendly name":
-	## Remove non-alphanumeric characters from the user's name
-	## And convert the remainder to lowercase
-	# shellcheck disable=SC2001
-	repo_friendlyname=$(sed 's/[^A-Za-z0-9\-]//g' <<<"$user_name" | tr '[:upper:]' '[:lower:]')
 
 	# Export the public key to a file
 	gpg --export "$signing_key_fingerprint" > "${repo_path:?}/${repo_friendlyname:?}-signing-key.gpg"
