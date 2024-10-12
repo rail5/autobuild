@@ -29,7 +29,7 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 				redirect_and_die("repositories.php", $_GET);
 			}
 
-			if (empty($_GET["repo_name"]) && !empty($debian_repos)) {
+			if (empty($_GET["repo_name"])) {
 				$_GET["error"] = "no-repo-name";
 				redirect_and_die("repositories.php", $_GET);
 			}
@@ -42,10 +42,6 @@ if (isset($_GET["action"]) && !isset($_GET["error"])) {
 			$github_pages_url = $github_pages ? $_GET["github_pages_url"] : "";
 
 			// Validate input
-			if (empty($debian_repos)) {
-				$repo_name = "default"; // First repo must be called 'default'
-			}
-
 			if (preg_match("/[^a-zA-Z0-9\-\_]/", $repo_name)) {
 				$_GET["error"] = "invalid-repo-name";
 				redirect_and_die("repositories.php", $_GET);
@@ -157,13 +153,8 @@ display_error_message();
 						<form action="repositories.php" method="get" style="display: inline-block;">
 								<input type="hidden" name="action" value="create">
 								<h3>Repository Details</h3>
-								<?php
-
-								if (!empty($debian_repos)) {
-								echo '<label for="repo_name">Repository Name:</label>
-								<input type="text" name="repo_name" placeholder="my-debian-repo"><br>';
-								}
-								?>
+								<label for="repo_name">Repository Name:</label>
+								<input type="text" name="repo_name" placeholder="my-debian-repo"><br>
 								
 								<label for="repo_url">Repository URL:</label>
 								<input type="text" name="repo_url" placeholder="https://my.site/deb">
