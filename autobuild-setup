@@ -30,10 +30,19 @@ function setup_single_vm() {
 	if [[ $# != 1 ]]; then
 		echo "bag args to setup_single_vm" && exit
 	fi
-	local ARCH="$1"
+	local ARCH="$1" vm_is_installing="" vm_is_upgrading="" ARCH_DIRECTORY=""
 
 	ARCH_DIRECTORY="$local_storage_directory/build-farm/debian-stable-$ARCH"
 	cd "$ARCH_DIRECTORY" || (echo ""; echo "Local storage directory is not properly configured"; exit)
+
+	vm_is_installing=$(test -f "./installing" && echo "true" || echo "false")
+	vm_is_upgrading=$(test -f "./upgrading" && echo "true" || echo "false")
+
+	if [[ $vm_is_installing == true || $vm_is_upgrading == true ]]; then
+		dialog --title "$window_title" \
+			--infobox "The $ARCH VM is already being installed or upgraded" 15 55; sleep 3
+		return
+	fi
 
 	rm -f "./image.qcow"
 	rm -f "./preseed.cfg"
