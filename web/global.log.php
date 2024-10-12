@@ -103,7 +103,7 @@ function get_logs_to_clear($older_than) {
 		$log_number = basename($log, ".log");
 		$timestamp = filemtime($log);
 
-		if ((time() - $timestamp) > ($older_than * 60) && get_job_status($log_number) != 4) {
+		if ((time() - $timestamp) > ($older_than * 60) && get_job_status($log_number) < 4) {
 			$logs_to_clear[] = $log_number;
 		}
 	}
