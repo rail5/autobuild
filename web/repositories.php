@@ -9,10 +9,8 @@
 require_once "global.php";
 
 $debian_repos = get_debian_repos();
-//$debian_repos = array();
 
 $signing_keys = get_signing_keys();
-//$signing_keys = array();
 
 $github_configured = github_is_configured();
 
