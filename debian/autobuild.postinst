@@ -33,6 +33,11 @@ chown _autobuild /var/autobuild/config.toml
 # Set permissions on config file
 chmod 660 /var/autobuild/config.toml
 
+# Create the /var/autobuild/repo directory
+if [[ ! -d /var/autobuild/repo ]]; then
+	mkdir -p /var/autobuild/repo
+fi
+
 # Enable and start the autobuild service
 deb-systemd-invoke enable autobuild.socket
 deb-systemd-invoke start autobuild.socket
