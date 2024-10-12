@@ -346,14 +346,9 @@ function setup_debian_repo() {
 
 	# If we're making a new repository, let's get a name for it
 	if [[ "$repo_path" == "" ]]; then
-		# If this is the first repository, it must be called "default"
-		if [[ "$(get_list_of_debian_repos)" == "" ]]; then
-			new_repo_name="default"
-		else
-			{ new_repo_name="$(dialog --title "$window_title" \
-				--inputbox "Enter a name for this new repository:" 15 55 \
-				2>&1 1>&3 3>&- )"; } 3>&1
-		fi
+		{ new_repo_name="$(dialog --title "$window_title" \
+			--inputbox "Enter a name for this new repository:" 15 55 \
+			2>&1 1>&3 3>&- )"; } 3>&1
 
 		case "$new_repo_name" in
 			("")
@@ -363,7 +358,7 @@ function setup_debian_repo() {
 				# Invalid characters
 				# Allowed characters: a-z, A-Z, 0-9, -, and _
 				dialog --title "$window_title" \
-					--infobox "Invalid repository name!\nRepo names may contain letters, numbers, hypens (-) and underscores (_)" 15 55;
+					--infobox "Invalid repository name!\nRepo names may contain letters, numbers, hyphens (-) and underscores (_)" 15 55;
 				sleep 7;
 				return ;;
 			(*)

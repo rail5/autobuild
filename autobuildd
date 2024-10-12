@@ -983,10 +983,6 @@ while true; do
 			shift ;;
 		-d | --debian-repo )
 			case "$2" in
-				("")
-					# None specified -- use default repo
-					this_debian_repo="default"
-					;;
 				(*[!a-zA-Z0-9\-\_]*)
 					# Invalid characters. Fail closed
 					# Allowed characters: a-z, A-Z, 0-9, -, and _
