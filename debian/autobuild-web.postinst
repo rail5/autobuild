@@ -25,6 +25,7 @@ chmod 770 /var/autobuild/web/log
 
 # If the database is present, make sure it has proper permissions
 if [[ -f /var/autobuild/web/db.sqlite ]]; then
+	chown _autobuild:nogroup /var/autobuild/web/db.sqlite
 	chmod 644 /var/autobuild/web/db.sqlite
 fi
 
