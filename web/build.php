@@ -246,7 +246,7 @@ $arm64_checkbox_onoff = isset($_GET["arch"]) && in_array("arm64", $_GET["arch"])
 							
 							<h3><u>Options</u></h3>
 							<li>
-								<input type="checkbox" id="upgrade" name="upgrade" value="1" checked>
+								<input type="checkbox" id="upgrade" name="upgrade" value="1">
 								<label for="upgrade">Upgrade Build Farm VMs before building</label>
 							</li>
 
