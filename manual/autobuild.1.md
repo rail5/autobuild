@@ -42,6 +42,8 @@ The configuration file can be found at /var/autobuild/config.toml. This file may
     Write output to a specified log directory instead of to the
     terminal.
     Autobuild will create a file in that directory called {JOB-ID}.log
+    Individual package build logs will also be written to that directory
+    instead of to /var/autobuild/log.
 
 -r, \--remove-old-builds
 
