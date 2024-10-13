@@ -16,6 +16,7 @@ autobuild_temp_directory=$(mktemp --tmpdir -d autobuild.XXXXXXXXXXXX)
 local_storage_directory="/var/autobuild"
 build_farm_directory="$local_storage_directory/build-farm"
 package_directory="$local_storage_directory/packages"
+log_directory="$local_storage_directory/log"
 autobuild_directory="/usr/share/autobuild"
 pkgs_build_base_directory="builds/$(date +%Y-%h-%d-%H%M%S)"
 
@@ -25,6 +26,10 @@ BUILDFARM_SCRIPTS_FILE="$autobuild_directory/build-farm/scripts/scripts.sh"
 
 if [ ! -d "$local_storage_directory" ]; then
 	mkdir "$local_storage_directory"
+fi
+
+if [ ! -d "$log_directory" ]; then
+	mkdir "$log_directory"
 fi
 
 # Copy any updated files to $local_storage_directory/build-farm in case an upgrade took place
@@ -548,7 +553,9 @@ function build_all_pkgs_in_pkgarrays() {
 	if [[ ${#amd64_builds[@]} -gt 0 ]]; then
 		enter_queue_for_build_vm "amd64"
 		for pkgname in "${amd64_builds[@]}"; do
-			upgrade_vm_and_build_pkg "amd64" "$pkgname"
+			local pkg_log="$log_directory/$this_job_id.$pkgname.amd64.build"
+			echo "Build log for $pkgname on amd64: $(basename "$pkg_log")"
+			upgrade_vm_and_build_pkg "amd64" "$pkgname" >> "$pkg_log" 2>&1
 			building_locally=false
 		done
 		exit_queue_for_build_vm "amd64"
@@ -557,7 +564,9 @@ function build_all_pkgs_in_pkgarrays() {
 	if [[ ${#i386_builds[@]} -gt 0 ]]; then
 		enter_queue_for_build_vm "i386"
 		for pkgname in "${i386_builds[@]}"; do
-			upgrade_vm_and_build_pkg "i386" "$pkgname"
+			local pkg_log="$log_directory/$this_job_id.$pkgname.i386.build"
+			echo "Build log for $pkgname on i386: $(basename "$pkg_log")"
+			upgrade_vm_and_build_pkg "i386" "$pkgname" >> "$pkg_log" 2>&1
 			building_locally=false
 		done
 		exit_queue_for_build_vm "i386"
@@ -566,7 +575,9 @@ function build_all_pkgs_in_pkgarrays() {
 	if [[ ${#arm64_builds[@]} -gt 0 ]]; then
 		enter_queue_for_build_vm "arm64"
 		for pkgname in "${arm64_builds[@]}"; do
-			upgrade_vm_and_build_pkg "arm64" "$pkgname"
+			local pkg_log="$log_directory/$this_job_id.$pkgname.arm64.build"
+			echo "Build log for $pkgname on arm64: $(basename "$pkg_log")"
+			upgrade_vm_and_build_pkg "arm64" "$pkgname" >> "$pkg_log" 2>&1
 			building_locally=false
 		done
 		exit_queue_for_build_vm "arm64"
@@ -1069,6 +1080,10 @@ function display_help() {
 	echo "  --arm64"
 	echo "    Build packages on the arm64 Build Farm VM"
 	echo ""
+	echo "  -c"
+	echo "  --clear-logs"
+	echo "	Clear all log files (in /var/autobuild/log) and exit"
+	echo ""
 	echo "  -C"
 	echo "  --create-signing-key"
 	echo "    Create a GPG signing key and exit"
@@ -1134,6 +1149,8 @@ function display_help() {
 	echo "    Write output to a provided directory instead of standard output"
 	echo "    e.g.: -L /tmp"
 	echo "    Autobuild will output to /tmp/job-id.log"
+	echo "    Individual package build logs will also be saved there instead of /var/autobuild/log"
+	echo ""
 	echo "Example:"
 	echo "  autobuild -12g -d default -p liesel -p bookthief -p polonius"
 	echo "  autobuild --i386 --arm64 --debian-repo default --github-page --package liesel --package bookthief --package polonius"
@@ -1147,7 +1164,7 @@ arguments=$(cat <&0) # Receive arguments from STDIN
 
 eval set -- "$arguments"
 
-TEMP=$(getopt -o 0123bCd:DE:fghik:lL:nN:o:p:r:su --long local,amd64,i386,arm64,bell,create-signing-key,debian-repo:,delete-signing-key,key-email:,forgejo-page,github-page,help,install-vm,kill:,list,log:,no-upgrade,key-name:,output:,package:,remove-old-builds:,setup,upgrade \
+TEMP=$(getopt -o 0123bcCd:DE:fghik:lL:nN:o:p:r:su --long local,amd64,i386,arm64,bell,clear-logs,create-signing-key,debian-repo:,delete-signing-key,key-email:,forgejo-page,github-page,help,install-vm,kill:,list,log:,no-upgrade,key-name:,output:,package:,remove-old-builds:,setup,upgrade \
               -n 'autobuild' -- "$@")
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; graceful_exit 1 ; fi
@@ -1191,6 +1208,9 @@ while true; do
 		-b | --bell )
 			# Handled by the autobuild client
 			shift ;;
+		-c | --clear-logs )
+			rm -rf "${local_storage_directory:?}/log/"*
+			graceful_exit ;;
 		-C | --create-signing-key )
 			if [[ $just_delete_signing_key == true ]]; then
 				echo "Error: Cannot create and delete a signing key in the same command"
@@ -1250,17 +1270,17 @@ while true; do
 		-L | --log )
 			# Open a log file in the given directory and redirect all of our output to it
 			## First make sure we can actually write there
-			provided_log_file="$2"
+			log_directory="$2"
 
-			if [[ ! -d "$provided_log_file" ]]; then
-				echo "Error: Argument is not a directory: '$provided_log_file'"
+			if [[ ! -d "$log_directory" ]]; then
+				echo "Error: Argument is not a directory: '$log_directory'"
 				graceful_exit 1
-			elif [[ ! -w "$provided_log_file" ]]; then
-				echo "Error: Autobuild does not have write permissions to '$provided_log_file'"
+			elif [[ ! -w "$log_directory" ]]; then
+				echo "Error: Autobuild does not have write permissions to '$log_directory'"
 				graceful_exit 1
 			fi
 
-			provided_log_file="$provided_log_file/$this_job_id.log"
+			provided_log_file="$log_directory/$this_job_id.log"
 
 			exec >>"$provided_log_file"
 			echo "PID: $$"
