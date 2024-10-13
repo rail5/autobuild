@@ -168,7 +168,6 @@ function vm_upgrade($arch_list, $redirect = true) {
 
 function vm_install($arch_list) {
 	global $build_farm_directory;
-	$log_file = escapeshellarg(create_log_file());
 	foreach ($arch_list as $arch) {
 		if (vm_is_installing($arch) || vm_is_configured($arch) || vm_is_upgrading($arch)) {
 			continue;

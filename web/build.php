@@ -135,31 +135,23 @@ if (isset($_GET['submitted']) && !isset($_GET['error'])) {
 		$build_command .= "-n ";
 	}
 
-	// Create log file
-	$log_file = create_log_file();
-	$log_number = str_replace(".log", "", basename($log_file));
-	$build_command .= "-L \"$log_file\" ";
+	$build_command .= "-L \"/var/autobuild/web/log\" ";
 
 	/* Run build command */
-	run_autobuild($build_command);
+	$autobuild_jobid = run_autobuild_and_get_jobid($build_command);
 
-	while (filesize($log_file) === 0) {
-		sleep(1); // Sleep until we can get the job info
-		clearstatcache(); // Don't cache the result of filesize()
-	}
+	// Get the PID
+	$autobuild_pid = substr($autobuild_jobid, strrpos($autobuild_jobid, "."));
 
-	// Get the PID and the Job ID
-	$autobuild_pid = get_job_pid($log_number);
-	$autobuild_jobid = get_job_jobid($log_number);
-
-	$timestamp = str_replace(".$autobuild_pid", "", $autobuild_jobid);
+	// Get the timestamp
+	$timestamp = str_replace("$autobuild_pid", "", $autobuild_jobid);
 	$timestamp = str_replace(".", " ", $timestamp);
 	$timestamp = preg_replace('/[^0-9\-\ :(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)]/', "", $timestamp);
 
 	add_build($timestamp);
 
 	// Redirect to watch page
-	header("location: log.php?log=$log_number");
+	header("location: log.php?log=$autobuild_jobid");
 	die();
 }
 

@@ -35,24 +35,6 @@ function get_log_file($log_number) {
 	return $log_file;
 }
 
-function create_log_file() {
-	global $log_directory;
-	$log_number = random_string();
-	$log_file = "$log_directory/$log_number.log";
-
-	while (file_exists($log_file)) {
-		$log_number = random_string();
-		$log_file = "$log_directory/$log_number.log";
-	}
-
-	file_put_contents($log_file, "");
-
-	// Make sure the autobuild user can write to the log file
-	chmod($log_file, 0770);
-
-	return $log_file;
-}
-
 function delete_log($log_number) {
 	global $log_directory;
 	$log_file = get_log_file($log_number);
@@ -152,7 +134,6 @@ function get_job_status($log_number) {
 
 	// Get the PID and the Job ID
 	$pid = get_job_pid($log_number);
-	$jobid = get_job_jobid($log_number);
 
 	$log_file = escapeshellarg(get_log_file($log_number));
 	$logfile_last_line = trim(`tail -n 1 $log_file`);
