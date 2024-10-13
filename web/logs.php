@@ -28,7 +28,7 @@ if (isset($_GET["delete-all"]) && !isset($_GET["error"])) {
 		$log_number = str_replace(".log", "", basename($log_file));
 		delete_log($log_number);
 	}
-	// Redirect without the "delete-all-on-page" parameter so the user doesn't accidently do it again by refreshing
+	// Redirect without the "delete-all-on-page" parameter so the user doesn't accidentally do it again by refreshing
 	$new_parameters = array();
 	foreach ($_GET as $key => $value) {
 		if ($key != "delete-all-on-page") {
