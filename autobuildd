@@ -103,6 +103,21 @@ currently_upgrading["amd64"]=false
 currently_upgrading["i386"]=false
 currently_upgrading["arm64"]=false
 
+# For queueing
+declare -A queue_files
+queue_files["amd64"]="$build_farm_directory/debian-stable-amd64/queue"
+queue_files["i386"]="$build_farm_directory/debian-stable-i386/queue"
+queue_files["arm64"]="$build_farm_directory/debian-stable-arm64/queue"
+
+exec {amd64_queue_lock_fd}>>"${queue_files["amd64"]}"
+exec {i386_queue_lock_fd}>>"${queue_files["i386"]}"
+exec {arm64_queue_lock_fd}>>"${queue_files["arm64"]}"
+
+declare -A queue_lock_fds
+queue_lock_fds["amd64"]="$amd64_queue_lock_fd"
+queue_lock_fds["i386"]="$i386_queue_lock_fd"
+queue_lock_fds["arm64"]="$arm64_queue_lock_fd"
+
 
 echo "PID: $$" # Echo the PID as the first line of output
 	# This is so other processes can terminate the autobuild daemon early if desired
@@ -530,26 +545,32 @@ function build_all_pkgs_in_pkgarrays() {
 	### Start a VM, build a package, shut it down
 	## Exit the queue
 
-	enter_queue_for_build_vm "amd64"
-	for pkgname in "${amd64_builds[@]}"; do
-		upgrade_vm_and_build_pkg "amd64" "$pkgname"
-		building_locally=false
-	done
-	exit_queue_for_build_vm "amd64"
+	if [[ ${#amd64_builds[@]} -gt 0 ]]; then
+		enter_queue_for_build_vm "amd64"
+		for pkgname in "${amd64_builds[@]}"; do
+			upgrade_vm_and_build_pkg "amd64" "$pkgname"
+			building_locally=false
+		done
+		exit_queue_for_build_vm "amd64"
+	fi
 
-	enter_queue_for_build_vm "i386"
-	for pkgname in "${i386_builds[@]}"; do
-		upgrade_vm_and_build_pkg "i386" "$pkgname"
-		building_locally=false
-	done
-	exit_queue_for_build_vm "i386"
+	if [[ ${#i386_builds[@]} -gt 0 ]]; then
+		enter_queue_for_build_vm "i386"
+		for pkgname in "${i386_builds[@]}"; do
+			upgrade_vm_and_build_pkg "i386" "$pkgname"
+			building_locally=false
+		done
+		exit_queue_for_build_vm "i386"
+	fi
 	
-	enter_queue_for_build_vm "arm64"
-	for pkgname in "${arm64_builds[@]}"; do
-		upgrade_vm_and_build_pkg "arm64" "$pkgname"
-		building_locally=false
-	done
-	exit_queue_for_build_vm "arm64"
+	if [[ ${#arm64_builds[@]} -gt 0 ]]; then
+		enter_queue_for_build_vm "arm64"
+		for pkgname in "${arm64_builds[@]}"; do
+			upgrade_vm_and_build_pkg "arm64" "$pkgname"
+			building_locally=false
+		done
+		exit_queue_for_build_vm "arm64"
+	fi
 
 	if [[ $building_locally == true ]]; then
 		# Building packages locally
@@ -570,13 +591,12 @@ function enter_queue_for_build_vm() {
 
 	# Attempt to obtain a file lock on the queue file
 	## If we can't, then somebody else is writing to the queue file
-	exec 200>>"$build_farm_directory/debian-stable-$ARCH/queue"
-	flock -x 200
+	flock -x "${queue_lock_fds["$ARCH"]}"
 
 	# Once we've obtained the lock, write our job ID to the bottom of the queue file
 	## And release our lock to let other jobs queue
-	echo "$this_job_id" >> "$build_farm_directory/debian-stable-$ARCH/queue"
-	flock -u 200
+	echo "$this_job_id" >> "${queue_files["$ARCH"]}"
+	flock -u "${queue_lock_fds["$ARCH"]}"
 
 	queue_for_build_vm "$ARCH"
 }
@@ -589,7 +609,7 @@ function queue_for_build_vm() {
 
 	# Verify that our job ID is somewhere in the queue
 	## If it isn't, then we should cancel the job
-	if ! grep -q "$this_job_id" "$build_farm_directory/debian-stable-$ARCH/queue"; then
+	if ! grep -q "$this_job_id" "${queue_files["$ARCH"]}"; then
 		# We're not in the queue at all anymore
 		## Cancel the job
 		graceful_interrupt
@@ -598,15 +618,15 @@ function queue_for_build_vm() {
 	# Watch the queue file until our job ID is at the top
 	## At which point, we return from the function
 	## Whatever comes next must properly call exit_queue_for_build_vm when the job is done
-	position_in_queue=$(grep -n "$this_job_id" "$build_farm_directory/debian-stable-$ARCH/queue" | awk -F: '{print $1}')
+	position_in_queue=$(grep -n "$this_job_id" "${queue_files["$ARCH"]}" | awk -F: '{print $1}')
 
 	if [[ $position_in_queue -gt 1 ]]; then
 		echo "Position in queue: #$position_in_queue"
 		echo "Queued"
 	fi
 
-	until [[ $(head -n 1 "$build_farm_directory/debian-stable-$ARCH/queue") == "$this_job_id" ]]; do
-		updated_position_in_queue=$(grep -n "$this_job_id" "$build_farm_directory/debian-stable-$ARCH/queue" | awk -F: '{print $1}')
+	until [[ $(head -n 1 "${queue_files["$ARCH"]}") == "$this_job_id" ]]; do
+		updated_position_in_queue=$(grep -n "$this_job_id" "${queue_files["$ARCH"]}" | awk -F: '{print $1}')
 		if [[ $updated_position_in_queue -ne $position_in_queue ]]; then
 			position_in_queue=$updated_position_in_queue
 			echo "Position in queue: #$position_in_queue"
@@ -623,13 +643,13 @@ function exit_queue_for_build_vm() {
 	local ARCH="$1"
 
 	# Attempt to obtain a lock on the queue file
-	flock -x 200
+	flock -x "${queue_lock_fds["$ARCH"]}"
 
 	# Remove our job ID from the queue
-	sed -i "/$this_job_id/d" "$build_farm_directory/debian-stable-$ARCH/queue"
+	sed -i "/$this_job_id/d" "${queue_files["$ARCH"]}"
 
 	# Release our lock
-	flock -u 200
+	flock -u "${queue_lock_fds["$ARCH"]}"
 }
 
 function push_github_release_page() {
