@@ -1,3 +1,17 @@
+autobuild (3.3.2) unstable; urgency=medium
+
+  * autobuild-web: Paginated logs page
+    By default, displaying 10 logs per page
+  * autobuild-web: Pass the logs directory to autobuild -L instead of a
+    specific log file
+  * autobuild-web: Default unchecked 'upgrade first' on build.php
+  * autobuild-web: Patched a bug in the cron jobs that could have
+    potentially cleared logs which were in-progress
+  * autobuild: Dynamically assign file descriptors to queue files
+  * autobuild: Allow only directories as arguments to -L
+
+ -- rail5 <andrew@rail5.org>  Sun, 13 Oct 2024 16:12:44 +0800
+
 autobuild (3.3.1) unstable; urgency=medium
 
   * autobuild: Handle job queueing properly
