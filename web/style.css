@@ -352,7 +352,27 @@ button.no-decoration {
 	color: #069;
 	text-decoration: underline;
 	cursor: pointer;
-  }
+}
+
+button.no-decoration:hover {
+	filter: brightness(120%);
+}
+
+a.button-no-decoration {
+	background: none!important;
+	border: none;
+	padding: 0!important;
+	color: #069;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+select.small {
+	width: 25%;
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
 
 /* Tables */
 table {

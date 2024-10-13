@@ -15,10 +15,22 @@ $autobuild_directory = "/var/autobuild";
 $autobuild_repos_directory = "$autobuild_directory/repo";
 $autobuild_builds_directory = "$autobuild_directory/builds";
 
-function get_build_logs() {
+function get_build_logs($offset = 0, $limit = null) {
 	global $log_directory;
-	return array_filter(glob("$log_directory/*.log"), 'file_not_empty');
+	$log_list = array_filter(glob("$log_directory/*.log"), 'file_not_empty');
+
+	$log_list = array_slice($log_list, $offset, $limit);
+
+	return $log_list;
 }
+
+function get_number_of_build_logs() {
+	global $log_directory;
+	$log_list = array_filter(glob("$log_directory/*.log"), 'file_not_empty');
+
+	return count($log_list);
+}
+
 function get_log_file($log_number) {
 	global $log_directory;
 	$log_file = "$log_directory/$log_number.log";
