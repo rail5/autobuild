@@ -8,7 +8,19 @@
 
 require_once "global.php";
 
-$log_file = get_log_file($_GET["log"]);
+if (!isset($_GET["log"])) {
+	redirect_and_die("index.php");
+}
+
+$log_file = "";
+
+if (!isset($_GET["tab"]) || $_GET["tab"] == "main") {
+	$log_file = get_log_file($_GET["log"]);
+} else {
+	$log_file = get_package_build_log($_GET["log"], $_GET["tab"]);
+}
+
+
 ?>
 <!DOCTYPE html>
 <html>

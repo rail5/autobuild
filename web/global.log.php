@@ -47,15 +47,62 @@ function get_log_file($log_number) {
 	return $log_file;
 }
 
+function get_package_build_logs($log_number) {
+	global $log_directory;
+	$package_log_list = glob("$log_directory/$log_number.*.build");
+
+	$package_logs = array();
+
+	foreach ($package_log_list as $package_log) {
+		$log_name = basename($package_log, ".build");
+		$log_name = str_replace("$log_number.", "", $log_name);
+		$package_logs[$log_name] = $package_log;
+	}
+
+	return $package_logs;
+}
+
+function get_package_build_log_names($log_number) {
+	$package_log_list = get_package_build_logs($log_number);
+
+	$package_log_names = array();
+
+	foreach ($package_log_list as $package_log) {
+		$log_name = basename($package_log, ".build");
+		$log_name = str_replace("$log_number.", "", $log_name);
+		$package_log_names[] = $log_name;
+	}
+
+	return $package_log_names;
+}
+
+function get_package_build_log($log_number, $package) {
+	$package_log_list = get_package_build_logs($log_number);
+
+	foreach ($package_log_list as $name => $package_log) {
+		if ($name == $package) {
+			return $package_log;
+		}
+	}
+
+	return "";
+}
+
 function delete_log($log_number) {
 	global $log_directory;
 	$log_file = get_log_file($log_number);
 	$status_file = get_status_file($log_number);
+	$package_log_files = get_package_build_logs($log_number);
 
 	$jobid = escapeshellarg(get_job_jobid($log_number));
 
 	unlink($log_file);
 	unlink($status_file);
+
+	foreach ($package_log_files as $package_log_file) {
+		unlink($package_log_file);
+	}
+
 	run_autobuild("-r $jobid");
 }
 
@@ -78,7 +125,7 @@ function write_status_file($log_number, $status_code) {
 
 function delete_all_logs() {
 	global $log_directory;
-	$logs = array_filter(glob("$log_directory/*.{log,status}", GLOB_BRACE));
+	$logs = array_filter(glob("$log_directory/*.{log,status,build}", GLOB_BRACE));
 
 	foreach ($logs as $log) {
 		unlink($log);

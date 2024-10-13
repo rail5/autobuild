@@ -27,6 +27,15 @@ if (!isset($_GET["error"])) {
 	if (isset($_GET["cancel"]) && $autobuild_status & 4) {
 		run_autobuild("-k $autobuild_pid");
 	}
+
+	// Get the individual package build logs
+	$package_logs = get_package_build_log_names($log_number);
+
+	$tab = "main";
+
+	if (isset($_GET["tab"]) && in_array($_GET["tab"], $package_logs)) {
+		$tab = $_GET["tab"];
+	}
 }
 
 display_header();
@@ -56,7 +65,7 @@ display_error_message();
 									<img src="img/cancel.webp" width="30px" height="30px" title="Cancel build" />
 								</a>
 								&nbsp; &nbsp; 
-								<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '">
+								<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab='. $tab .'">
 									<img src="img/refresh.webp" width="30px" height="30px" title="Refresh log" />
 								</a>
 							</div>';
@@ -68,9 +77,20 @@ display_error_message();
 								echo print_status_code($autobuild_status, true);
 							?>
 						</label>
+						<br>
+						<div class="tabs">
+							&nbsp; 
+							<?php
+								echo '<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab=main" class="tab' . ($tab == "main" ? " active" : "") . '">Main</a>';
+								foreach ($package_logs as $package_log) {
+									echo '<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab=' . $package_log . '" class="tab' . ($tab == $package_log ? " active" : "") . '">' . $package_log . '</a>';
+								}
+							?>
+						</div>
 						<?php
+
 						if (!isset($_GET["error"])) {
-							echo '	<iframe src="view-log.php?log='.$_GET["log"].'#end" title="Build log" height="400" width="100%" id="build-log-iframe"></iframe><br>';
+							echo '	<iframe src="view-log.php?log='.$_GET["log"].'&tab='.$tab.'#end" title="Build log" height="400" width="100%" id="build-log-iframe"></iframe><br>';
 						}
 						?>
 						
