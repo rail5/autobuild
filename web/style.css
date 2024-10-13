@@ -371,6 +371,9 @@ a.button-no-decoration {
 	display: flex;
 	padding-bottom: 0;
 	column-gap: 1px;
+	row-gap: 2px;
+	flex-wrap: wrap;
+	margin-left: 0.5rem;
 }
 
 a.tab {

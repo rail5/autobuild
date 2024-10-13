@@ -78,21 +78,22 @@ display_error_message();
 							?>
 						</label>
 						<br>
-						<div class="tabs">
-							&nbsp; 
+						<div class="tabs" id="tabs">
 							<?php
-								echo '<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab=main" class="tab' . ($tab == "main" ? " active" : "") . '">Main</a>';
+								echo '<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab=main#tabs" class="tab' . ($tab == "main" ? " active" : "") . '">Main</a>';
 								foreach ($package_logs as $package_log) {
-									echo '<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab=' . $package_log . '" class="tab' . ($tab == $package_log ? " active" : "") . '">' . $package_log . '</a>';
+									echo '<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&tab=' . $package_log . '#tabs" class="tab' . ($tab == $package_log ? " active" : "") . '">' . $package_log . '</a>';
 								}
 							?>
 						</div>
+						<div id="log">
 						<?php
 
 						if (!isset($_GET["error"])) {
 							echo '	<iframe src="view-log.php?log='.$_GET["log"].'&tab='.$tab.'#end" title="Build log" height="400" width="100%" id="build-log-iframe"></iframe><br>';
 						}
 						?>
+						</div>
 						
 					</div>
 					<div class="card" id="new-build">
