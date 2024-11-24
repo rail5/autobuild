@@ -39,7 +39,13 @@ if ($username && basename($_SERVER["PHP_SELF"]) == "setup.php") {
 	die();
 }
 
-if ($username && !$_SESSION['logged-in'] && basename($_SERVER['PHP_SELF']) != "login.php") {
+$acceptable_guest_pages = array(
+	"login.php",
+	"captcha.php",
+	"view-captcha.php"
+);
+
+if ($username && !$_SESSION['logged-in'] && !in_array(basename($_SERVER["PHP_SELF"]), $acceptable_guest_pages)) {
 	header('location: login.php');
 	die();
 }
