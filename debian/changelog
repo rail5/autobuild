@@ -1,3 +1,16 @@
+autobuild (3.3.3) unstable; urgency=medium
+
+  * Patched annoying bug in autobuild-web
+    Sometimes, the captcha iframe on the login page would itself redirect
+    to another copy of the login page
+    Fixed by adding an 'acceptable_guest_pages' array and making sure the
+    captcha's in it
+  * Prettied up the tab display a bit
+  * Autobuild-web: Separate tabs for package build logs
+  * Autobuild: Split package build logs into their own files
+
+ -- rail5 <andrew@rail5.org>  Mon, 25 Nov 2024 14:26:32 +0800
+
 autobuild (3.3.2) unstable; urgency=medium
 
   * autobuild-web: Paginated logs page
