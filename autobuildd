@@ -1488,7 +1488,22 @@ for index in "${!packages_to_build[@]}"; do
 	if [ ${packages[$package]+1} ]; then
 		echo "Building $package"
 	else
-		if git ls-remote "$package" HEAD >/dev/null 2>&1; then
+		# Is it a URL?
+		# Prepend git credentials and check if it's a valid git url
+
+		pkgurl="$package"
+
+		# First check: Does it contain 'github.com'?
+		if [[ "$package" == *"github.com"* ]]; then
+			# Place our github credentials in the URL
+			pkgurl="${package/:\/\//:\/\/$GITHUB_OWNER:$GITHUB_ACCESS_TOKEN@}"
+			# Otherwise, does it contain the url of our Forgejo instance?
+		elif [[ "$package" == *"$FORGEJO_INSTANCE_URL"* ]]; then
+			# Place our Forgejo credentials in the URL
+			pkgurl="${package/:\/\//:\/\/$FORGEJO_OWNER:$FORGEJO_ACCESS_TOKEN@}"
+		fi
+
+		if git ls-remote "$pkgurl" HEAD >/dev/null 2>&1; then
 			# If it's a valid git url, add it to the list and keep going
 			package_name=$(basename "$package")
 			package_name="${package_name/.git/""}"
