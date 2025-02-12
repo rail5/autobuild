@@ -1,7 +1,7 @@
 Source: autobuild
 Priority: optional
 Maintainer: rail5 <andrew@rail5.org>
-Build-Depends: debhelper (>= 8.0.0), pandoc
+Build-Depends: debhelper (>= 8.0.0), pandoc, bpp
 Standards-Version: 3.9.3
 Section: utils
 
