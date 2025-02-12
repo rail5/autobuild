@@ -45,7 +45,7 @@ The configuration file can be found at /var/autobuild/config.toml. This file may
     Individual package build logs will also be written to that directory
     instead of to /var/autobuild/log.
 
--r, \--remove-old-builds
+-r, \--remove
 
     Remove a given subdirectory under /var/autobuild/builds, and quit
     If the given argument is 'all', then remove everything under
