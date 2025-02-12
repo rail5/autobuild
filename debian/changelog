@@ -1,3 +1,10 @@
+autobuild (3.3.4) unstable; urgency=medium
+
+  * Improved CLI help message
+  * Allow git URLs to private repos that we have access to
+
+ -- rail5 <andrew@rail5.org>  Wed, 12 Feb 2025 11:36:51 +0800
+
 autobuild (3.3.3) unstable; urgency=medium
 
   * Patched annoying bug in autobuild-web
