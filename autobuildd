@@ -433,24 +433,13 @@ function start_build_vm() {
 	### And will disappear the moment the VM is shut down
 	### This is used to actually build packages, so that the build environment
 	### Is not permanently altered by the building of any package.
-
-	if [[ STATELESS -eq 1 ]]; then
-		# Clear any pre-existing snapshots, in case they're there
-		rm -f "$build_farm_directory/$ARCHDIR/snapshot.qcow"
-
-		# Create snapshot
-		qemu-img create -f qcow2 -b "$build_farm_directory/$ARCHDIR/$VM_IMAGE" -F qcow2 "$build_farm_directory/$ARCHDIR/snapshot.qcow"
-		VM_IMAGE="snapshot.qcow"
-
-		echo "---"
-		echo "Starting $ARCH VM. You can connect to it (if you want) as follows:"
-		echo "  SSH Port: $SSHPORT"
-		echo "  TELNET Port: $TELNETPORT"
-		echo "---"
+	local STATELESS_COMMAND=""
+	if [[ "$STATELESS" == 1 ]]; then
+		STATELESS_COMMAND="-snapshot"
 	fi
 
 	# Boot the VM
-	boot_vm_nodisplay "$ARCH_STRING" "$build_farm_directory/$ARCHDIR/$VM_IMAGE" "$SSHPORT" "$TELNETPORT" &
+	boot_vm_nodisplay "$ARCH_STRING" "$build_farm_directory/$ARCHDIR/$VM_IMAGE" "$SSHPORT" "$TELNETPORT" "$STATELESS_COMMAND" &
 }
 
 function shutdown_build_vm() {
