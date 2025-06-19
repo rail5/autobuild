@@ -1,3 +1,13 @@
+autobuild (3.3.5) unstable; urgency=medium
+
+  * autobuild: Use qemu's built-in -snapshot option instead of
+    manually creating snapshots
+    This more reliably guarantees isolation and statelessness of
+    the build farm VMs
+  * autobuild-web: Proper log sorting in logs.php
+
+ -- rail5 <andrew@rail5.org>  Wed, 19 Mar 2025 14:29:09 +0800
+
 autobuild (3.3.4) unstable; urgency=medium
 
   * Improved CLI help message

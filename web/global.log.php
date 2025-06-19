@@ -18,6 +18,11 @@ $autobuild_builds_directory = "$autobuild_directory/builds";
 function get_build_logs($offset = 0, $limit = null) {
 	global $log_directory;
 	$log_list = array_filter(glob("$log_directory/*.log"), 'file_not_empty');
+	
+	// Sort the logs by the time they were last modified
+	usort($log_list, function($a, $b) {
+		return filemtime($b) - filemtime($a);
+	});
 
 	$log_list = array_slice($log_list, $offset, $limit);
 

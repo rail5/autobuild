@@ -24,7 +24,7 @@ if (!isset($_GET["error"])) {
 
 	// Are we canceling the job?
 	// If the user asked to cancel, first make sure that the job is actually running (first bit in the status code = 1)
-	if (isset($_GET["cancel"]) && $autobuild_status & 4) {
+	if (isset($_GET["cancel"]) && isset($_GET["confirm"]) && $autobuild_status & 4) {
 		run_autobuild("-k $autobuild_pid");
 	}
 
@@ -43,6 +43,26 @@ display_error_message();
 ?>
 
 	<main>
+	<?php
+	if (isset($_GET["cancel"]) && !isset( $_GET["confirm"]) && $autobuild_status & 4) {
+		echo "<div class=\"overlay-container\">
+	<div class=\"overlay modal\">
+		<div class=\"modal-content\">
+			<h2>Confirm Cancel</h2>
+			<p>Are you sure you want to cancel the build?</p>
+			<form action=\"log.php\" method=\"get\">
+				<input type=\"hidden\" name=\"log\" value=\"".$_GET["log"]."\">
+				<input type=\"hidden\" name=\"tab\" value=\"".$tab."\">
+				<input type=\"hidden\" name=\"cancel\" value=\"true\">
+				<input type=\"hidden\" name=\"confirm\" value=\"true\">";
+				echo "<button type=\"submit\">Yes</button>
+				<a class=\"button\" href=\"log.php?log=".$_GET["log"]."\">No</a>
+			</form>
+		</div>
+	</div>
+</div>".PHP_EOL;
+	}
+		?>
 		<div class="container">
 			<div class="content-wrapper">
 				<aside class="sidebar">
@@ -61,7 +81,11 @@ display_error_message();
 							if ($autobuild_status & 4) {
 								echo '
 							<div id="control-buttons" style="margin-left: calc(100% - 85px);">
-								<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&cancel=true">
+								<a href="' . basename($_SERVER["PHP_SELF"]) . "?log=" . $_GET["log"] . '&cancel=true';
+								if (isset($_GET["confirm"])) {
+									echo '&confirm=true';
+								}
+								echo '">
 									<img src="img/cancel.webp" width="30px" height="30px" title="Cancel build" />
 								</a>
 								&nbsp; &nbsp; 
