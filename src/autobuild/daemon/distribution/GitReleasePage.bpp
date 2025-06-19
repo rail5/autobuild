@@ -1,0 +1,10 @@
+# Copyright (C) 2025 rail5
+# Free software (GNU Affero GPL v3)
+
+@include_once "DistributionChannel.bpp"
+
+@class GitReleasePage : DistributionChannel {
+	@private url
+	@private version
+	@private notes
+}

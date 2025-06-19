@@ -1,0 +1,137 @@
+@class Window {
+	# Display a window using 'dialog'
+	@protected window_title="Autobuild Setup"
+	@protected window_description="This menu can be reached anytime with 'autobuild -s'"
+	@protected window_dimensions="15 55"
+	@protected window_type="menu"
+
+	@public response
+
+	@public @method setTitle title {
+		@this.window_title="$title"
+	}
+
+	@public @method setDescription description {
+		@this.window_description="$description"
+	}
+
+	@public @method setDimensions dimension1 dimension2 {
+		if [[ -z "$dimension2" ]]; then
+			@this.window_dimensions="$dimension1"
+		else
+			@this.window_dimensions="$dimension1 $dimension2"
+		fi
+	}
+
+	@virtual @public @method display {
+		dialog --title "@{this.window_title}" \
+			--menu "@{this.window_description}" @{this.window_dimensions} \
+			5 \
+			1 "Edit config" \
+			2 "Install build farm" \
+			3 "Configure Debian repositories" \
+			4 "Clear 'builds' directory" \
+			5 "Exit"
+	}
+
+	@public @method getResponse {
+		{
+			@this.response="@(@this.display 2>&1 1>&3 3>&-)"
+		} 3>&1
+	}
+}
+
+@class Menu : Window {
+	@private menu_items=()
+
+	@public @method addMenuItem item {
+		@this.menu_items+=("$item")
+	}
+
+	@public @method display {
+		# Build option list
+		local option_string="" i=1
+		for option in "@{this.menu_items[@]}"; do
+			option_string+="$i \"${option}\" "
+			i=$((i + 1))
+		done
+
+		# Display menu
+		eval "dialog --title \"@{this.window_title}\" \
+			--menu \"@{this.window_description}\" @{this.window_dimensions} \
+			@{#this.menu_items[@]} \
+			$option_string"
+	}
+}
+
+@class BigTextEntry : Window {
+	@public defaultTextFile
+
+	@public @method display {
+		eval "dialog --title \"@{this.window_title}\" \
+			--backtitle \"@{this.window_description}\" \
+			--max-input 99999 \
+			--editbox \"@{this.defaultTextFile}\" @{this.window_dimensions}"
+	}
+}
+
+@class TextEntry : Window {
+	@public defaultText
+
+	@public @method display {
+		eval "dialog --title \"@{this.window_title}\" \
+			--inputbox \"@{this.window_description}\" @{this.window_dimensions} \"@{this.defaultText}\""
+	}
+}
+
+@class CheckList : Window {
+	@private optionNames=()
+	@private optionValues=()
+
+	@public @method addOption name value {
+		@this.optionNames+=("$name")
+		@this.optionValues+=("$value")
+	}
+
+	@public @method display {
+		# Build option list
+		local option_string="" i=0
+		for option in "@{this.optionNames[@]}"; do
+			option_string+="\"${option}\" \"@{this.optionValues[$i]}\" off "
+		done
+
+		# Display checklist
+		eval "dialog --title \"@{this.window_title}\" \
+			--checklist \"@{this.window_description}\" @{this.window_dimensions} \
+			@{#this.optionNames[@]} \
+			$option_string"
+	}
+}
+
+@class YesNo : Window {
+	@public @method display {
+		eval "dialog --title \"@{this.window_title}\" \
+			--yesno \"@{this.window_description}\" @{this.window_dimensions}"
+	}
+}
+
+@class InfoBox : Window {
+	@public @method display {
+		eval "dialog --title \"@{this.window_title}\" \
+			--infobox \"@{this.window_description}\" @{this.window_dimensions}"
+	}
+}
+
+@class ProgressBar : Window {
+	@public @method display {
+		eval "dialog --title \"@{this.window_title}\" \
+			--gauge \"@{this.window_description}\" @{this.window_dimensions}"
+	}
+}
+
+@class ProgressBox : Window {
+	@public @method display {
+		eval "dialog --title \"@{this.window_title}\" \
+			--progressbox \"@{this.window_description}\" @{this.window_dimensions}"
+	}
+}

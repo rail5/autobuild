@@ -1,0 +1,82 @@
+@include_once "Window.bpp"
+
+@class SetupProgram {
+	@private local_storage_directory="/var/autobuild"
+	@private autobuild_directory="/usr/share/autobuild"
+	@private config_file="@this.local_storage_directory/config.toml"
+	@private window_title="Autobuild Setup"
+
+	@constructor {
+		if [[ "$(whoami)" != _autobuild ]]; then
+			echo "Setup must be run via autobuild -s"
+			exit 1
+		fi
+
+		# Copy any updated files to $local_storage_directory/build-farm in case an upgrade took place
+		mkdir -p "@{this.local_storage_directory}/build-farm" 2>/dev/null
+		cp -ru --preserve=timestamps "@{this.autobuild_directory}/build-farm/"* "@{this.local_storage_directory}/build-farm/"
+
+		if [ ! -f "@{this.config_file}" ]; then
+			cp "@{this.autobuild_directory}/config.toml" "@{this.config_file}"
+		fi
+	}
+
+	@public @method EditConfig {
+		@Menu menu
+		@menu.setTitle "@this.window_title"
+		@menu.setDescription "Edit config"
+		@menu.addMenuItem "Packages"
+		@menu.addMenuItem "GitHub Settings"
+		@menu.addMenuItem "Forgejo Settings"
+		@menu.addMenuItem "Back"
+
+		@menu.getResponse
+
+		case "@menu.response" in
+			1)
+				#@this.EditPackages
+				;;
+			2)
+				#@this.EditGitHubSettings
+				;;
+			3)
+				#@this.EditForgejoSettings
+				;;
+			4)
+				#@this.MainMenu
+				;;
+		esac
+	}
+
+	@public @method MainMenu {
+		@Menu menu
+		@menu.setTitle "@this.window_title"
+		@menu.setDescription "This menu can be reached anytime with 'autobuild -s'"
+		@menu.addMenuItem "Edit config"
+		@menu.addMenuItem "Install build farm"
+		@menu.addMenuItem "Configure Debian repositories"
+		@menu.addMenuItem "Clear 'builds' directory"
+		@menu.addMenuItem "Exit"
+
+		@menu.getResponse
+
+		case "@menu.response" in
+			1)
+				@this.EditConfig
+				@this.MainMenu
+				;;
+			2)
+				#@this.InstallBuildFarm
+				;;
+			3)
+				#@this.ConfigureDebianRepositories
+				;;
+			4)
+				#@this.ClearBuildsDirectory
+				;;
+			5)
+				#@this.Exit
+				;;
+		esac
+	}
+}

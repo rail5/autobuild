@@ -1,0 +1,11 @@
+# Copyright (C) 2025 rail5
+# Free software (GNU Affero GPL v3)
+
+@include_once "Package.bpp"
+
+# Job: Represents a build job in the autobuild system
+@class Job {
+	@private packageList=() # List of pointers to Package objects to be built
+	@private selectedVMs=()
+
+}

@@ -1,0 +1,8 @@
+# Copyright (C) 2025 rail5
+# Free software (GNU Affero GPL v3)
+
+@include_once "DistributionChannel.bpp"
+
+@class DebianRepository : DistributionChannel {
+	
+}

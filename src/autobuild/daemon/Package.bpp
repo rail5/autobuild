@@ -1,0 +1,57 @@
+# Copyright (C) 2025 rail5
+# Free software (GNU Affero GPL v3)
+
+# Package: Represents a Debian package to be built
+@class Package {
+	@private name
+	@private version
+	@private source_path # Either a URL to a Git repository or a path to a .tar.gz archive
+	@private architectures=() # List of architectures this package supports
+	@private external_dependencies=() # List of external (non-Debian) repositories containing build dependencies
+
+	@private changelog # Automatically set to the latest changelog entry (never manually set)
+
+	@public @method setName name {
+		@this.name=$name
+	}
+
+	@public @method getName {
+		echo @this.name
+	}
+
+	@public @method setVersion version {
+		@this.version=$version
+	}
+
+	@public @method getVersion {
+		echo @this.version
+	}
+
+	@public @method setSource path {
+		@this.source_path=$path
+	}
+
+	@public @method getSource {
+		echo @this.source_path
+	}
+
+	@public @method addArchitecture arch {
+		if [[ ! " @{this.architectures[@]} " =~ " $arch " ]]; then
+			@this.architectures+=("$arch")
+		fi
+	}
+
+	@public @method getArchitectures {
+		echo "@{this.architectures[@]}"
+	}
+
+	@public @method addExternalDependency repo {
+		if [[ ! " @{this.external_dependencies[@]} " =~ " $repo " ]]; then
+			@this.external_dependencies+=("$repo")
+		fi
+	}
+
+	@public @method getExternalDependencies {
+		echo "@{this.external_dependencies[@]}"
+	}
+}

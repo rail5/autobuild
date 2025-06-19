@@ -1,0 +1,9 @@
+# Testing
+
+@include_once "Daemon.bpp"
+
+@Daemon daemon
+trap "&@daemon.cleanUp" INT TERM HUP
+@daemon.listen
+
+@delete @daemon

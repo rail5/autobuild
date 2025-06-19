@@ -1,0 +1,11 @@
+#!/usr/bin/env bpp
+
+# autobuild setup
+# Copyright (C) 2022-2025 rail5
+# Free software (GNU Affero GPL v3)
+
+@include_once "includes/Window.bpp"
+@include_once "includes/SetupProgram.bpp"
+
+@SetupProgram program
+@program.MainMenu

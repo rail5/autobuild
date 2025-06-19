@@ -1,0 +1,19 @@
+# Copyright (C) 2025 rail5
+# Free software (GNU Affero GPL v3)
+
+@include_once <SharedQueue>
+@include_once "VM.bpp"
+
+@class BuildFarm {
+	@private VMs=() # Array of pointers to VM objects
+	@private @SharedQueue* jobQueue
+
+	@constructor {
+		@this.jobQueue=@new SharedQueue
+		# Add the VMs
+	}
+
+	@destructor {
+		@delete @this.jobQueue
+	}
+}

@@ -1,0 +1,26 @@
+# Testing
+
+# Verify the daemon is running
+if ! [[ -p /tmp/1.fifo ]]; then
+	echo "Daemon FIFO does not exist. Please start the daemon first."
+	exit 1
+fi
+
+fifoFile=/tmp/$RANDOM$RANDOM$RANDOM.fifo
+
+function cleanUp() {
+	rm -f $fifoFile
+	exit $?
+}
+
+trap "cleanUp" EXIT INT TERM HUP
+
+mkfifo -m 600 $fifoFile
+echo "$fifoFile $@" > /tmp/1.fifo
+# Read back the response
+while IFS= read -r line; do
+	echo "$line"
+done < $fifoFile
+
+# Clean up
+cleanUp

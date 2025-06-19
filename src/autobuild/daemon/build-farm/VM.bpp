@@ -1,0 +1,24 @@
+# Copyright (C) 2025 rail5
+# Free software (GNU Affero GPL v3)
+
+@include_once "../Package.bpp"
+
+# VM: Represents a virtual machine in the build farm
+@class VM {
+	@private name
+	@private arch
+
+	@public @method buildPackage @Package* package {
+		#TBD
+		if [[ @package == @nullptr ]]; then
+			>&2 echo "Invalid package pointer passed to buildPackage"
+			return 1
+		fi
+		echo "Building package: @package.getName on VM: @this.name"
+		echo "Architecture: @this.arch"
+		echo "Source: @package.getSource"
+		echo "Version: @package.getVersion"
+		echo "Architectures: @package.getArchitectures"
+		echo "External Dependencies: @package.getExternalDependencies"
+	}
+}
