@@ -1241,9 +1241,9 @@
 			"requestSchema": {
 				"type": "object",
 				"properties": {
-					"name": {
-						"type": "string",
-						"comment": "The name of the signing key to create",
+					"key": {
+						"type": "SigningKey",
+						"comment": "The metadata necessary to create the signing key",
 						"required": true
 					}
 				}
@@ -1257,9 +1257,9 @@
 			"requestSchema": {
 				"type": "object",
 				"properties": {
-					"name": {
-						"type": "string",
-						"comment": "The name of the signing key to remove",
+					"key": {
+						"type": "SigningKey",
+						"comment": "The signing key to remove",
 						"required": true
 					}
 				}
@@ -1277,6 +1277,67 @@
 				"comment": "A list of signing keys owned by the user",
 				"required": true
 			}
+		},
+		{
+			"name": "exportSigningKey",
+			"comment": "Get the private/public key pair of a signing key owned by the user. USE WITH EXTREME CAUTION!",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "SigningKey",
+						"comment": "The signing key to export",
+						"required": true
+					},
+					"password": {
+						"type": "string",
+						"comment": "The user's password, used to decrypt the private key",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"privateKey": {
+						"type": "string",
+						"comment": "The private key of the signing key",
+						"required": true
+					},
+					"publicKey": {
+						"type": "string",
+						"comment": "The public key of the signing key",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "importSigningKey",
+			"comment": "Import a signing key into the user's account. The key must have an associated email address, and this email address must be unique across all keys stored in the system.",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"privateKey": {
+						"type": "string",
+						"comment": "The private key of the signing key to import",
+						"required": true
+					},
+					"publicKey": {
+						"type": "string",
+						"comment": "The public key of the signing key to import",
+						"required": true
+					},
+					"password": {
+						"type": "string",
+						"comment": "The user's password, used to encrypt the private key before storing it",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
 		}
 	]
 }
