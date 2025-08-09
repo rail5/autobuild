@@ -1,0 +1,1252 @@
+{
+	"title": "Autobuild Daemon API Specification",
+	"description": "This schema defines the API for the autobuild daemon, which handles package building, publishing, and user management.",
+	"version": "1.0",
+
+	"Request": {
+		"comment": "The base class for all requests to the autobuild daemon",
+		"type": "object",
+		"properties": {
+			"respondTo": {
+				"type": "FilePath",
+				"comment": "A Unix socket to which the daemon should writs its reply",
+				"required": true
+			},
+			"credentials": {
+				"type": "AuthCredentials",
+				"comment": "The credentials of the user making the request",
+				"required": false
+			},
+			"command": {
+				"type": "Command",
+				"comment": "The command to be executed by the autobuild daemon",
+				"required": true
+			}
+		}
+	},
+
+	"Response": {
+		"comment": "The base class for all responses from the autobuild daemon",
+		"type": "object",
+		"properties": {
+			"status": {
+				"type": "string",
+				"enum": ["success", "error"],
+				"comment": "The status of the response, indicating whether the command was successful or if there was an error",
+				"required": true
+			},
+			"message": {
+				"type": "string",
+				"comment": "A human-readable message providing additional information about the response",
+				"required": false
+			},
+			"commandResponse": {
+				"type": "CommandResponse",
+				"comment": "The response data specific to the command executed. Specific response schemas are defined in the 'Commands' section.",
+				"required": false
+			}
+		}
+	},
+
+	"Types": {
+		"FilePath": {
+			"type": "string",
+			"comment": "An absolute file path on the system"
+		},
+		"AuthenticationLevel": {
+			"type": "string",
+			"enum": ["none", "user", "mod", "admin"],
+			"comment": "Defines the level of authentication required for certain actions"
+		},
+		"SigningKey": {
+			"type": "object",
+			"comment": "A signing key used for verifying package signatures",
+			"properties": {
+				"keyID": {
+					"type": "string",
+					"comment": "The unique identifier of the signing key",
+					"required": true
+				}
+			}
+		},
+		"ReadableDebianRepository": {
+			"type": "object",
+			"comment": "The sources.list and signing key of a Debian repository",
+			"properties": {
+				"debianRepositorySources": {
+					"type": "string",
+					"comment": "A URL to, or the raw contents of, the repository's sources.list file",
+					"required": true
+				},
+				"debianRepositorySigningKey": {
+					"type": "string",
+					"comment": "A URL to, or the raw contents of, the repository's signing key file",
+					"required": true
+				}
+			}
+		},
+		"WritableDebianRepository": {
+			"type": "object",
+			"properties": {
+				"debianRepositoryName": {
+					"type": "string",
+					"required": true
+				},
+				"debianRepositorySigningKey": {
+					"type": "SigningKey",
+					"comment": "The signing key used for this repository. This key is used to sign packages published to this repository.",
+					"required": true
+				}
+			},
+			"comment": "The name of a Debian repository managed by this autobuild instance and owned by the user issuing the command"
+		},
+		"GitRepository": {
+			"type": "object",
+			"comment": "A git repository on either Github or Foregjo",
+			"properties": {
+				"instanceURL": {
+					"type": "string",
+					"comment": "The URL of the git instance (e.g., 'https://github.com' or 'https://forgejo.example.com')",
+					"required": true
+				},
+				"repoUser": {
+					"type": "string",
+					"comment": "The username of the repository owner",
+					"required": true
+				},
+				"repoName": {
+					"type": "string",
+					"comment": "The name of the repository",
+					"required": true
+				},
+				"branch": {
+					"type": "string",
+					"comment": "The branch of the repository to use. If not provided, use the repository's default branch",
+					"required": false
+				}
+			}
+		},
+		"Channel": {
+			"comment": "A channel providing the source of a package or a repository of binary packages",
+			"type": "or",
+			"alternatives": [
+				{
+					"type": "ReadableDebianRepository",
+					"comment": "A Debian repository channel"
+				},
+				{
+					"type": "WritableDebianRepository",
+					"comment": "A writable Debian repository channel owned by the user"
+				},
+				{
+					"type": "GitRepository",
+					"comment": "A git repository channel"
+				}
+			]
+		},
+		"GitCredential": {
+			"comment": "Credentials for accessing a git instance. Used for publishing release pages and accessing private repositories.",
+			"type": "object",
+			"properties": {
+				"instanceURL": {
+					"type": "string",
+					"comment": "The URL of the git instance (e.g., 'https://github.com' or 'https://forgejo.example.com')",
+					"required": true
+				},
+				"username": {
+					"type": "string",
+					"comment": "The username for the git instance",
+					"required": true
+				},
+				"accessToken": {
+					"type": "string",
+					"comment": "A personal access token for the git instance.",
+					"required": true
+				}
+			}
+		},
+		"AuthCredentials": {
+			"comment": "Credentials for user authentication. Either a username/password pair or a session token from a successful login.",
+			"type": "or",
+			"alternatives": [
+				{
+					"type": "object",
+					"properties": {
+						"username": {
+							"type": "string",
+							"comment": "The username of the user",
+							"required": true
+						},
+						"password": {
+							"type": "string",
+							"comment": "The password of the user",
+							"required": true
+						}
+					}
+				},
+				{
+					"type": "object",
+					"properties": {
+						"sessionToken": {
+							"type": "string",
+							"comment": "A session token obtained from a previous authentication request",
+							"required": true
+						}
+					}
+				}
+			]
+		},
+		"BuildStatus": {
+			"comment": "The status of a build",
+			"type": "string",
+			"enum": ["queued", "in_progress", "completed", "failed", "cancelled"],
+			"required": true
+		},
+		"BuildInfo": {
+			"comment": "The status of a build",
+			"type": "object",
+			"properties": {
+				"buildID": {
+					"type": "string",
+					"comment": "A unique identifier for the build",
+					"required": true
+				},
+				"status": {
+					"type": "BuildStatus",
+					"comment": "The current status of the build",
+					"required": true
+				},
+				"logFiles": {
+					"type": "array",
+					"items": {"type": "FilePath"},
+					"comment": "A list of file paths to the build log files",
+					"required": false
+				}
+			}
+		},
+		"Command": {
+			"comment": "The base class for all commands processed by the autobuild daemon. Individual commands are elaborated in the 'Commands' section.",
+			"authenticationLevel": {
+				"type": "AuthenticationLevel",
+				"comment": "The level of authentication required to execute this command",
+				"required": true
+			},
+			"requestSchema": {},
+			"responseSchema": {}
+		}
+	},
+
+	"Commands": [
+		{
+			"name": "login",
+			"comment": "Authenticate a user and return a session token",
+			"authenticationLevel": "none",
+			"requestSchema": {
+				"type": "AuthCredentials",
+				"comment": "The credentials of the user to authenticate",
+				"required": true
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"sessionToken": {
+						"type": "string",
+						"comment": "A session token that can be used for subsequent requests",
+						"required": true
+					},
+					"expiration": {
+						"type": "string",
+						"format": "date-time",
+						"comment": "The expiration time of the session token",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "logout",
+			"comment": "Log out a user and invalidate their session token",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"sessionToken": {
+						"type": "string",
+						"comment": "The session token of the user to log out",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "build",
+			"comment": "Build packages owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"packageNames": {
+						"type": "array",
+						"items": {"type": "string"},
+						"comment": "A list of package names to build",
+						"required": true
+					},
+					"vms": {
+						"type": "array",
+						"items": {"type": "string"},
+						"comment": "A list of VM names to build the packages on",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"buildID": {
+						"type": "string",
+						"comment": "A unique identifier for the build",
+						"required": true
+					},
+					"logFiles": {
+						"type": "array",
+						"items": {"type": "FilePath"},
+						"comment": "A list of file paths to the build log files",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "publish",
+			"comment": "Publish packages owned by this user to a specified list of channels",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"password": {
+						"type": "string",
+						"comment": "The password of the user, required for publishing packages",
+						"required": true
+					},
+					"packageNames": {
+						"type": "array",
+						"items": {"type": "string"},
+						"comment": "A list of package names to publish",
+						"required": true
+					},
+					"channels": {
+						"type": "array",
+						"items": {"type": "Channel"},
+						"comment": "A list of channels to which the packages should be published",
+						"required": true
+					},
+					"from": {
+						"type": "or",
+						"alternatives": [
+							{
+								"type": "array",
+								"items": {"type": "string"},
+								"comment": "A list of VM names to build the packages on before publishing"
+							},
+							{
+								"type": "Channel",
+								"comment": "A channel from which the packages should be copied instead of building from source"
+							}
+						],
+						"comment": "You can specify either a list of VMs to build the packages on or a channel to copy the packages from",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"buildID": {
+						"type": "string",
+						"comment": "A unique identifier for the build",
+						"required": true
+					},
+					"logFiles": {
+						"type": "array",
+						"items": {"type": "FilePath"},
+						"comment": "A list of file paths to the build log files",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "getBuildInfo",
+			"comment": "Get information regarding a build",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"buildID": {
+						"type": "string",
+						"comment": "The unique identifier of the build to check the status of",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "BuildInfo",
+				"comment": "The status of the requested build"
+			}
+		},
+		{
+			"name": "listBuilds",
+			"comment": "List all builds run by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"statusFilter": {
+						"type": "BuildStatus",
+						"comment": "Filter builds by their status. If not provided, all builds will be returned",
+						"required": false
+					},
+					"since": {
+						"type": "string",
+						"format": "date-time",
+						"comment": "Only return builds that were started after this date and time. If not provided, all builds will be returned",
+						"required": false
+					},
+					"before": {
+						"type": "string",
+						"format": "date-time",
+						"comment": "Only return builds that were started before this date and time. If not provided, all builds will be returned",
+						"required": false
+					}
+				}
+			}
+		},
+		{
+			"name": "cancelBuild",
+			"comment": "Cancel a build that is currently in progress",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"buildID": {
+						"type": "string",
+						"comment": "The unique identifier of the build to cancel",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "addUser",
+			"comment": "Add a new user to the system",
+			"authenticationLevel": "mod",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"comment": "The username of the new user",
+						"required": true
+					},
+					"password": {
+						"type": "string",
+						"comment": "The password of the new user",
+						"required": true
+					},
+					"privilegeLevel": {
+						"type": "AuthenticationLevel",
+						"comment": "The privilege level of the new user",
+						"enum": ["user", "mod", "admin"],
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "removeUser",
+			"comment": "Remove a user from the system",
+			"authenticationLevel": "mod",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"comment": "The username of the user to remove",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "listUsers",
+			"comment": "List all users in the system",
+			"authenticationLevel": "mod",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"privilegeLevelFilter": {
+						"type": "AuthenticationLevel",
+						"comment": "Filter users by their privilege level. If not provided, all users will be returned",
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"username": {
+							"type": "string",
+							"comment": "The username of the user"
+						},
+						"privilegeLevel": {
+							"type": "AuthenticationLevel",
+							"comment": "The privilege level of the user"
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "modifyUser",
+			"comment": "Modify the details of an existing user. Users can only modify their own details, mods can modify any user.",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"comment": "The username of the user to modify. If not provided, the current user's details will be modified",
+						"required": false
+					},
+					"newUsername": {
+						"type": "string",
+						"comment": "The new username for the user. If not provided, the username will not be changed",
+						"required": false
+					},
+					"oldPassword": {
+						"type": "string",
+						"comment": "The current password of the user. Required if changing the password",
+						"required": false
+					},
+					"newPassword": {
+						"type": "string",
+						"comment": "The new password for the user. If not provided, the password will not be changed",
+						"required": false
+					},
+					"privilegeLevel": {
+						"type": "AuthenticationLevel",
+						"comment": "The new privilege level for the user. If not provided, the privilege level will not be changed",
+						"enum": ["user", "mod", "admin"],
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "getUserInfo",
+			"comment": "Get information about a user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"comment": "The username of the user to get information about. If not provided, the current user's information will be returned",
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"comment": "The username of the user",
+						"required": true
+					},
+					"privilegeLevel": {
+						"type": "AuthenticationLevel",
+						"comment": "The privilege level of the user",
+						"required": true
+					},
+					"builds": {
+						"type": "array",
+						"items": {
+							"type": "BuildInfo"
+						},
+						"comment": "A list of builds run by the user",
+						"required": false
+					},
+					"channels": {
+						"type": "array",
+						"items": {"type": "Channel"},
+						"comment": "A list of channels the user owns",
+						"required": false
+					},
+					"repositories": {
+						"type": "array",
+						"items": {"type": "ReadableDebianRepository"},
+						"comment": "A list of Debian repositories the user controls",
+						"required": false
+					},
+					"packages": {
+						"type": "array",
+						"items": {"type": "string"},
+						"comment": "A list of package names owned by the user",
+						"required": false
+					}
+				}
+			}
+		},
+		{
+			"name": "addVM",
+			"comment": "Add a new VM to the build farm",
+			"authenticationLevel": "admin",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the VM to add",
+						"required": true
+					},
+					"OS": {
+						"type": "string",
+						"comment": "The operating system of the VM. If not provided, set to 'debian'",
+						"required": false,
+						"default": "debian"
+					},
+					"architecture": {
+						"type": "string",
+						"comment": "The architecture of the VM. If not provided, set to 'amd64'",
+						"required": false,
+						"default": "amd64"
+					},
+					"resources": {
+						"type": "object",
+						"properties": {
+							"cpu": {
+								"type": "integer",
+								"comment": "The number of CPU cores allocated to the VM. If not provided, use system defaults",
+								"required": false
+							},
+							"memory": {
+								"type": "integer",
+								"comment": "The amount of memory (in MB) allocated to the VM. If not provided, use system defaults",
+								"required": false
+							},
+							"disk": {
+								"type": "integer",
+								"comment": "The disk space (in MB) allocated to the VM. If not provided, use system defaults",
+								"required": false
+							}
+						},
+						"comment": "The resources allocated to the VM. If not provided, use system defaults",
+						"required": false
+					},
+					"accessibleBy": {
+						"type": "AuthenticationLevel",
+						"comment": "The minimum authentication level required to access this VM. If not provided, set to 'user'",
+						"enum": ["user", "mod", "admin"],
+						"required": false,
+						"default": "user"
+					},
+					"installationImage": {
+						"type": "FilePath",
+						"comment": "The file path to the installation image for the VM.",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "installVM",
+			"comment": "Install (or re-install) one of the configured VMs in the build farm",
+			"authenticationLevel": "admin",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the VM to install",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"logFile": {
+						"type": "FilePath",
+						"comment": "The file path to the installation log file",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "removeVM",
+			"comment": "Remove a VM from the build farm",
+			"authenticationLevel": "admin",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the VM to remove",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "getVMInfo",
+			"comment": "Get information about a specific VM in the build farm",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the VM to get information about",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"name": {"type": "string", "comment": "The name of the VM"},
+					"OS": {"type": "string", "comment": "The operating system of the VM"},
+					"architecture": {"type": "string", "comment": "The architecture of the VM"},
+					"resources": {
+						"type": "object",
+						"properties": {
+							"cpu": {"type": "integer", "comment": "Number of CPU cores"},
+							"memory": {"type": "integer", "comment": "Memory in MB"},
+							"disk": {"type": "integer", "comment": "Disk space in MB"}
+						},
+						"required": true,
+						"comment": "The resources allocated to the VM"
+					},
+					"accessibleBy": {
+						"type": "AuthenticationLevel",
+						"comment": "The minimum authentication level required to access this VM"
+					}
+				}
+			}
+		},
+		{
+			"name": "modifyVM",
+			"comment": "Modify the details of an existing VM in the build farm",
+			"authenticationLevel": "admin",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the VM to modify",
+						"required": true
+					},
+					"newName": {
+						"type": "string",
+						"comment": "The new name for the VM. If not provided, the name will not be changed",
+						"required": false
+					},
+					"OS": {
+						"type": "string",
+						"comment": "The new operating system for the VM. If not provided, the OS will not be changed",
+						"required": false
+					},
+					"architecture": {
+						"type": "string",
+						"comment": "The new architecture for the VM. If not provided, the architecture will not be changed",
+						"required": false
+					},
+					"resources": {
+						"type": "object",
+						"properties": {
+							"cpu": {"type": "integer", "comment": "Number of CPU cores", "required": false},
+							"memory": {"type": "integer", "comment": "Memory in MB", "required": false},
+							"disk": {"type": "integer", "comment": "Disk space in MB", "required": false}
+						},
+						"comment": "The new resources allocated to the VM. If not provided, the resources will not be changed. If only some properties are provided, only those will be updated.",
+						"required": false
+					},
+					"accessibleBy": {
+						"type": "AuthenticationLevel",
+						"comment": "The new minimum authentication level required to access this VM. If not provided, the accessibleBy level will not be changed",
+						"enum": ["user", "mod", "admin"],
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "upgradeVM",
+			"comment": "Upgrade the packages in a VM to the latest versions available in its repositories",
+			"authenticationLevel": "mod",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the VM to upgrade",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"logFile": {
+						"type": "FilePath",
+						"comment": "The file path to the upgrade log file",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "setBuildFarmUpgradeInterval",
+			"comment": "Set the interval at which the build farm VMs should be automatically upgraded",
+			"authenticationLevel": "admin",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"interval": {
+						"type": "integer",
+						"comment": "The interval, in hours, between automatic upgrades of the build farm VMs. If set to 0, automatic upgrades will be disabled",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "getBuildFarmInfo",
+			"comment": "List all VMs available to the authenticated user, as well as the build farm's automatic upgrade interval",
+			"authenticationLevel": "user",
+			"requestSchema": {},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"vms": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {"type": "string", "comment": "The name of the VM"},
+								"OS": {"type": "string", "comment": "The operating system of the VM"},
+								"architecture": {"type": "string", "comment": "The architecture of the VM"},
+								"resources": {
+									"type": "object",
+									"properties": {
+										"cpu": {"type": "integer", "comment": "Number of CPU cores"},
+										"memory": {"type": "integer", "comment": "Memory in MB"},
+										"disk": {"type": "integer", "comment": "Disk space in MB"}
+									},
+									"required": true,
+									"comment": "The resources allocated to the VM"
+								},
+								"lastUpgraded": {
+									"type": "string",
+									"format": "date-time",
+									"comment": "The last time the VM was upgraded"
+								},
+								"accessibleBy": {
+									"type": "AuthenticationLevel",
+									"comment": "The minimum authentication level required to access this VM"
+								}
+							}
+						},
+						"comment": "A list of VMs available to the authenticated user"
+					},
+					"upgradeInterval": {
+						"type": "integer",
+						"comment": "The interval, in hours, between automatic upgrades of the build farm VMs. If set to 0, automatic upgrades are disabled",
+						"required": true
+					}
+				}
+			}
+		},
+		{
+			"name": "addPackage",
+			"comment": "Add a package source to the user's account, so that it can be built and published",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"sourceChannel": {
+						"type": "Channel",
+						"comment": "The source channel from which the package will be built. This can be a git repository or a Debian repository",
+						"required": true
+					},
+					"externalDependencies": {
+						"type": "array",
+						"items": {"type": "channel"},
+						"comment": "A list of channels providing build dependencies outside of a VM's built-in repositories",
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "removePackage",
+			"comment": "Remove a package source from the user's account",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the package to remove",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "modifyPackage",
+			"comment": "Modify the details of an existing package",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the package to modify",
+						"required": true
+					},
+					"sourceChannel": {
+						"type": "Channel",
+						"comment": "The new source channel for the package. If not provided, the source channel will not be changed",
+						"required": false
+					},
+					"addedExternalDependencies": {
+						"type": "array",
+						"items": {"type": "Channel"},
+						"comment": "A list of channels providing build dependencies to add to the package. If not provided, no dependencies will be added",
+						"required": false
+					},
+					"removedExternalDependencies": {
+						"type": "array",
+						"items": {"type": "Channel"},
+						"comment": "A list of channels providing build dependencies to remove from the package. If not provided, no dependencies will be removed",
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "listPackages",
+			"comment": "List all packages owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {},
+			"responseSchema": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"name": {"type": "string", "comment": "The name of the package"},
+						"sourceChannel": {"type": "Channel", "comment": "The source channel of the package"},
+						"externalDependencies": {
+							"type": "array",
+							"items": {"type": "Channel"},
+							"comment": "A list of channels providing build dependencies for the package"
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "getPackageInfo",
+			"comment": "Get information about a specific package owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the package to get information about",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the package",
+						"required": true
+					},
+					"sourceChannel": {
+						"type": "Channel",
+						"comment": "The source channel of the package",
+						"required": true
+					},
+					"externalDependencies": {
+						"type": "array",
+						"items": {"type": "Channel"},
+						"comment": "A list of channels providing build dependencies for the package",
+						"required": false
+					}
+				}
+			}
+		},
+		{
+			"addGitCredential": {
+				"name": "addGitCredential",
+				"comment": "Add a git credential for the user to publish release pages and access private repositories",
+				"authenticationLevel": "user",
+				"requestSchema": {
+					"type": "object",
+					"properties": {
+						"credential": {
+							"type": "GitCredential",
+							"comment": "The git credential to add",
+							"required": true
+						},
+						"password": {
+							"type": "string",
+							"comment": "The autobuild user's unhashed password. This will be used to derive the encryption key for the credential before storing it securely",
+							"required": true
+						}
+					}
+				}
+			}
+		},
+		{
+			"name": "listGitCredentials",
+			"comment": "List all git credentials stored for the user",
+			"authenticationLevel": "user",
+			"requestSchema": {},
+			"responseSchema": {
+				"type": "array",
+				"items": {
+					"type": "GitCredential",
+					"comment": "A list of git credentials stored for the user"
+				}
+			}
+		},
+		{
+			"name": "removeGitCredential",
+			"comment": "Remove a git credential from the user's account",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"instanceURL": {
+						"type": "string",
+						"comment": "The URL of the git instance (e.g., 'https://github.com' or 'https://forgejo.example.com')",
+						"required": true
+					},
+					"username": {
+						"type": "string",
+						"comment": "The username for the git instance",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "modifyGitCredential",
+			"comment": "Modify an existing git credential for the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"instanceURL": {
+						"type": "string",
+						"comment": "The URL of the git instance (e.g., 'https://github.com' or 'https://forgejo.example.com')",
+						"required": true
+					},
+					"username": {
+						"type": "string",
+						"comment": "The username for the git instance",
+						"required": true
+					},
+					"newAccessToken": {
+						"type": "string",
+						"comment": "The new personal access token for the git instance. If not provided, the access token will not be changed",
+						"required": false
+					},
+					"password": {
+						"type": "string",
+						"comment": "The autobuild user's unhashed password. This will be used to derive the encryption key for the credential before storing it securely",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "createDebianRepository",
+			"comment": "Create a new Debian repository channel owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the new Debian repository channel",
+						"required": true
+					},
+					"signingKey": {
+						"type": "SigningKey",
+						"comment": "The signing key to use for the repository.",
+						"required": true
+					},
+					"isGitManaged": {
+						"type": "boolean",
+						"comment": "Whether the repository is managed by git. E.g., published by Github Pages or similar services",
+						"required": false,
+						"default": false
+					},
+					"gitRepository": {
+						"type": "GitRepository",
+						"comment": "The git repository to use for the Debian repository. This is required if isGitManaged is true",
+						"required": false
+					},
+					"gitCredential": {
+						"type": "GitCredential",
+						"comment": "The git credential to use for accessing the git repository. This is required if isGitManaged is true",
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "removeDebianRepository",
+			"comment": "Remove a Debian repository channel owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the Debian repository channel to remove",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "modifyDebianRepository",
+			"comment": "Modify the details of an existing Debian repository channel owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the Debian repository channel to modify",
+						"required": true
+					},
+					"newName": {
+						"type": "string",
+						"comment": "The new name for the Debian repository channel. If not provided, the name will not be changed",
+						"required": false
+					},
+					"signingKey": {
+						"type": "SigningKey",
+						"comment": "The new signing key for the repository. If not provided, the signing key will not be changed",
+						"required": false
+					},
+					"isGitManaged": {
+						"type": "boolean",
+						"comment": "Whether the repository is managed by git. E.g., published by Github Pages or similar services. If not provided, the git management status will not be changed",
+						"required": false
+					},
+					"gitRepository": {
+						"type": "GitRepository",
+						"comment": "The new git repository to use for the Debian repository. This is required if isGitManaged is true and will replace the current git repository if it exists.",
+						"required": false
+					},
+					"gitCredential": {
+						"type": "GitCredential",
+						"comment": "The new git credential to use for accessing the git repository. This is required if isGitManaged is true and will replace the current git credential if it exists.",
+						"required": false
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "listDebianRepositories",
+			"comment": "List all Debian repository channels owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {},
+			"responseSchema": {
+				"type": "array",
+				"items": {
+					"type": "WritableDebianRepository",
+					"comment": "A list of Debian repository channels owned by the user"
+				}
+			}
+		},
+		{
+			"name": "createSigningKey",
+			"comment": "Create a new signing key for the user",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the signing key to create",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "removeSigningKey",
+			"comment": "Remove a signing key from the user's account",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"comment": "The name of the signing key to remove",
+						"required": true
+					}
+				}
+			},
+			"responseSchema": {}
+		},
+		{
+			"name": "listSigningKeys",
+			"comment": "List all signing keys owned by the user",
+			"authenticationLevel": "user",
+			"requestSchema": {},
+			"responseSchema": {
+				"type": "array",
+				"items": {
+					"type": "SigningKey",
+					"comment": "A list of signing keys owned by the user",
+					"required": true
+				}
+			}
+		}
+	]
+}
