@@ -1,6 +1,7 @@
 {
 	"title": "Autobuild Daemon API Specification",
 	"description": "This schema defines the API for the autobuild daemon, which handles package building, publishing, and user management.",
+	"schemaComment": "This schema is non-standard JSON, but is hopefully comprehensible all the same. If any parts of its design are not clear, please ask for clarification or revision.",
 	"version": "1.0",
 
 	"Request": {
@@ -18,8 +19,15 @@
 				"required": false
 			},
 			"command": {
-				"type": "Command",
+				"type": "CommandName",
 				"comment": "The command to be executed by the autobuild daemon",
+				"schemaComment": "'CommandName' refers to the contents of a 'name' field in one of the commands defined in the 'Commands' section of this schema",
+				"required": true
+			},
+			"params": {
+				"type": "CommandRequest",
+				"comment": "The parameters for the command being executed. The schema for this will depend on the specific command being executed",
+				"schemaComment": "'CommandRequest' refers to the contents of a 'requestSchema' field in one of the commands defined in the 'Commands' section of this schema",
 				"required": true
 			}
 		}
@@ -48,6 +56,7 @@
 			"commandResponse": {
 				"type": "CommandResponse",
 				"comment": "The response data specific to the command executed. Specific response schemas are defined in the 'Commands' section.",
+				"schemaComment": "'CommandResponse' refers to the contents of a 'responseSchema' field in one of the commands defined in the 'Commands' section of this schema",
 				"required": false
 			}
 		}
@@ -112,15 +121,15 @@
 				},
 				"debianRepositorySigningKey": {
 					"type": "SigningKey",
-					"comment": "The signing key used for this repository. This key is used to sign packages published to this repository.",
-					"required": true
+					"comment": "The signing key used for this repository. This key is used to sign packages published to this repository",
+					"required": false
 				}
 			},
-			"comment": "The name of a Debian repository managed by this autobuild instance and owned by the user issuing the command"
+			"comment": "A Debian repository managed by this autobuild instance and owned by the user issuing the command"
 		},
 		"GitRepository": {
 			"type": "object",
-			"comment": "A git repository on either Github or Foregjo",
+			"comment": "A git repository on either Github or Forgejo",
 			"properties": {
 				"instanceURL": {
 					"type": "string",
@@ -163,7 +172,7 @@
 			]
 		},
 		"GitCredential": {
-			"comment": "Credentials for accessing a git instance. Used for publishing release pages and accessing private repositories.",
+			"comment": "Credentials for accessing a git instance. Used for publishing release pages and accessing private repositories",
 			"type": "object",
 			"properties": {
 				"instanceURL": {
@@ -184,7 +193,7 @@
 			}
 		},
 		"AuthCredentials": {
-			"comment": "Credentials for user authentication. Either a username/password pair or a session token from a successful login.",
+			"comment": "Credentials for user authentication. Either a username/password pair or a session token from a successful login",
 			"type": "or",
 			"alternatives": [
 				{
@@ -217,11 +226,10 @@
 		"BuildStatus": {
 			"comment": "The status of a build",
 			"type": "string",
-			"enum": ["queued", "in_progress", "completed", "failed", "cancelled"],
-			"required": true
+			"enum": ["queued", "in_progress", "completed", "failed", "cancelled"]
 		},
 		"BuildInfo": {
-			"comment": "The status of a build",
+			"comment": "Information about a build",
 			"type": "object",
 			"properties": {
 				"buildID": {
@@ -438,6 +446,13 @@
 						"required": false
 					}
 				}
+			},
+			"responseSchema": {
+				"type": "array",
+				"items": {
+					"type": "BuildInfo"
+				},
+				"comment": "A list of builds run by the user, filtered by the provided criteria"
 			}
 		},
 		{
@@ -476,7 +491,6 @@
 					"privilegeLevel": {
 						"type": "AuthenticationLevel",
 						"comment": "The privilege level of the new user",
-						"enum": ["user", "mod", "admin"],
 						"required": true
 					}
 				}
@@ -560,7 +574,6 @@
 					"privilegeLevel": {
 						"type": "AuthenticationLevel",
 						"comment": "The new privilege level for the user. If not provided, the privilege level will not be changed",
-						"enum": ["user", "mod", "admin"],
 						"required": false
 					}
 				}
@@ -672,7 +685,6 @@
 					"accessibleBy": {
 						"type": "AuthenticationLevel",
 						"comment": "The minimum authentication level required to access this VM. If not provided, set to 'user'",
-						"enum": ["user", "mod", "admin"],
 						"required": false,
 						"default": "user"
 					},
@@ -803,7 +815,6 @@
 					"accessibleBy": {
 						"type": "AuthenticationLevel",
 						"comment": "The new minimum authentication level required to access this VM. If not provided, the accessibleBy level will not be changed",
-						"enum": ["user", "mod", "admin"],
 						"required": false
 					}
 				}
@@ -912,7 +923,7 @@
 					},
 					"externalDependencies": {
 						"type": "array",
-						"items": {"type": "channel"},
+						"items": {"type": "Channel"},
 						"comment": "A list of channels providing build dependencies outside of a VM's built-in repositories",
 						"required": false
 					}
@@ -1027,23 +1038,21 @@
 			}
 		},
 		{
-			"addGitCredential": {
-				"name": "addGitCredential",
-				"comment": "Add a git credential for the user to publish release pages and access private repositories",
-				"authenticationLevel": "user",
-				"requestSchema": {
-					"type": "object",
-					"properties": {
-						"credential": {
-							"type": "GitCredential",
-							"comment": "The git credential to add",
-							"required": true
-						},
-						"password": {
-							"type": "string",
-							"comment": "The autobuild user's unhashed password. This will be used to derive the encryption key for the credential before storing it securely",
-							"required": true
-						}
+			"name": "addGitCredential",
+			"comment": "Add a git credential for the user to publish release pages and access private repositories",
+			"authenticationLevel": "user",
+			"requestSchema": {
+				"type": "object",
+				"properties": {
+					"credential": {
+						"type": "GitCredential",
+						"comment": "The git credential to add",
+						"required": true
+					},
+					"password": {
+						"type": "string",
+						"comment": "The autobuild user's plain-text password. This will be used to derive the encryption key for the credential before storing it securely",
+						"required": true
 					}
 				}
 			}
@@ -1215,9 +1224,9 @@
 			"responseSchema": {
 				"type": "array",
 				"items": {
-					"type": "WritableDebianRepository",
-					"comment": "A list of Debian repository channels owned by the user"
-				}
+					"type": "WritableDebianRepository"},
+					"comment": "A list of Debian repository channels owned by the user",
+					"required": true
 			}
 		},
 		{
@@ -1259,11 +1268,9 @@
 			"requestSchema": {},
 			"responseSchema": {
 				"type": "array",
-				"items": {
-					"type": "SigningKey",
-					"comment": "A list of signing keys owned by the user",
-					"required": true
-				}
+				"items": {"type": "SigningKey"},
+				"comment": "A list of signing keys owned by the user",
+				"required": true
 			}
 		}
 	]
