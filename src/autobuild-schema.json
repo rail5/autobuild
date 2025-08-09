@@ -263,9 +263,19 @@
 			"comment": "Authenticate a user and return a session token",
 			"authenticationLevel": "none",
 			"requestSchema": {
-				"type": "AuthCredentials",
-				"comment": "The credentials of the user to authenticate",
-				"required": true
+				"type": "object",
+				"properties": {
+					"username": {
+						"type": "string",
+						"comment": "The username of the user to authenticate",
+						"required": true
+					},
+					"password": {
+						"type": "string",
+						"comment": "The password of the user to authenticate",
+						"required": true
+					}
+				}
 			},
 			"responseSchema": {
 				"type": "object",
