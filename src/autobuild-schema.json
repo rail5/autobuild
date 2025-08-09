@@ -9,7 +9,7 @@
 		"properties": {
 			"respondTo": {
 				"type": "FilePath",
-				"comment": "A Unix socket to which the daemon should writs its reply",
+				"comment": "A Unix socket to which the daemon should write its reply",
 				"required": true
 			},
 			"credentials": {
@@ -35,6 +35,11 @@
 				"comment": "The status of the response, indicating whether the command was successful or if there was an error",
 				"required": true
 			},
+			"errorCode": {
+				"type": "ErrorCode",
+				"comment": "An error code indicating the type of error that occurred, if any. This is only present if the status is 'error'",
+				"required": false
+			},
 			"message": {
 				"type": "string",
 				"comment": "A human-readable message providing additional information about the response",
@@ -49,6 +54,19 @@
 	},
 
 	"Types": {
+		"ErrorCode": {
+			"type": "string",
+			"enum": ["error",
+					"not_found",
+					"permission_denied",
+					"invalid_request",
+					"authentication_required",
+					"authentication_failed",
+					"build_failed",
+					"internal_error",
+					"session_expired"],
+			"comment": "Defines the error codes that can be returned by the autobuild daemon"
+		},
 		"FilePath": {
 			"type": "string",
 			"comment": "An absolute file path on the system"
