@@ -38,15 +38,9 @@
 		"type": "object",
 		"properties": {
 			"status": {
-				"type": "string",
-				"enum": ["success", "error"],
-				"comment": "The status of the response, indicating whether the command was successful or if there was an error",
+				"type": "StatusCode",
+				"comment": "A status code indicating the result of the command execution",
 				"required": true
-			},
-			"errorCode": {
-				"type": "ErrorCode",
-				"comment": "An error code indicating the type of error that occurred, if any. This is only present if the status is 'error'",
-				"required": false
 			},
 			"message": {
 				"type": "string",
@@ -63,9 +57,10 @@
 	},
 
 	"Types": {
-		"ErrorCode": {
+		"StatusCode": {
 			"type": "string",
-			"enum": ["error",
+			"enum": ["success",
+					"error",
 					"not_found",
 					"permission_denied",
 					"invalid_request",
@@ -74,7 +69,7 @@
 					"build_failed",
 					"internal_error",
 					"session_expired"],
-			"comment": "Defines the error codes that can be returned by the autobuild daemon"
+			"comment": "Defines the status codes that can be returned by the autobuild daemon"
 		},
 		"FilePath": {
 			"type": "string",
