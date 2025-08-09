@@ -84,7 +84,7 @@
 			"type": "object",
 			"comment": "A signing key used for verifying package signatures",
 			"properties": {
-				"keyID": {
+				"keyEmail": {
 					"type": "string",
 					"comment": "The unique identifier of the signing key",
 					"required": true
