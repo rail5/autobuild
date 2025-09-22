@@ -678,6 +678,19 @@ function push_github_release_page() {
 	VERSION=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
 	
 	# Create GitHub Release
+
+	# Get the name of the default branch
+	curl -L \
+		-H "Accept: application/vnd.github+json" \
+		-H "Authorization: Bearer $GITHUB_ACCESS_TOKEN" \
+		-H "X-GitHub-Api-Version: 2022-11-28" \
+		"https://api.github.com/repos/$GITHUB_OWNER/$PKGNAME" > "$base_release_directory/$PKGNAME/repo-info"
+	
+	local DEFAULT_BRANCH
+	DEFAULT_BRANCH=$(jq -r '.default_branch' "$base_release_directory/$PKGNAME/repo-info")
+	if [[ "$DEFAULT_BRANCH" == "null" ]] || [[ "$DEFAULT_BRANCH" == "" ]]; then
+		DEFAULT_BRANCH="main" # Fallback to 'main'
+	fi
 	
 	## Send POST request to GitHub API to create a release page
 	curl -L \
@@ -687,7 +700,7 @@ function push_github_release_page() {
 			-H "X-GitHub-Api-Version: 2022-11-28" \
 			"https://api.github.com/repos/$GITHUB_OWNER/$PKGNAME/releases" \
 			-d "{\"tag_name\": \"v$VERSION\",
-				\"target_commitish\": \"main\",
+				\"target_commitish\": \"$DEFAULT_BRANCH\",
 				\"name\": \"v$VERSION\",
 				\"body\": \"$CHANGELOG\",
 				\"draft\": false,
@@ -736,6 +749,19 @@ function push_forgejo_release_page() {
 	VERSION=$(dpkg-parsechangelog -l "$autobuild_temp_directory/$pkgs_build_base_directory/srconly/$PKGNAME/debian/changelog" --show-field version | sed -z 's/\n//g')
 	
 	# Create Forgejo Release
+
+	# Get the name of the default branch
+	curl -L \
+		-H "accept: application/json" \
+		-H "Content-Type: application/json" \
+		-H "Authorization: Bearer $FORGEJO_ACCESS_TOKEN" \
+		"$FORGEJO_INSTANCE_URL/api/v1/repos/$FORGEJO_OWNER/$PKGNAME" > "$base_release_directory/$PKGNAME/repo-info"
+	
+	local DEFAULT_BRANCH
+	DEFAULT_BRANCH=$(jq -r '.default_branch' "$base_release_directory/$PKGNAME/repo-info")
+	if [[ "$DEFAULT_BRANCH" == "null" ]] || [[ "$DEFAULT_BRANCH" == "" ]]; then
+		DEFAULT_BRANCH="main" # Fallback to 'main'
+	fi
 	
 	## Send POST request to Forgejo API to create a release page
 	curl -L \
@@ -745,7 +771,7 @@ function push_forgejo_release_page() {
 			-H "Authorization: Bearer $FORGEJO_ACCESS_TOKEN" \
 			"$FORGEJO_INSTANCE_URL/api/v1/repos/$FORGEJO_OWNER/$PKGNAME/releases" \
 			-d "{\"tag_name\": \"v$VERSION\",
-				\"target_commitish\": \"main\",
+				\"target_commitish\": \"$DEFAULT_BRANCH\",
 				\"name\": \"v$VERSION\",
 				\"body\": \"$CHANGELOG\",
 				\"draft\": false,
