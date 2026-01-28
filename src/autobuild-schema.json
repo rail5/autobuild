@@ -58,8 +58,8 @@
 
 	"Types": {
 		"StatusCode": {
-			"type": "string",
-			"enum": ["success",
+			"type": "enum",
+			"values": ["success",
 					"error",
 					"not_found",
 					"permission_denied",
@@ -76,8 +76,8 @@
 			"comment": "An absolute file path on the system"
 		},
 		"AuthenticationLevel": {
-			"type": "string",
-			"enum": ["none", "user", "mod", "admin"],
+			"type": "enum",
+			"values": ["none", "user", "mod", "admin"],
 			"comment": "Defines the level of authentication required for certain actions"
 		},
 		"SigningKey": {
@@ -93,6 +93,7 @@
 		},
 		"ReadableDebianRepository": {
 			"type": "object",
+			"isA": "Channel",
 			"comment": "The sources.list and signing key of a Debian repository",
 			"properties": {
 				"debianRepositorySources": {
@@ -109,6 +110,7 @@
 		},
 		"WritableDebianRepository": {
 			"type": "object",
+			"isA": "Channel",
 			"properties": {
 				"debianRepositoryName": {
 					"type": "string",
@@ -124,6 +126,7 @@
 		},
 		"GitRepository": {
 			"type": "object",
+			"isA": "Channel",
 			"comment": "A git repository on either Github or Forgejo",
 			"properties": {
 				"instanceURL": {
@@ -187,41 +190,53 @@
 				}
 			}
 		},
+		"UsernamePasswordPair": {
+			"comment": "A pair of username and password for authentication",
+			"type": "object",
+			"isA": "AuthCredentials",
+			"properties": {
+				"username": {
+					"type": "string",
+					"comment": "The username of the user",
+					"required": true
+				},
+				"password": {
+					"type": "string",
+					"comment": "The password of the user",
+					"required": true
+				}
+			}
+		},
+		"SessionToken": {
+			"comment": "A session token obtained from a previous authentication request",
+			"type": "object",
+			"isA": "AuthCredentials",
+			"properties": {
+				"sessionToken": {
+					"type": "string",
+					"comment": "A session token that can be used for subsequent requests",
+					"required": true
+				}
+			}
+		},
 		"AuthCredentials": {
 			"comment": "Credentials for user authentication. Either a username/password pair or a session token from a successful login",
 			"type": "or",
 			"alternatives": [
 				{
-					"type": "object",
-					"properties": {
-						"username": {
-							"type": "string",
-							"comment": "The username of the user",
-							"required": true
-						},
-						"password": {
-							"type": "string",
-							"comment": "The password of the user",
-							"required": true
-						}
-					}
+					"type": "UsernamePasswordPair",
+					"comment": "Username/password pair for authentication"
 				},
 				{
-					"type": "object",
-					"properties": {
-						"sessionToken": {
-							"type": "string",
-							"comment": "A session token obtained from a previous authentication request",
-							"required": true
-						}
-					}
+					"type": "SessionToken",
+					"comment": "Session token for authentication"
 				}
 			]
 		},
 		"BuildStatus": {
 			"comment": "The status of a build",
-			"type": "string",
-			"enum": ["queued", "in_progress", "completed", "failed", "cancelled"]
+			"type": "enum",
+			"values": ["queued", "in_progress", "completed", "failed", "cancelled"]
 		},
 		"BuildInfo": {
 			"comment": "Information about a build",
@@ -265,14 +280,9 @@
 			"requestSchema": {
 				"type": "object",
 				"properties": {
-					"username": {
-						"type": "string",
-						"comment": "The username of the user to authenticate",
-						"required": true
-					},
-					"password": {
-						"type": "string",
-						"comment": "The password of the user to authenticate",
+					"credentials": {
+						"type": "UsernamePasswordPair",
+						"comment": "The username and password of the user to authenticate",
 						"required": true
 					}
 				}
@@ -372,21 +382,16 @@
 						"comment": "A list of channels to which the packages should be published",
 						"required": true
 					},
-					"from": {
-						"type": "or",
-						"alternatives": [
-							{
-								"type": "array",
-								"items": {"type": "string"},
-								"comment": "A list of VM names to build the packages on before publishing"
-							},
-							{
-								"type": "Channel",
-								"comment": "A channel from which the packages should be copied instead of building from source"
-							}
-						],
-						"comment": "You can specify either a list of VMs to build the packages on or a channel to copy the packages from",
-						"required": true
+					"copyFrom": {
+						"type": "Channel",
+						"comment": "A channel from which the packages should be copied instead of building from source. EITHER copyFrom or buildOn should be given, NOT BOTH.",
+						"required": false
+					},
+					"buildOn": {
+						"type": "array",
+						"items": {"type": "string"},
+						"comment": "A list of VM names to build the packages on before publishing. EITHER copyFrom or buildOn should be given, NOT BOTH.",
+						"required": false
 					}
 				}
 			},
