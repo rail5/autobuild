@@ -35,7 +35,15 @@
 # JsonObject: A class representing a JSON object.
 @class JsonObject : Json {
 	@public @method toPrimitive {
+		@this.serialize
+	}
+
+	@public @method serialize {
 		jq . <<< "@{this.value}"
+	}
+
+	@public @method deserialize rawJson {
+		@this.value="$rawJson"
 	}
 
 	# Set a key-value pair in the JSON object.
@@ -47,6 +55,16 @@
 		fi
 
 		@this.value="@(jq --arg k "$key" --argjson v "@value.toPrimitive" '. + {($k): $v}' <<< "@{this.value}")"
+	}
+
+	# Set a key-value pair in the JSON object where the value is a primitive (string, number, boolean, etc).
+	# The key must be a string, and the value must be a valid JSON primitive (quoted string, number, boolean, null).
+	# Example usage:
+	#   @object.setPrimitive "key" "\"String Value\""
+	#   @object.setPrimitive "numberKey" "42"
+	#   @object.setPrimitive "boolKey" "true"
+	@public @method setPrimitive key value {
+		@this.value="@(jq --arg k "$key" --arg v "$value" '. + {($k): ($v | fromjson)}' <<< "@{this.value}")"
 	}
 
 	# Get the value associated with a specific key in the JSON object.
@@ -101,32 +119,32 @@
 	}
 }
 
-@Json innerObj
-@innerObj.setPrimitiveValue "\"Inner Value\""
-
-@Json innerObj2
-@innerObj2.setPrimitiveValue "true"
-
-@JsonArray innerArray
-
-@Json innermostObj
-@innermostObj.setPrimitiveValue "\"Innermost Value\""
-
-@Json innermostObj2
-@innermostObj2.setPrimitiveValue "42"
-
-@innerArray.add &@innermostObj
-@innerArray.add &@innermostObj2
-
-@JsonObject outerObj
-@outerObj.set "inner" &@innerObj
-@outerObj.set "inner2" &@innerObj2
-@outerObj.set "innerArray" &@innerArray
-@outerObj.set "key with spaces" &@innerObj
-
-@outerObj.toPrimitive
-
-@outerObj.keys | while IFS= read -r key; do
-	echo "Key: $key"
-	echo "Value: @(@outerObj.get "$key")"
-done
+#@Json innerObj
+#@innerObj.setPrimitiveValue "\"Inner Value\""
+#
+#@Json innerObj2
+#@innerObj2.setPrimitiveValue "true"
+#
+#@JsonArray innerArray
+#
+#@Json innermostObj
+#@innermostObj.setPrimitiveValue "\"Innermost Value\""
+#
+#@Json innermostObj2
+#@innermostObj2.setPrimitiveValue "42"
+#
+#@innerArray.add &@innermostObj
+#@innerArray.add &@innermostObj2
+#
+#@JsonObject outerObj
+#@outerObj.set "inner" &@innerObj
+#@outerObj.set "inner2" &@innerObj2
+#@outerObj.set "innerArray" &@innerArray
+#@outerObj.set "key with spaces" &@innerObj
+#
+#@outerObj.toPrimitive
+#
+#@outerObj.keys | while IFS= read -r key; do
+#	echo "Key: $key"
+#	echo "Value: @(@outerObj.get "$key")"
+#done

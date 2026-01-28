@@ -1,0 +1,20 @@
+@include_once "../json.bpp"
+
+@class SessionToken : JsonObject {
+	@public @method setSessionToken token {
+		@this.setPrimitive "sessionToken" "\"$token\""
+	}
+
+	@public @method getSessionToken {
+		@this.getRaw "sessionToken"
+	}
+
+	@public @method deserialize rawJson {
+		# Verify that the JSON contains only the "sessionToken" key.
+		local keys="@(jq -r 'keys[]' <<< "$rawJson" | sort)"
+		if [[ "$keys" != "sessionToken" ]]; then
+			return 1
+		fi
+		@super.deserialize "$rawJson"
+	}
+}
