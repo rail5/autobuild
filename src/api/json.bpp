@@ -1,0 +1,132 @@
+# Json: The base class for JSON handling
+# This class (and its subclasses) provide a minimal OOP wrapper around jq
+@class Json {
+	# The internal value of the Json object, stored as a string.
+	# This value is expected to be a valid JSON string.
+	# It can be set directly using the `setPrimitiveValue` method.
+	# The default value is "null", which represents an empty JSON object.
+	@protected value=null
+
+	@public @method toPrimitive {
+		jq -R 'try fromjson catch . ' <<< "@{this.value}"
+	}
+
+	# Set a primitive value
+	# This function sets the internal value directly.
+	# String values must be quoted. Eg, @Json.setPrimitiveValue "\"String Value\""
+	# Literals like numbers and booleans do not need quotes.
+	@public @method setPrimitiveValue value {
+		@this.value="$value"
+	}
+
+	# The base Json class does not implement serialization or deserialization.
+	# Subclasses should override these methods to provide specific serialization and deserialization logic.
+	# The default implementation does nothing.
+	@virtual @public @method serialize {
+	}
+
+	# The base Json class does not implement serialization or deserialization.
+	# Subclasses should override these methods to provide specific serialization and deserialization logic.
+	# The default implementation does nothing.
+	@virtual @public @method deserialize {
+	}
+}
+
+# JsonObject: A class representing a JSON object.
+@class JsonObject : Json {
+	@public @method toPrimitive {
+		jq . <<< "@{this.value}"
+	}
+
+	# Set a key-value pair in the JSON object.
+	# The key must be a string, and the value must be a pointer to a valid Json object.
+	# If `value` does not point to a valid Json object, the method returns 1.
+	@public @method set key @Json* value {
+		if [[ @value == @nullptr ]]; then
+			return 1
+		fi
+
+		@this.value="@(jq --arg k "$key" --argjson v "@value.toPrimitive" '. + {($k): $v}' <<< "@{this.value}")"
+	}
+
+	# Get the value associated with a specific key in the JSON object.
+	@public @method get key {
+		jq --arg k "$key" '.[$k]' <<< "@{this.value}"
+	}
+
+	# Get the raw, unquoted value associated with a specific key in the JSON object.
+	@public @method getRaw key {
+		jq -r --arg k "$key" '.[$k]' <<< "@{this.value}"
+	}
+
+	# Get all keys in the JSON object.
+	# This outputs each key, unquoted, on its own line.
+	# If you expect that some of the keys may contain spaces or special characters,
+	# Then you should iterate using `IFS= read -r` to handle them correctly.
+	# As in: `@object.keys | while IFS= read -r key; do ...`
+	# If you know in advance that the keys do not contain spaces or special characters,
+	# Then you can use a simple for loop: `for key in @object.keys; do ...`
+	@public @method keys {
+		jq -r 'keys[]' <<< "@{this.value}"
+	}
+}
+
+# JsonArray: A class representing a JSON array.
+@class JsonArray : Json {
+	@public @method toPrimitive {
+		jq . <<< "@{this.value}"
+	}
+
+	# Add a value to the JSON array.
+	# The value must be a pointer to a valid Json object.
+	# If `value` does not point to a valid Json object, the method returns 1.
+	# The value is appended to the end of the array.
+	# If the array is empty, it initializes the array with the value.
+	@public @method add @Json* value {
+		if [[ @value == @nullptr ]]; then
+			return 1
+		fi
+
+		@this.value="@(jq --argjson v "@value.toPrimitive" '. + [$v]' <<< "@{this.value}")"
+	}
+
+	# Get the value at a specific index in the JSON array.
+	@public @method get index {
+		jq --argjson i "$index" '.[($i)]' <<< "@{this.value}"
+	}
+
+	# Get the size of the JSON array.
+	@public @method size {
+		jq 'length' <<< "@{this.value}"
+	}
+}
+
+@Json innerObj
+@innerObj.setPrimitiveValue "\"Inner Value\""
+
+@Json innerObj2
+@innerObj2.setPrimitiveValue "true"
+
+@JsonArray innerArray
+
+@Json innermostObj
+@innermostObj.setPrimitiveValue "\"Innermost Value\""
+
+@Json innermostObj2
+@innermostObj2.setPrimitiveValue "42"
+
+@innerArray.add &@innermostObj
+@innerArray.add &@innermostObj2
+
+@JsonObject outerObj
+@outerObj.set "inner" &@innerObj
+@outerObj.set "inner2" &@innerObj2
+@outerObj.set "innerArray" &@innerArray
+@outerObj.set "key with spaces" &@innerObj
+
+@outerObj.toPrimitive
+
+@outerObj.keys | while IFS= read -r key; do
+	echo "Key: $key"
+	echo "Value: @(@outerObj.get "$key")"
+done
