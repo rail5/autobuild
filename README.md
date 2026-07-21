@@ -67,7 +67,7 @@ A web interface is provided by the **autobuild-web** package:
 sudo apt install autobuild-web
 ```
 
-After installing, it will be available on your web-server at **http://your-domain-or.ip/autobuild**
+After installing, it will be available at **http://127.0.0.1/autobuild**
 
 | Desktop                                                                                                               | Mobile                                                                                                                        |
 | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
