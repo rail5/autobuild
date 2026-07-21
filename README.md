@@ -6,7 +6,7 @@ Automatically build & distribute Debian packages
 
 ## What does it do?
 
-This program can **automatically**:
+Autobuild can **automatically**:
 
 - Retrieve Debian package sources from a git repo or .tar.gz archive
 
